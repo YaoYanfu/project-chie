@@ -286,6 +286,34 @@
       margin: 0 auto;
     }
 
+    .message-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      max-width: min(94%, 740px);
+    }
+
+    .message-row.user {
+      align-self: flex-end;
+      justify-content: flex-end;
+    }
+
+    .message-row.assistant {
+      align-self: flex-start;
+    }
+
+    .message-avatar {
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255, 230, 238, 0.34);
+      border-radius: 50%;
+      margin-top: 2px;
+      object-fit: cover;
+      object-position: center;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.26);
+    }
+
     .message {
       display: grid;
       gap: 6px;
@@ -318,6 +346,17 @@
       align-self: flex-start;
       border-color: rgba(215, 108, 141, 0.26);
       background: rgba(50, 36, 45, 0.46);
+    }
+
+    .message-content {
+      min-width: 0;
+    }
+
+    .message-voice {
+      width: min(100%, 340px);
+      height: 34px;
+      margin-top: 2px;
+      outline: none;
     }
 
     .meta {
@@ -519,6 +558,15 @@
 
       .message {
         max-width: 94%;
+      }
+
+      .message-row {
+        max-width: 100%;
+      }
+
+      .message-avatar {
+        width: 34px;
+        height: 34px;
       }
 
       .composer {
@@ -743,6 +791,72 @@
       return response.json();
     }
 
+    function buildAuthedUrl(path) {
+      const url = new URL(path, window.location.origin);
+      const token = getToken();
+      if (token) {
+        url.searchParams.set("token", token);
+      }
+      return url.toString();
+    }
+
+    function stopMessageSelection(event) {
+      event.stopPropagation();
+    }
+
+    function appendVoiceControl(message, item) {
+      if (!item.voice_url) {
+        return;
+      }
+      const audio = document.createElement("audio");
+      audio.className = "message-voice";
+      audio.controls = true;
+      audio.preload = "metadata";
+      audio.src = buildAuthedUrl(item.voice_url);
+      if (item.voice_text) {
+        audio.title = item.voice_text;
+      }
+      audio.addEventListener("click", stopMessageSelection);
+      audio.addEventListener("keydown", stopMessageSelection);
+      message.appendChild(audio);
+    }
+
+    function playAssistantVoice(item) {
+      if (!item || !item.voice_url) {
+        return;
+      }
+      const audio = new Audio(buildAuthedUrl(item.voice_url));
+      audio.play().catch(() => {
+        setStatus("语音已生成，可点消息下方播放器收听");
+      });
+    }
+
+    function waitForAssistantVoice(sessionId, assistantMessage, attempt = 0) {
+      if (!assistantMessage || assistantMessage.voice_url || attempt >= 20) {
+        return;
+      }
+      window.setTimeout(async () => {
+        try {
+          if (getSessionId() !== sessionId) {
+            return;
+          }
+          const payload = await api(`/api/sessions/${encodeURIComponent(sessionId)}/messages`);
+          const updatedMessage = payload.messages.find((item) => item.message_id === assistantMessage.message_id);
+          if (updatedMessage && updatedMessage.voice_url) {
+            renderMessages(payload.messages);
+            setStatus("语音已生成");
+            playAssistantVoice(updatedMessage);
+            return;
+          }
+          waitForAssistantVoice(sessionId, assistantMessage, attempt + 1);
+        } catch (error) {
+          if (attempt < 3) {
+            waitForAssistantVoice(sessionId, assistantMessage, attempt + 1);
+          }
+        }
+      }, 3000);
+    }
+
     function renderMessages(messages) {
       messageList.replaceChildren();
       selectedMessageIds.clear();
@@ -755,6 +869,17 @@
         return;
       }
       for (const item of messages) {
+        const row = document.createElement("div");
+        row.className = `message-row ${item.role === "user" ? "user" : "assistant"}`;
+
+        if (item.role !== "user") {
+          const avatar = document.createElement("img");
+          avatar.className = "message-avatar";
+          avatar.src = "/assets/chie-avatar.jpg";
+          avatar.alt = "千惠";
+          row.appendChild(avatar);
+        }
+
         const message = document.createElement("article");
         message.className = `message ${item.role === "user" ? "user" : "assistant"}`;
         message.dataset.messageId = item.message_id;
@@ -771,9 +896,13 @@
         meta.append(speaker, mark);
 
         const content = document.createElement("div");
+        content.className = "message-content";
         content.textContent = item.content;
 
         message.append(meta, content);
+        if (item.role !== "user") {
+          appendVoiceControl(message, item);
+        }
         message.addEventListener("click", () => toggleMessageSelection(message));
         message.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -781,7 +910,8 @@
             toggleMessageSelection(message);
           }
         });
-        messageList.appendChild(message);
+        row.appendChild(message);
+        messageList.appendChild(row);
       }
       messagesPanel.scrollTop = messagesPanel.scrollHeight;
     }
@@ -883,7 +1013,13 @@
           }),
         });
         renderMessages(payload.messages);
-        setStatus(`${payload.model_enabled ? "本地模型接口已启用" : "本地占位模式"} / ${payload.model_name}`);
+        const voiceStatus = payload.assistant_message.voice_url ? " / 语音已生成" : " / 语音后台生成中";
+        setStatus(`${payload.model_enabled ? "本地模型接口已启用" : "本地占位模式"} / ${payload.model_name}${voiceStatus}`);
+        if (payload.assistant_message.voice_url) {
+          playAssistantVoice(payload.assistant_message);
+        } else {
+          waitForAssistantVoice(getSessionId(), payload.assistant_message);
+        }
       } catch (error) {
         setStatus(error.message);
       } finally {

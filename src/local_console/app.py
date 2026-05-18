@@ -6,14 +6,19 @@ from typing import List, Optional
 
 import json
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
-from fastapi.responses import HTMLResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+from src.common.logger import get_logger
+from src.common.utils.utils_tts import extract_private_dialogue_tts_text, synthesize_voice
 
 from .engine import LocalChatEngine, LocalModelError
 from .settings import LocalConsoleSettings
 from .storage import ChatMessage, ConversationStore, normalize_session_id
+
+logger = get_logger("local_console.app")
 
 
 class MessagePayload(BaseModel):
@@ -22,6 +27,8 @@ class MessagePayload(BaseModel):
     content: str
     created_at: str
     source: str
+    voice_text: str = ""
+    voice_url: str = ""
 
 
 class ChatRequest(BaseModel):
@@ -68,7 +75,35 @@ def _message_to_payload(message: ChatMessage) -> MessagePayload:
         content=message.content,
         created_at=message.created_at,
         source=message.source,
+        voice_text=message.voice_text,
+        voice_url=message.voice_url,
     )
+
+
+async def _generate_private_dialogue_voice(
+    session_id: str,
+    message_id: str,
+    content: str,
+    store: ConversationStore,
+) -> None:
+    """在后台为私密模式助手回复补充台词语音。"""
+    from src.config.config import global_config
+
+    if not global_config.voice.enable_tts or not global_config.voice.tts_enable_private_mode_dialogue:
+        return
+
+    voice_text = extract_private_dialogue_tts_text(content)
+    if not voice_text:
+        return
+
+    voice_bytes = await synthesize_voice(voice_text)
+    if not voice_bytes:
+        logger.info("私密模式台词语音合成未生成，保留完整文字回复")
+        return
+
+    voice_url = store.save_voice(session_id, message_id, voice_bytes)
+    store.update_message_voice(session_id, message_id, voice_text, voice_url)
+    logger.info("已为私密模式回复生成千惠台词语音")
 
 
 def _extract_token(
@@ -152,8 +187,16 @@ def create_app(settings: Optional[LocalConsoleSettings] = None) -> FastAPI:
             messages=[_message_to_payload(message) for message in messages],
         )
 
+    @app.get("/api/sessions/{session_id}/voices/{message_id}.wav", dependencies=[Depends(require_auth)])
+    async def get_voice(session_id: str, message_id: str) -> Response:
+        safe_session_id = normalize_session_id(session_id)
+        voice_bytes = store.load_voice(safe_session_id, message_id)
+        if voice_bytes is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="语音不存在")
+        return Response(content=voice_bytes, media_type="audio/wav")
+
     @app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(require_auth)])
-    async def chat(request: ChatRequest) -> ChatResponse:
+    async def chat(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatResponse:
         safe_session_id = normalize_session_id(request.session_id)
         user_text = request.message.strip()
         if not user_text:
@@ -167,6 +210,13 @@ def create_app(settings: Optional[LocalConsoleSettings] = None) -> FastAPI:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
         assistant_message = ChatMessage.create("assistant", reply_result.content)
         all_messages = store.append_message(safe_session_id, assistant_message)
+        background_tasks.add_task(
+            _generate_private_dialogue_voice,
+            safe_session_id,
+            assistant_message.message_id,
+            assistant_message.content,
+            store,
+        )
 
         return ChatResponse(
             session_id=safe_session_id,

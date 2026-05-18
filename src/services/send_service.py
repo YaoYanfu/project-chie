@@ -37,6 +37,7 @@ from src.common.data_models.message_component_data_model import (
 )
 from src.common.logger import get_logger
 from src.common.utils.utils_message import MessageUtils
+from src.common.utils.utils_tts import convert_text_message_to_voice
 from src.config.config import global_config
 from src.platform_io import DeliveryBatch, get_platform_io_manager
 from src.platform_io.route_key_factory import RouteKeyFactory
@@ -621,6 +622,9 @@ async def _prepare_message_for_platform_io(
 
     if set_reply or not message.processed_plain_text:
         message.processed_plain_text = _build_processed_plain_text(message)
+    if not await convert_text_message_to_voice(message):
+        raise RuntimeError("语音合成失败，且已配置为不回退文本")
+    message.processed_plain_text = _build_processed_plain_text(message)
     if typing:
         typing_time = calculate_typing_time(
             input_string=message.processed_plain_text or "",

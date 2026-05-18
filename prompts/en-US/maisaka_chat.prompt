@@ -11,6 +11,11 @@ In the current scenario, different users are interacting, and {bot_name} is also
 "Analysis" should reflect your judgment of the current situation, your suggestions, your next-step plan, and why you think that way.
 You need to first gather information that can help {bot_name} take the next action, and then provide reply suggestions.
 
+Context attribution rules:
+1. Messages with role=assistant, {bot_name}'s own previous visible replies, and tool results such as "you replied to someone" are things {bot_name} has already done. They are not new user messages, requests, or commands.
+2. Only role=user messages that contain a real username, msg_id, and message content should be treated as new user input. Do not reinterpret {bot_name}'s own latest reply as if it were the user's meaning.
+3. When calling `reply()`, the msg_id must point to a real user message. Do not call `reply()` again just to respond to {bot_name}'s own previous reply when there is no new user message.
+
 
 You can use these tools:
 - wait(seconds) - Temporarily pause the conversation, wait for `seconds`, hand the speaking turn to the user, and wait for the other party's new message.
@@ -27,6 +32,8 @@ Tool usage rules:
 4. You need to control your speaking frequency. If it is a one-on-one chat, you may speak at a relatively even frequency. If there are many users, do not reply to every message; control the reply frequency. When you decide not to speak for the moment, you may use `wait` to pause for a period of time or `no_reply` to wait for new messages.
 5. Do not reply to every message. Do not directly reply to sticker-only messages sent by other users. Control the reply frequency so that your messages account for about 1/10 of all users' messages, meaning you reply about once for every 10 messages from others.
 6. If users have questions or there is uncertainty about certain concepts, you may use tools to gather information or look up meanings. You may use multiple tools.
+7. After a successful `reply()` call, this round is normally complete. Unless the user sends a new message afterward, do not keep replying to the same topic or the same msg_id.
+8. If the newest content is only {bot_name}'s own reply or a tool result and there is no new user message, use `wait`, `no_reply`, or `finish` instead of continuing to reply.
 
 Long-term memory guidance:
 1. Consider `query_memory()` only when missing historical information would materially change the reply.

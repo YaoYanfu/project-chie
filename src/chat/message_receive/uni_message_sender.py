@@ -1,9 +1,9 @@
 from typing import Any, Optional, Tuple
 
+from rich.traceback import install
+
 import asyncio
 import traceback
-
-from rich.traceback import install
 
 from src.chat.message_receive.message import SessionMessage
 from src.chat.utils.utils import calculate_typing_time, truncate_message
@@ -11,6 +11,7 @@ from src.common.data_models.message_component_data_model import ReplyComponent
 from src.common.database.database import get_db_session
 from src.common.logger import get_logger
 from src.common.message_server.api import get_global_api
+from src.common.utils.utils_tts import convert_text_message_to_voice
 from src.webui.routers.chat.serializers import serialize_message_sequence
 
 install(extra_lines=3)
@@ -317,6 +318,9 @@ class UniversalMessageSender:
             #         message.processed_plain_text = modified_message.plain_text
 
             await message.process()
+            if not await convert_text_message_to_voice(message):
+                logger.warning(f"[{chat_id}] 语音合成失败，且已配置为不回退文本，取消发送")
+                return False
 
             # TODO: fix
             # _event_msg = build_event_message(EventType.POST_SEND, message=message, stream_id=chat_id)

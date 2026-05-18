@@ -1488,6 +1488,10 @@ class MaisakaReasoningEngine:
             if not result.success and tool_call.func_name == "reply":
                 logger.warning(f"{self._runtime.log_prefix} 回复工具未生成可见消息，将继续下一轮循环")
 
+            if result.success and tool_call.func_name == "reply":
+                logger.debug(f"{self._runtime.log_prefix} 回复工具已成功发送可见消息，暂停当前内部循环")
+                return True, tool_result_summaries, tool_monitor_results
+
             if bool(result.metadata.get("pause_execution", False)):
                 return True, tool_result_summaries, tool_monitor_results
 

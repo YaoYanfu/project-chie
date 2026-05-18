@@ -10,10 +10,12 @@ from uuid import uuid4
 import hashlib
 import json
 import re
+import shutil
 
 MessageRole = Literal["user", "assistant", "system"]
 
 _SESSION_ID_PATTERN = re.compile("[^a-zA-Z0-9_.\\-\u3040-\u30ff\u3400-\u9fff]+")
+_MESSAGE_ID_PATTERN = re.compile("[^a-zA-Z0-9_.\\-]+")
 
 
 def _utc_now_text() -> str:
@@ -24,6 +26,12 @@ def normalize_session_id(session_id: str) -> str:
     normalized = _SESSION_ID_PATTERN.sub("_", session_id.strip())
     normalized = normalized.strip("._-")
     return normalized or "default"
+
+
+def normalize_message_id(message_id: str) -> str:
+    normalized = _MESSAGE_ID_PATTERN.sub("_", message_id.strip())
+    normalized = normalized.strip("._-")
+    return normalized or "message"
 
 
 def _build_legacy_message_id(role: str, content: str, created_at: str, source: str) -> str:
@@ -41,6 +49,8 @@ class ChatMessage:
     content: str
     created_at: str
     source: str = "local_console"
+    voice_text: str = ""
+    voice_url: str = ""
 
     @classmethod
     def create(cls, role: MessageRole, content: str, source: str = "local_console") -> "ChatMessage":
@@ -54,6 +64,8 @@ class ChatMessage:
         content = str(payload.get("content", ""))
         created_at = str(payload.get("created_at") or _utc_now_text())
         source = str(payload.get("source") or "local_console")
+        voice_text = str(payload.get("voice_text") or "")
+        voice_url = str(payload.get("voice_url") or "")
         message_id = str(payload.get("message_id") or _build_legacy_message_id(role, content, created_at, source))
         return cls(
             message_id=message_id,
@@ -61,6 +73,8 @@ class ChatMessage:
             content=content,
             created_at=created_at,
             source=source,
+            voice_text=voice_text,
+            voice_url=voice_url,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -72,12 +86,22 @@ class ConversationStore:
 
     def __init__(self, data_dir: Path):
         self._session_dir = data_dir / "sessions"
+        self._voice_dir = data_dir / "voices"
         self._session_dir.mkdir(parents=True, exist_ok=True)
+        self._voice_dir.mkdir(parents=True, exist_ok=True)
         self._lock = RLock()
 
     def _session_path(self, session_id: str) -> Path:
         safe_session_id = normalize_session_id(session_id)
         return self._session_dir / f"{safe_session_id}.json"
+
+    def _voice_session_dir(self, session_id: str) -> Path:
+        safe_session_id = normalize_session_id(session_id)
+        return self._voice_dir / safe_session_id
+
+    def _voice_path(self, session_id: str, message_id: str) -> Path:
+        safe_message_id = normalize_message_id(message_id)
+        return self._voice_session_dir(session_id) / f"{safe_message_id}.wav"
 
     def load_messages(self, session_id: str) -> List[ChatMessage]:
         path = self._session_path(session_id)
@@ -111,6 +135,9 @@ class ConversationStore:
         with self._lock:
             if path.exists():
                 path.unlink()
+            voice_dir = self._voice_session_dir(session_id)
+            if voice_dir.exists():
+                shutil.rmtree(voice_dir)
 
     def delete_messages(self, session_id: str, message_ids: List[str]) -> List[ChatMessage]:
         target_ids: Set[str] = set(message_ids)
@@ -119,6 +146,8 @@ class ConversationStore:
             kept_messages = [message for message in messages if message.message_id not in target_ids]
             if len(kept_messages) != len(messages):
                 self._write_messages(session_id, kept_messages)
+                for message_id in target_ids:
+                    self.delete_voice(session_id, message_id)
             return kept_messages
 
     def list_sessions(self) -> List[str]:
@@ -135,3 +164,44 @@ class ConversationStore:
         temp_path = path.with_suffix(".json.tmp")
         temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         temp_path.replace(path)
+
+    def build_voice_url(self, session_id: str, message_id: str) -> str:
+        safe_session_id = normalize_session_id(session_id)
+        safe_message_id = normalize_message_id(message_id)
+        return f"/api/sessions/{safe_session_id}/voices/{safe_message_id}.wav"
+
+    def save_voice(self, session_id: str, message_id: str, voice_bytes: bytes) -> str:
+        with self._lock:
+            voice_dir = self._voice_session_dir(session_id)
+            voice_dir.mkdir(parents=True, exist_ok=True)
+            self._voice_path(session_id, message_id).write_bytes(voice_bytes)
+        return self.build_voice_url(session_id, message_id)
+
+    def load_voice(self, session_id: str, message_id: str) -> bytes | None:
+        path = self._voice_path(session_id, message_id)
+        with self._lock:
+            if not path.exists() or not path.is_file():
+                return None
+            return path.read_bytes()
+
+    def delete_voice(self, session_id: str, message_id: str) -> None:
+        path = self._voice_path(session_id, message_id)
+        if path.exists():
+            path.unlink()
+
+    def update_message_voice(
+        self,
+        session_id: str,
+        message_id: str,
+        voice_text: str,
+        voice_url: str,
+    ) -> List[ChatMessage]:
+        with self._lock:
+            messages = self.load_messages(session_id)
+            for message in messages:
+                if message.message_id == message_id:
+                    message.voice_text = voice_text
+                    message.voice_url = voice_url
+                    self._write_messages(session_id, messages)
+                    break
+            return messages

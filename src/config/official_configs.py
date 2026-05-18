@@ -2287,7 +2287,7 @@ class ExpressionConfig(ConfigBase):
     """是否开启全局黑话模式，注意，此功能关闭后，已经记录的全局黑话不会改变，需要手动删除"""
 
 class VoiceConfig(ConfigBase):
-    """语音识别配置类"""
+    """语音配置类"""
 
     __ui_label__ = "语音"
     __ui_icon__ = "mic"
@@ -2300,6 +2300,217 @@ class VoiceConfig(ConfigBase):
         },
     )
     """是否启用语音识别，启用后麦麦可以识别语音消息"""
+
+    enable_tts: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "启用语音回复",
+                "en_US": "Enable voice replies",
+                "ja_JP": "音声返信を有効化",
+            },
+            "x-widget": "switch",
+            "x-icon": "volume-2",
+        },
+    )
+    """是否启用语音合成回复，启用后会将文本回复转换为语音消息"""
+
+    tts_provider: str = Field(
+        default="gpt_sovits",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "语音合成服务",
+                "en_US": "TTS provider",
+                "ja_JP": "音声合成サービス",
+            },
+            "x-widget": "select",
+            "x-icon": "audio-waveform",
+            "advanced": True,
+        },
+    )
+    """语音合成服务，目前支持 gpt_sovits"""
+
+    gpt_sovits_api_url: str = Field(
+        default="http://127.0.0.1:9880/tts",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "GPT-SoVITS API 地址",
+                "en_US": "GPT-SoVITS API URL",
+                "ja_JP": "GPT-SoVITS API URL",
+            },
+            "x-widget": "input",
+            "x-icon": "link",
+            "advanced": True,
+        },
+    )
+    """GPT-SoVITS api_v2.py 的 /tts 地址"""
+
+    tts_ref_audio_path: str = Field(
+        default=r"D:\GPT-soVITS\GPT-SoVITS-v2pro-20250604-nvidia50\logs\千惠\5-wav32k\ad04_01_『オープニング』.mp3_0006971200_0007148800.wav",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "参考音频路径",
+                "en_US": "Reference audio path",
+                "ja_JP": "参照音声パス",
+            },
+            "x-widget": "input",
+            "x-icon": "file-audio",
+        },
+    )
+    """GPT-SoVITS 参考音频路径，用于指定千惠的声音"""
+
+    tts_prompt_text: str = Field(
+        default="",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "参考音频文本",
+                "en_US": "Reference prompt text",
+                "ja_JP": "参照音声テキスト",
+            },
+            "x-widget": "textarea",
+            "x-icon": "message-square-text",
+            "advanced": True,
+        },
+    )
+    """参考音频对应文本；不知道文本时可留空"""
+
+    tts_text_lang: str = Field(
+        default="zh",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "回复文本语言",
+                "en_US": "Reply text language",
+                "ja_JP": "返信テキスト言語",
+            },
+            "x-widget": "input",
+            "x-icon": "languages",
+            "advanced": True,
+        },
+    )
+    """待合成回复文本的语言，例如 zh、ja、en"""
+
+    tts_prompt_lang: str = Field(
+        default="ja",
+        json_schema_extra={
+            "label": {
+                "zh_CN": "参考音频语言",
+                "en_US": "Reference audio language",
+                "ja_JP": "参照音声言語",
+            },
+            "x-widget": "input",
+            "x-icon": "languages",
+            "advanced": True,
+        },
+    )
+    """参考音频的语言，例如 zh、ja、en"""
+
+    tts_send_probability: float = Field(
+        default=1.0,
+        ge=0,
+        le=1,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "语音回复概率",
+                "en_US": "Voice reply probability",
+                "ja_JP": "音声返信確率",
+            },
+            "x-widget": "slider",
+            "x-icon": "percent",
+            "step": 0.1,
+        },
+    )
+    """检测到用户要求语音且模型判断适合后，文本回复被转换为语音的概率，1.0 表示总是转换"""
+
+    tts_only_when_requested: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "仅被要求时语音",
+                "en_US": "Voice only on request",
+                "ja_JP": "要求時のみ音声",
+            },
+            "x-widget": "switch",
+            "x-icon": "message-circle-question",
+            "advanced": True,
+        },
+    )
+    """是否仅在用户主动要求语音回复时才进行语音合成，建议开启以保持文字聊天为主"""
+
+    tts_enable_llm_decision: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "语音前模型判断",
+                "en_US": "LLM voice decision",
+                "ja_JP": "音声前モデル判断",
+            },
+            "x-widget": "switch",
+            "x-icon": "brain",
+            "advanced": True,
+        },
+    )
+    """检测到用户要求语音后，是否再让模型判断本次回复是否适合发语音"""
+
+    tts_enable_private_mode_dialogue: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "私密模式台词语音",
+                "en_US": "Private dialogue voice",
+                "ja_JP": "プライベート台詞音声",
+            },
+            "x-widget": "switch",
+            "x-icon": "message-circle-heart",
+        },
+    )
+    """是否在私密模式中为千惠亲口说出的台词补充语音，完整文字回复仍会保留"""
+
+    tts_max_text_length: int = Field(
+        default=220,
+        ge=1,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "最大合成字数",
+                "en_US": "Max TTS characters",
+                "ja_JP": "最大合成文字数",
+            },
+            "x-widget": "input",
+            "x-icon": "text-cursor-input",
+            "advanced": True,
+        },
+    )
+    """单条语音合成允许的最大文本长度，超过后会截断"""
+
+    tts_timeout: float = Field(
+        default=120.0,
+        ge=1,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "语音合成超时",
+                "en_US": "TTS timeout",
+                "ja_JP": "音声合成タイムアウト",
+            },
+            "x-widget": "input",
+            "x-icon": "timer",
+            "advanced": True,
+        },
+    )
+    """语音合成请求超时时间，单位为秒"""
+
+    tts_fallback_to_text: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {
+                "zh_CN": "失败时回退文本",
+                "en_US": "Fallback to text",
+                "ja_JP": "失敗時にテキストへ戻す",
+            },
+            "x-widget": "switch",
+            "x-icon": "message-square",
+            "advanced": True,
+        },
+    )
+    """语音合成失败时是否保留原文本回复"""
 
 
 class EmojiConfig(ConfigBase):

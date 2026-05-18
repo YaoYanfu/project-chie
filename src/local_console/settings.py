@@ -59,11 +59,15 @@ def _build_default_system_prompt() -> str:
             personality,
             reply_style,
             "你正在通过本地控制台和用户私聊，请自然、直接、连贯地回复。",
+            "如果回复中包含环境、动作或神态描写，请只把千惠亲口说出的话放在引号中，不要把旁白放进引号。",
         ]
         return "\n".join(part for part in prompt_parts if part)
     except Exception as exc:
         logger.warning(f"读取主配置构造本地控制台提示词失败，使用默认提示词: {exc}")
-        return "你的名字是千惠。你正在通过本地控制台和用户私聊，请自然、直接、连贯地回复。"
+        return (
+            "你的名字是千惠。你正在通过本地控制台和用户私聊，请自然、直接、连贯地回复。"
+            "如果回复中包含环境、动作或神态描写，请只把千惠亲口说出的话放在引号中，不要把旁白放进引号。"
+        )
 
 
 def _default_data_dir() -> Path:

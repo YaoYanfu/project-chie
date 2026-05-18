@@ -240,6 +240,54 @@ def test_finish_tool_removes_empty_assistant_history_message() -> None:
     assert runtime._chat_history == []
 
 
+@pytest.mark.asyncio
+async def test_successful_reply_tool_pauses_internal_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeToolRegistry:
+        async def list_tools(self, availability_context: object) -> list[object]:
+            del availability_context
+            return []
+
+        async def invoke(self, invocation: ToolInvocation, execution_context: object) -> ToolExecutionResult:
+            del execution_context
+            return ToolExecutionResult(
+                tool_name=invocation.tool_name,
+                success=True,
+                content="回复已生成并发送。",
+            )
+
+    runtime = SimpleNamespace(
+        _tool_registry=FakeToolRegistry(),
+        _chat_history=[],
+        _update_stage_status=lambda *args, **kwargs: None,
+        chat_stream=SimpleNamespace(
+            is_group_session=False,
+            group_id="",
+            user_id="user-1",
+            platform="qq",
+        ),
+        is_action_tool_currently_available=lambda tool_name: tool_name == "reply",
+        log_prefix="[test]",
+        session_id="test-session",
+    )
+    engine = MaisakaReasoningEngine(runtime)  # type: ignore[arg-type]
+
+    async def _skip_store_tool_record(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+
+    monkeypatch.setattr(engine, "_store_tool_execution_record", _skip_store_tool_record)
+
+    should_pause, tool_summaries, tool_monitor_results = await engine._handle_tool_calls(
+        [ToolCall(call_id="reply-call", func_name="reply", args={"msg_id": "m1"})],
+        "应该回复用户这一条消息。",
+        object(),  # type: ignore[arg-type]
+    )
+
+    assert should_pause is True
+    assert tool_summaries == ["- reply [成功]: 回复已生成并发送。"]
+    assert tool_monitor_results[0]["tool_name"] == "reply"
+    assert runtime._chat_history[-1].tool_name == "reply"
+
+
 def test_timing_gate_head_trim_keeps_short_history() -> None:
     messages = [
         AssistantMessage(content="第一条消息", timestamp=datetime.now()),
