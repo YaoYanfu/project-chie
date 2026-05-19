@@ -110,7 +110,7 @@ class RuntimeDataCapabilityMixin:
                 result = await database_service.db_count(model_class=model_class, filters=args.get("filters"))
             else:
                 return {"success": False, "error": f"不支持的 query_type: {query_type}"}
-            return {"success": True, "result": result}
+            return result
         except Exception as e:
             logger.error(f"[cap.database.query] 执行失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
@@ -136,7 +136,7 @@ class RuntimeDataCapabilityMixin:
                 key_field=args.get("key_field"),
                 key_value=args.get("key_value"),
             )
-            return {"success": True, "result": result}
+            return result
         except Exception as e:
             logger.error(f"[cap.database.save] 执行失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
@@ -162,7 +162,7 @@ class RuntimeDataCapabilityMixin:
                 order_by=args.get("order_by"),
                 single_result=args.get("single_result", False),
             )
-            return {"success": True, "result": result}
+            return result
         except Exception as e:
             logger.error(f"[cap.database.get] 执行失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
@@ -185,7 +185,7 @@ class RuntimeDataCapabilityMixin:
                 return {"success": False, "error": f"未找到数据模型: {model_name}"}
 
             result = await database_service.db_delete(model_class=model_class, filters=filters)
-            return {"success": True, "result": result}
+            return result
         except Exception as e:
             logger.error(f"[cap.database.delete] 执行失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
@@ -205,7 +205,7 @@ class RuntimeDataCapabilityMixin:
                 return {"success": False, "error": f"未找到数据模型: {model_name}"}
 
             result = await database_service.db_count(model_class=model_class, filters=args.get("filters"))
-            return {"success": True, "count": result}
+            return result
         except Exception as e:
             logger.error(f"[cap.database.count] 执行失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
@@ -222,11 +222,27 @@ class RuntimeDataCapabilityMixin:
     def _serialize_stream(stream: BotChatSession) -> Dict[str, Any]:
         return {
             "session_id": stream.session_id,
+            "stream_id": stream.session_id,
             "platform": stream.platform,
             "user_id": stream.user_id,
+            "user_nickname": stream.user_nickname,
+            "user_cardname": stream.user_cardname,
             "group_id": stream.group_id,
+            "group_name": stream.group_name,
+            "account_id": stream.account_id,
+            "scope": stream.scope,
             "is_group_session": stream.is_group_session,
+            "chat_type": "group" if stream.is_group_session else "private",
         }
+
+    @staticmethod
+    def _normalize_chat_type(args: Dict[str, Any]) -> str:
+        raw_chat_type = str(args.get("chat_type") or args.get("type") or "").strip().lower()
+        if raw_chat_type in {"group", "private"}:
+            return raw_chat_type
+        if str(args.get("group_id") or "").strip():
+            return "group"
+        return "private"
 
     async def _cap_chat_get_all_streams(self, plugin_id: str, capability: str, args: Dict[str, Any]) -> Any:
         platform: str = args.get("platform", "qq")
@@ -253,6 +269,49 @@ class RuntimeDataCapabilityMixin:
             return {"success": True, "streams": [self._serialize_stream(item) for item in streams]}
         except Exception as e:
             logger.error(f"[cap.chat.get_private_streams] 执行失败: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+
+    async def _cap_chat_open_session(self, plugin_id: str, capability: str, args: Dict[str, Any]) -> Any:
+        """按平台目标打开或创建一个聊天流。"""
+
+        del plugin_id, capability
+
+        platform = str(args.get("platform") or "qq").strip()
+        chat_type = self._normalize_chat_type(args)
+        user_id = str(args.get("user_id") or "").strip()
+        group_id = str(args.get("group_id") or "").strip()
+        account_id = str(args.get("account_id") or "").strip() or None
+        scope = str(args.get("scope") or "").strip() or None
+
+        if not platform:
+            return {"success": False, "error": "缺少必要参数 platform"}
+        if chat_type == "group" and not group_id:
+            return {"success": False, "error": "群聊会话缺少必要参数 group_id"}
+        if chat_type == "private" and not user_id:
+            return {"success": False, "error": "私聊会话缺少必要参数 user_id"}
+
+        try:
+            existing_session_ids = chat_manager.resolve_session_ids_by_target(
+                platform=platform,
+                target_id=group_id if chat_type == "group" else user_id,
+                chat_type=chat_type,
+            )
+            session = await chat_manager.get_or_create_session(
+                platform=platform,
+                user_id=user_id or "",
+                group_id=group_id or None,
+                account_id=account_id,
+                scope=scope,
+            )
+            serialized_stream = self._serialize_stream(session)
+            return {
+                "success": True,
+                "created": session.session_id not in existing_session_ids,
+                "stream": serialized_stream,
+                **serialized_stream,
+            }
+        except Exception as e:
+            logger.error(f"[cap.chat.open_session] 执行失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     async def _cap_chat_get_stream_by_group_id(self, plugin_id: str, capability: str, args: Dict[str, Any]) -> Any:
@@ -319,11 +378,12 @@ class RuntimeDataCapabilityMixin:
             return {"success": False, "error": "缺少必要参数 message_id"}
 
         try:
+            chat_id = str(args.get("chat_id") or args.get("stream_id") or "").strip()
+            include_binary_data = bool(args.get("include_binary_data", False))
             message = message_service.get_message_by_id(
                 message_id=message_id,
-                chat_id=str(args.get("chat_id") or args.get("stream_id") or "").strip() or None,
+                chat_id=chat_id or None,
             )
-            include_binary_data = bool(args.get("include_binary_data", False))
             serialized_message = (
                 self._serialize_messages([message], include_binary_data=include_binary_data)[0]
                 if message is not None

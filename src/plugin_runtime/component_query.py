@@ -11,15 +11,16 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Optional, Tupl
 
 from src.common.logger import get_logger
 from src.core.tooling import (
+    ToolContentItem,
     ToolAvailabilityContext,
     ToolExecutionContext,
     ToolExecutionResult,
     ToolInvocation,
     ToolSpec,
-    build_tool_detailed_description,
 )
 from src.core.types import ActionActivationType, ActionInfo, CommandInfo, ComponentInfo, ComponentType, ToolInfo
 from src.llm_models.payload_content.tool_option import normalize_tool_option
+from src.plugin_runtime.host.message_utils import PluginMessageUtils
 
 if TYPE_CHECKING:
     from src.plugin_runtime.host.component_registry import ActionEntry, CommandEntry, ComponentEntry, ToolEntry
@@ -258,11 +259,22 @@ class ComponentQueryService:
 
         return ToolInfo(
             name=entry.name,
-            description=entry.brief_description or entry.description,
+            description=entry.description,
             enabled=bool(entry.enabled),
             plugin_name=entry.plugin_id,
             parameters_schema=ComponentQueryService._build_tool_parameters_schema(entry),
         )
+
+    @staticmethod
+    def _get_tool_visibility(entry: "ToolEntry") -> str:
+        """读取插件工具面向 LLM 的可见性声明。"""
+
+        raw_visibility = str(entry.metadata.get("visibility") or "").strip().lower()
+        if raw_visibility in {"visible", "deferred", "hidden"}:
+            return raw_visibility
+        if bool(entry.metadata.get("core_tool", False)):
+            return "visible"
+        return "deferred"
 
     @staticmethod
     def _build_tool_spec(entry: "ToolEntry") -> ToolSpec:
@@ -276,17 +288,19 @@ class ComponentQueryService:
         """
 
         parameters_schema = ComponentQueryService._build_tool_parameters_schema(entry)
+        visibility = ComponentQueryService._get_tool_visibility(entry)
         return ToolSpec(
             name=entry.name,
-            brief_description=entry.brief_description or entry.description or f"工具 {entry.name}",
-            detailed_description=entry.detailed_description or build_tool_detailed_description(parameters_schema),
+            description=entry.description or f"工具 {entry.name}",
             parameters_schema=parameters_schema,
             provider_name=entry.plugin_id,
             provider_type="plugin",
+            enabled=visibility != "hidden",
             metadata={
                 "plugin_id": entry.plugin_id,
                 "invoke_method": entry.invoke_method,
                 "legacy_component_type": entry.legacy_component_type,
+                "visibility": visibility,
             },
         )
 
@@ -305,6 +319,8 @@ class ComponentQueryService:
         self,
         component_type: ComponentType,
         name: str,
+        *,
+        context: Optional[ToolAvailabilityContext] = None,
     ) -> Optional[tuple["PluginSupervisor", "ComponentEntry"]]:
         """按组件短名解析唯一条目。
 
@@ -318,7 +334,7 @@ class ComponentQueryService:
 
         matched_entries = [
             (supervisor, entry)
-            for supervisor, entry in self._iter_component_entries(component_type)
+            for supervisor, entry in self._iter_component_entries(component_type, context=context)
             if entry.name == name
         ]
         if not matched_entries:
@@ -484,9 +500,14 @@ class ComponentQueryService:
                 "text": str(getattr(message, "processed_plain_text", "") or ""),
                 "stream_id": str(getattr(message, "session_id", "") or ""),
                 "group_id": str(getattr(group_info, "group_id", "") or ""),
+                "platform": str(getattr(message, "platform", "") or ""),
                 "user_id": str(getattr(user_info, "user_id", "") or ""),
                 "matched_groups": matched_groups if isinstance(matched_groups, dict) else {},
             }
+            if message is not None:
+                invoke_args["message"] = dict(
+                    PluginMessageUtils._session_message_to_dict(message, include_binary_data=False)
+                )
             if isinstance(plugin_config, dict):
                 invoke_args["plugin_config"] = plugin_config
 
@@ -698,18 +719,45 @@ class ComponentQueryService:
             payload["stream_id"] = stream_id
             payload["chat_id"] = stream_id
 
+        group_id = str(context.group_id or "").strip()
+        user_id = str(context.user_id or "").strip()
+        platform = str(context.platform or "").strip()
+        if group_id:
+            payload["group_id"] = group_id
+        if user_id:
+            payload["user_id"] = user_id
+        if platform:
+            payload["platform"] = platform
+
         anchor_message = context.metadata.get("anchor_message")
         message_info = getattr(anchor_message, "message_info", None)
         group_info = getattr(message_info, "group_info", None)
         user_info = getattr(message_info, "user_info", None)
 
-        group_id = str(getattr(group_info, "group_id", "") or "").strip()
-        user_id = str(getattr(user_info, "user_id", "") or "").strip()
-        if group_id:
-            payload["group_id"] = group_id
-        if user_id:
-            payload["user_id"] = user_id
+        anchor_group_id = str(getattr(group_info, "group_id", "") or "").strip()
+        anchor_user_id = str(getattr(user_info, "user_id", "") or "").strip()
+        if anchor_group_id:
+            payload["group_id"] = anchor_group_id
+        if anchor_user_id:
+            payload["user_id"] = anchor_user_id
         return payload
+
+    @staticmethod
+    def _build_tool_availability_context(
+        context: Optional[ToolExecutionContext],
+    ) -> Optional[ToolAvailabilityContext]:
+        """从执行上下文还原工具可用性判断所需字段。"""
+
+        if context is None:
+            return None
+        return ToolAvailabilityContext(
+            session_id=context.session_id,
+            stream_id=context.stream_id,
+            is_group_chat=context.is_group_chat,
+            group_id=context.group_id,
+            user_id=context.user_id,
+            platform=context.platform,
+        )
 
     @staticmethod
     def _build_tool_invocation_payload(
@@ -770,6 +818,7 @@ class ComponentQueryService:
         if isinstance(result, dict):
             success = bool(result.get("success", True))
             content = str(result.get("content", result.get("message", "")) or "").strip()
+            content_items = ComponentQueryService._parse_tool_content_items(result.get("content_items"))
             error_message = ""
             if not success:
                 error_message = str(result.get("error", result.get("message", "插件工具执行失败")) or "").strip()
@@ -779,6 +828,7 @@ class ComponentQueryService:
                 content=content,
                 error_message=error_message,
                 structured_content=result,
+                content_items=content_items,
                 metadata={"plugin_id": entry.plugin_id},
             )
 
@@ -804,6 +854,37 @@ class ComponentQueryService:
             metadata={"plugin_id": entry.plugin_id},
         )
 
+    @staticmethod
+    def _parse_tool_content_items(raw_items: Any) -> list[ToolContentItem]:
+        """从插件工具返回值中解析结构化内容项。"""
+
+        if not isinstance(raw_items, list):
+            return []
+
+        content_items: list[ToolContentItem] = []
+        for raw_item in raw_items:
+            if not isinstance(raw_item, dict):
+                continue
+
+            raw_content_type = str(raw_item.get("content_type") or raw_item.get("type") or "unknown").strip()
+            if raw_content_type not in {"text", "image", "audio", "resource_link", "resource", "binary", "unknown"}:
+                raw_content_type = "unknown"
+
+            metadata = raw_item.get("metadata")
+            content_items.append(
+                ToolContentItem(
+                    content_type=cast(Any, raw_content_type),
+                    text=str(raw_item.get("text") or ""),
+                    data=str(raw_item.get("data") or raw_item.get("base64") or ""),
+                    mime_type=str(raw_item.get("mime_type") or ""),
+                    uri=str(raw_item.get("uri") or ""),
+                    name=str(raw_item.get("name") or ""),
+                    description=str(raw_item.get("description") or ""),
+                    metadata=metadata if isinstance(metadata, dict) else {},
+                )
+            )
+        return content_items
+
     async def invoke_tool_as_tool(
         self,
         invocation: ToolInvocation,
@@ -819,7 +900,12 @@ class ComponentQueryService:
             ToolExecutionResult: 统一工具执行结果。
         """
 
-        matched_entry = self._get_unique_component_entry(ComponentType.TOOL, invocation.tool_name)
+        availability_context = self._build_tool_availability_context(context)
+        matched_entry = self._get_unique_component_entry(
+            ComponentType.TOOL,
+            invocation.tool_name,
+            context=availability_context,
+        )
         if matched_entry is None:
             return ToolExecutionResult(
                 tool_name=invocation.tool_name,

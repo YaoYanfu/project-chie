@@ -24,6 +24,8 @@ export interface ChatConfig {
   talk_value: number
   mentioned_bot_reply: boolean
   max_context_size: number
+  enable_context_optimization: boolean
+  enable_independent_timing_gate: boolean
   planner_smooth: number
   think_mode: 'classic' | 'deep' | 'dynamic'
   plan_reply_log_max_per_chat: number
@@ -39,36 +41,46 @@ export interface ChatConfig {
 export interface TargetItem {
   platform: string
   item_id: string
-  rule_type: 'group' | 'private'
+  type?: 'group' | 'private'
+  rule_type?: 'group' | 'private'
 }
 
 export interface LearningItem {
   platform: string
   item_id: string
-  rule_type: 'group' | 'private'
-  use_expression: boolean
-  enable_learning: boolean
-  enable_jargon_learning: boolean
+  type?: 'group' | 'private'
+  use?: boolean
+  learn?: boolean
+  rule_type?: 'group' | 'private'
+  use_expression?: boolean
+  enable_learning?: boolean
+  enable_jargon_learning?: boolean
 }
 
-export interface ExpressionGroup {
+export interface ChatStreamGroup {
+  targets?: TargetItem[]
   expression_groups: TargetItem[]
 }
 
+export type ExpressionGroup = ChatStreamGroup
+
 export interface ExpressionConfig {
   learning_list: LearningItem[]
-  expression_groups: ExpressionGroup[]
+  expression_groups: ChatStreamGroup[]
   expression_manual_reflect: boolean
   manual_reflect_operator_id: TargetItem | null
   allow_reflect: TargetItem[]
-  expression_self_reflect: boolean
-  expression_auto_check_interval: number
-  expression_auto_check_count: number
-  expression_auto_check_custom_criteria: string[]
   expression_checked_only: boolean
-  all_global_jargon: boolean
-  enable_jargon_explanation: boolean
-  jargon_mode: string
+  expression_self_reflect: boolean
+  max_expression_learner: number
+  all_global_jargon?: boolean
+  enable_jargon_explanation?: boolean
+  jargon_mode?: string
+}
+
+export interface JargonConfig {
+  learning_list: LearningItem[]
+  jargon_groups: ChatStreamGroup[]
 }
 
 export interface EmojiConfig {
@@ -210,6 +222,7 @@ export interface AllBotConfigs {
   personalityConfig: PersonalityConfig | null
   chatConfig: ChatConfig | null
   expressionConfig: ExpressionConfig | null
+  jargonConfig: JargonConfig | null
   emojiConfig: EmojiConfig | null
   voiceConfig: VoiceConfig | null
   messageReceiveConfig: MessageReceiveConfig | null
@@ -232,6 +245,7 @@ export type ConfigSectionName =
   | 'personality'
   | 'chat'
   | 'expression'
+  | 'jargon'
   | 'emoji'
   | 'memory'
   | 'visual'

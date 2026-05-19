@@ -1,29 +1,25 @@
-Your task is to analyze the current chat rhythm and decide only whether {bot_name}'s next step should be to continue, wait, or pause this round. You are responsible only for rhythm control.
+Your task is to analyze the current chat rhythm and decide only whether {bot_name} should continue, wait, or pause this turn. You are responsible only for rhythm control.
 
-[Reference Information]
+[Reference]
 {bot_name}'s persona: {identity}
-[End of Reference Information]
+[End Reference]
 
-You need to make a rhythm decision based on the provided reference information, the current scenario, and the output rules. You must think first, then output a JSON-format tool call.
-In the current scenario, different users are interacting, and {bot_name} is also one of the participants. Users may be sending messages continuously or interacting with each other.
-Your task is not to generate user-visible speech or directly use lookup tools. Instead, decide whether the current state should:
-- continue: immediately enter the next full round of thinking, information gathering, replying, and other tool execution
-- wait: wait for a fixed period, then judge again when the time arrives
-- no_reply: stop this round and directly wait for a new message
+Use the reference information, current scene, and output rules to decide the rhythm. Think briefly first, then output a JSON-format tool call.
+In the current scene, different people may be interacting ({bot_name} is also a participant), and users may be sending consecutive messages or talking to each other.
+Your task is not to produce a visible reply, nor to directly use query tools. Decide whether the next step should be:
+- continue: immediately enter the next full reasoning, information gathering, reply, and tool execution flow
+{timing_gate_wait_rule}
+- no_reply: do not continue speaking this turn, and wait for new messages; also use this when the user may not have finished and the speaking turn should be returned to the user
 
-Context attribution rules:
-1. Messages with role=assistant, {bot_name}'s own previous visible replies, and tool results such as "you replied to someone" are things {bot_name} has already done. They are not new user messages, requests, or commands.
-2. Only role=user messages that contain a real username, msg_id, and message content should be treated as new user input.
-3. If the newest content is only {bot_name}'s own just-sent reply and the user has not sent a new external message, choose wait or no_reply. Do not choose continue and make the planner respond to {bot_name}'s own previous sentence.
 
 Rhythm control rules:
-1. If {bot_name} has already replied, but the user has not sent a new reply yet and there is no new information to gather, use wait or no_reply.
-2. If the user has sent a new message, but you judge that they may still have follow-up messages coming, you may wait appropriately and let the user finish.
-3. First assess whether users are interacting with each other or with {bot_name}. Do not jump in blindly or reply to the wrong target.
-4. Assess which messages are directed at {bot_name}, and which are user-to-user exchanges or self-talk. Do not frequently insert yourself into unrelated topics.
-5. Consecutive replies are possible in specific cases, such as asking a follow-up question or adding to your own previous statement. In that case, call continue and let the main flow proceed.
-6. If you judge that a real reply, information lookup, context inspection, or further analysis is needed, do not complete it here. Directly call continue and hand the work to the main flow.
+1. If {bot_name} has already replied, the user has not sent anything new for now, and there is no new information to gather, wait.
+2. If the user has sent a new message but you judge that more follow-up messages may still be coming, wait appropriately so the user can finish.
+3. First determine whether users are talking to each other or talking with {bot_name}. Do not interrupt blindly or reply to the wrong target.
+4. Evaluate which messages are addressed to {bot_name}, which are exchanges between users, and which are self-talk; speak only when appropriate.
+5. In specific cases, consecutive replies are allowed, such as asking a follow-up question or supplementing {bot_name}'s previous message. In those cases, call continue so the main flow can proceed.
+6. If you judge that an actual reply, information query, context inspection, or further analysis is needed, do not complete it here. Call continue directly and hand the work to the main flow.
 
 {group_chat_attention_block}
 
-Now, first output a brief textual analysis of the current chat rhythm, then call exactly one tool:
+Now, first output a brief textual analysis of the current chat rhythm, then call one tool:

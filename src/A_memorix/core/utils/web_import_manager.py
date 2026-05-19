@@ -6,6 +6,11 @@ Web Import Task Manager
 
 from __future__ import annotations
 
+from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import asyncio
 import hashlib
 import json
@@ -15,24 +20,24 @@ import sys
 import time
 import traceback
 import uuid
-from collections import deque
-from dataclasses import dataclass, field
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.common.logger import get_logger
 from src.services import llm_service as llm_api
 
 from ...paths import default_data_dir, repo_root, resolve_repo_path, scripts_root
 from ..storage import (
+    KnowledgeType,
+    MetadataStore,
     parse_import_strategy,
     resolve_stored_knowledge_type,
     select_import_strategy,
-    KnowledgeType,
-    MetadataStore,
 )
+from ..storage.knowledge_types import ImportStrategy
 from ..storage.type_detection import looks_like_quote_text
+from ..strategies.base import KnowledgeType as StrategyKnowledgeType, ProcessedChunk
+from ..strategies.factual import FactualStrategy
+from ..strategies.narrative import NarrativeStrategy
+from ..strategies.quote import QuoteStrategy
 from ..utils.import_payloads import (
     ImportPayloadValidationError,
     is_probable_hash_token,
@@ -40,13 +45,15 @@ from ..utils.import_payloads import (
     normalize_paragraph_import_item,
     normalize_relation_import_item,
 )
+from ..utils.model_routing import (
+    ResolvedLLMModel,
+    generate_with_resolved_model,
+    get_text_generation_model_tasks,
+    pick_text_generation_task,
+    resolve_text_generation_model_selector,
+)
 from ..utils.runtime_self_check import ensure_runtime_self_check
 from ..utils.time_parser import normalize_time_meta
-from ..storage.knowledge_types import ImportStrategy
-from ..strategies.base import ProcessedChunk, KnowledgeType as StrategyKnowledgeType
-from ..strategies.narrative import NarrativeStrategy
-from ..strategies.factual import FactualStrategy
-from ..strategies.quote import QuoteStrategy
 
 logger = get_logger("A_Memorix.WebImportManager")
 
@@ -141,6 +148,44 @@ def _coerce_list(value: Any) -> List[str]:
     return out
 
 
+def _coerce_import_data_dict(value: Any, *, context: str) -> Dict[str, Any]:
+    """确保 LLM 抽取结果是对象，避免写入阶段出现部分提交。"""
+
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    raise ValueError(f"{context} 必须返回 JSON 对象，当前类型: {type(value).__name__}")
+
+
+def _normalize_import_relation_list(value: Any) -> List[Dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    relations: List[Dict[str, str]] = []
+    for item in value:
+        relation = normalize_relation_import_item(item)
+        if relation is not None:
+            relations.append(relation)
+    return relations
+
+
+def _normalize_import_entity_list(value: Any) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    entities: List[str] = []
+    seen = set()
+    for item in value:
+        name = normalize_entity_import_item(item)
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        entities.append(name)
+    return entities
+
+
 def _parse_optional_positive_int(value: Any, field_name: str) -> Optional[int]:
     if value is None:
         return None
@@ -150,9 +195,24 @@ def _parse_optional_positive_int(value: Any, field_name: str) -> Optional[int]:
     try:
         parsed = int(text)
     except Exception:
-        raise ValueError(f"{field_name} 必须为整数")
+        raise ValueError(f"{field_name} 必须为整数") from None
     if parsed <= 0:
         raise ValueError(f"{field_name} 必须 > 0")
+    return parsed
+
+
+def _parse_optional_non_negative_int(value: Any, field_name: str) -> Optional[int]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return None
+    try:
+        parsed = int(text)
+    except Exception:
+        raise ValueError(f"{field_name} 必须为整数") from None
+    if parsed < 0:
+        raise ValueError(f"{field_name} 必须 >= 0")
     return parsed
 
 
@@ -377,8 +437,7 @@ class ImportTaskManager:
         return scripts_root() / "migrate_maibot_memory.py"
 
     def _default_maibot_source_db(self) -> Path:
-        # A_memorix/core/utils -> workspace root
-        return self._resolve_repo_root() / "MaiBot" / "data" / "MaiBot.db"
+        return self._resolve_repo_root() / "data" / "MaiBot.db"
 
     def _cfg(self, key: str, default: Any) -> Any:
         return self.plugin.get_config(key, default)
@@ -558,7 +617,7 @@ class ImportTaskManager:
         try:
             candidate.relative_to(root)
         except ValueError:
-            raise ValueError("路径越界：relative_path 超出白名单目录")
+            raise ValueError("路径越界：relative_path 超出白名单目录") from None
         if must_exist and not candidate.exists():
             raise ValueError(f"路径不存在: {candidate}")
         return candidate
@@ -902,7 +961,9 @@ class ImportTaskManager:
             _parse_optional_positive_int(payload.get("entity_embed_batch_size"), "entity_embed_batch_size") or 512
         )
         embed_workers = _parse_optional_positive_int(payload.get("embed_workers"), "embed_workers")
-        max_errors = _parse_optional_positive_int(payload.get("max_errors"), "max_errors") or 500
+        max_errors = _parse_optional_non_negative_int(payload.get("max_errors"), "max_errors")
+        if max_errors is None:
+            max_errors = 0
         log_every = _parse_optional_positive_int(payload.get("log_every"), "log_every") or 5000
         preview_limit = _parse_optional_positive_int(payload.get("preview_limit"), "preview_limit") or 20
 
@@ -2002,7 +2063,7 @@ class ImportTaskManager:
         if total <= 0:
             total = max(1, scanned)
 
-        progress = max(0.0, min(1.0, float(scanned) / float(total))) if total > 0 else 0.0
+        chunk_progress = max(0.0, min(1.0, float(scanned) / float(total))) if total > 0 else 0.0
         preview = f"scanned={scanned}/{total}, migrated={migrated}, bad={bad}, last_id={last_id}"
 
         async with self._lock:
@@ -2017,14 +2078,14 @@ class ImportTaskManager:
                 if c.status not in {"completed", "failed", "cancelled"}:
                     c.status = "writing"
                     c.step = "migrating"
-                c.progress = progress
+                c.progress = chunk_progress
                 c.content_preview = preview
                 c.updated_at = _now()
             f.total_chunks = total
             f.done_chunks = done
             f.failed_chunks = bad
             f.cancelled_chunks = 0
-            f.progress = progress
+            self._recompute_file_progress(f)
             if f.status not in {"failed", "cancelled"}:
                 f.status = "writing"
                 f.current_step = "migrating"
@@ -2171,7 +2232,7 @@ class ImportTaskManager:
                 f.done_chunks = max(0, min(f.done_chunks, f.total_chunks))
                 f.failed_chunks = max(0, min(f.failed_chunks, f.total_chunks))
                 f.cancelled_chunks = 0
-                f.progress = 1.0
+                self._recompute_file_progress(f)
                 f.status = "completed"
                 f.current_step = "completed"
                 if bad_rows > 0 and not f.error:
@@ -2654,9 +2715,9 @@ class ImportTaskManager:
         await self._register_chunks(task_id, file_record.file_id, selected_chunks)
 
         await self._set_file_state(task_id, file_record.file_id, "extracting", "extracting")
-        model_cfg = None
+        resolved_model = None
         if task.params["llm_enabled"]:
-            model_cfg = await self._select_model()
+            resolved_model = await self._select_model()
 
         jobs = []
         for chunk in selected_chunks:
@@ -2668,7 +2729,7 @@ class ImportTaskManager:
                         chunk=chunk,
                         strategy=strategy,
                         llm_enabled=task.params["llm_enabled"],
-                        model_cfg=model_cfg,
+                        resolved_model=resolved_model,
                         chunk_semaphore=chunk_semaphore,
                         chat_log=bool(task.params.get("chat_log")),
                         chat_reference_time=str(task.params.get("chat_reference_time") or "").strip() or None,
@@ -2714,7 +2775,7 @@ class ImportTaskManager:
         chunk: ProcessedChunk,
         strategy: Any,
         llm_enabled: bool,
-        model_cfg: Any,
+        resolved_model: Optional[ResolvedLLMModel],
         chunk_semaphore: asyncio.Semaphore,
         chat_log: bool = False,
         chat_reference_time: Optional[str] = None,
@@ -2737,9 +2798,11 @@ class ImportTaskManager:
                 current_strategy = rescue_strategy
             try:
                 if llm_enabled and chunk.flags.requires_llm:
+                    if resolved_model is None:
+                        raise RuntimeError("没有可用 LLM 模型")
                     processed = await current_strategy.extract(
                         chunk,
-                        lambda prompt: self._llm_call(prompt, model_cfg),
+                        lambda prompt: self._llm_call(prompt, resolved_model),
                     )
                 elif chunk.type == StrategyKnowledgeType.QUOTE:
                     processed = await current_strategy.extract(chunk)
@@ -2754,10 +2817,10 @@ class ImportTaskManager:
             await self._set_chunk_state(task_id, file_record.file_id, chunk_id, "writing", "writing", 0.7)
             try:
                 time_meta = None
-                if chat_log and llm_enabled and model_cfg is not None:
+                if chat_log and llm_enabled and resolved_model is not None:
                     time_meta = await self._extract_chat_time_meta_with_llm(
                         processed.chunk.text,
-                        model_cfg,
+                        resolved_model,
                         reference_time=chat_reference_time,
                     )
                 async with self._storage_lock:
@@ -2780,7 +2843,7 @@ class ImportTaskManager:
         try:
             data = json.loads(content)
         except Exception as e:
-            raise RuntimeError(f"JSON 解析失败: {e}")
+            raise RuntimeError(f"JSON 解析失败: {e}") from e
 
         schema = self._detect_json_schema(data)
         async with self._lock:
@@ -3126,8 +3189,9 @@ class ImportTaskManager:
     ) -> None:
         content = str(processed.chunk.text or "")
         if is_probable_hash_token(content):
-            logger.warning("跳过疑似哈希段落写入: source=%s preview=%s", self._source_label(file_record), content[:32])
+            logger.warning(f"跳过疑似哈希段落写入: source={self._source_label(file_record)} preview={content[:32]}")
             return
+        data = _coerce_import_data_dict(processed.data, context="分块抽取结果")
         para_hash = self.plugin.metadata_store.add_paragraph(
             content=content,
             source=self._source_label(file_record),
@@ -3145,31 +3209,25 @@ class ImportTaskManager:
                 f"web_import text paragraph 向量写入降级: hash={para_hash[:8]} detail={vector_result.get('detail')}"
             )
 
-        data = processed.data or {}
         entities: List[str] = []
         relations: List[Tuple[str, str, str]] = []
 
-        for triple in data.get("triples", []):
-            s = str(triple.get("subject", "")).strip()
-            p = str(triple.get("predicate", "")).strip()
-            o = str(triple.get("object", "")).strip()
-            if s and p and o:
-                relations.append((s, p, o))
-                entities.extend([s, o])
+        for triple in _normalize_import_relation_list(data.get("triples")):
+            s = triple["subject"]
+            p = triple["predicate"]
+            o = triple["object"]
+            relations.append((s, p, o))
+            entities.extend([s, o])
 
-        for rel in data.get("relations", []):
-            s = str(rel.get("subject", "")).strip()
-            p = str(rel.get("predicate", "")).strip()
-            o = str(rel.get("object", "")).strip()
-            if s and p and o:
-                relations.append((s, p, o))
-                entities.extend([s, o])
+        for rel in _normalize_import_relation_list(data.get("relations")):
+            s = rel["subject"]
+            p = rel["predicate"]
+            o = rel["object"]
+            relations.append((s, p, o))
+            entities.extend([s, o])
 
         for k in ("entities", "events", "verbatim_entities"):
-            for e in data.get(k, []):
-                name = str(e or "").strip()
-                if name and not is_probable_hash_token(name):
-                    entities.append(name)
+            entities.extend(_normalize_import_entity_list(data.get(k)))
 
         uniq_entities = list({x.strip().lower(): x.strip() for x in entities if str(x).strip()}.values())
         for name in uniq_entities:
@@ -3208,10 +3266,7 @@ class ImportTaskManager:
             return ""
         if any(is_probable_hash_token(token) for token in (subject_token, predicate_token, object_token)):
             logger.warning(
-                "跳过疑似哈希关系写入: %s | %s | %s",
-                subject_token[:24],
-                predicate_token[:24],
-                object_token[:24],
+                f"跳过疑似哈希关系写入: {subject_token[:24]} | {predicate_token[:24]} | {object_token[:24]}",
             )
             return ""
 
@@ -3247,43 +3302,50 @@ class ImportTaskManager:
         except Exception:
             pass
         return rel_hash
-    async def _select_model(self) -> Any:
-        models = llm_api.get_available_models()
+    async def _select_model(self) -> ResolvedLLMModel:
+        models = get_text_generation_model_tasks(llm_api)
         if not models:
             raise RuntimeError("没有可用 LLM 模型")
 
         config_model = str(self._cfg("advanced.extraction_model", "auto") or "auto").strip()
-        if config_model.lower() != "auto" and config_model in models:
-            return models[config_model]
+        if config_model.lower() != "auto":
+            task_name, task_config, selected_model_name = resolve_text_generation_model_selector(models, config_model)
+            if task_name and task_config:
+                return ResolvedLLMModel(
+                    task_name=task_name,
+                    task_config=task_config,
+                    selected_model_name=selected_model_name,
+                )
+            logger.warning(f"advanced.extraction_model={config_model!r} 不可用于文本生成，已回退自动选择")
 
-        for task_name in [
-            "lpmm_entity_extract",
-            "lpmm_rdf_build",
-            "replyer",
-            "utils",
-            "planner",
-            "tool_use",
-        ]:
-            if task_name in models:
-                return models[task_name]
+        task_name, task_config = pick_text_generation_task(
+            models,
+            preferred=(
+                "memory",
+                "utils",
+                "lpmm_entity_extract",
+                "lpmm_rdf_build",
+                "replyer",
+                "planner",
+                "tool_use",
+            ),
+        )
+        if task_name and task_config:
+            return ResolvedLLMModel(task_name=task_name, task_config=task_config)
+        raise RuntimeError("没有可用 LLM 模型")
 
-        return models[next(iter(models))]
-
-    async def _llm_call(self, prompt: str, model_config: Any) -> Dict[str, Any]:
+    async def _llm_call(self, prompt: str, resolved_model: ResolvedLLMModel) -> Dict[str, Any]:
         cfg = self._llm_retry_config()
         retries = int(cfg["retries"])
-        task_name = llm_api.resolve_task_name_from_model_config(model_config)
         last_error: Optional[Exception] = None
         for attempt in range(retries + 1):
             try:
-                result = await llm_api.generate(
-                    llm_api.LLMServiceRequest(
-                        task_name=task_name,
-                        request_type="A_Memorix.WebImport",
-                        prompt=prompt,
-                        temperature=getattr(model_config, "temperature", None),
-                        max_tokens=getattr(model_config, "max_tokens", None),
-                    )
+                result = await generate_with_resolved_model(
+                    resolved_model,
+                    request_type="A_Memorix.WebImport",
+                    prompt=prompt,
+                    temperature=getattr(resolved_model.task_config, "temperature", None),
+                    max_tokens=getattr(resolved_model.task_config, "max_tokens", None),
                 )
                 success = bool(result.success)
                 response = str(result.completion.response or "")
@@ -3297,12 +3359,12 @@ class ImportTaskManager:
                         txt = txt[4:].strip()
 
                 try:
-                    return json.loads(txt)
+                    return _coerce_import_data_dict(json.loads(txt), context="LLM 抽取结果")
                 except Exception:
                     s = txt.find("{")
                     e = txt.rfind("}")
                     if s >= 0 and e > s:
-                        return json.loads(txt[s : e + 1])
+                        return _coerce_import_data_dict(json.loads(txt[s : e + 1]), context="LLM 抽取结果")
                     raise
             except Exception as err:
                 last_error = err
@@ -3334,7 +3396,7 @@ class ImportTaskManager:
     async def _extract_chat_time_meta_with_llm(
         self,
         text: str,
-        model_config: Any,
+        resolved_model: ResolvedLLMModel,
         *,
         reference_time: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
@@ -3368,11 +3430,12 @@ JSON schema:
 }}
 """
         try:
-            result = await self._llm_call(prompt, model_config)
+            result = await self._llm_call(prompt, resolved_model)
         except Exception as e:
             logger.warning(f"chat_log 时间语义抽取失败: {e}")
             return None
 
+        result = _coerce_import_data_dict(result, context="chat_log 时间抽取结果")
         raw_time_meta = {
             "event_time": result.get("event_time"),
             "event_time_start": result.get("event_time_start"),
@@ -3544,9 +3607,7 @@ JSON schema:
                 additional_cancelled += 1
             if additional_cancelled > 0:
                 f.cancelled_chunks += additional_cancelled
-                f.progress = self._compute_ratio(
-                    f.done_chunks + f.failed_chunks + f.cancelled_chunks, f.total_chunks
-                )
+            self._recompute_file_progress(f)
             f.updated_at = _now()
             task.updated_at = _now()
             self._recompute_task_progress(task)
@@ -3604,7 +3665,7 @@ JSON schema:
             c.progress = 1.0
             c.updated_at = _now()
             f.done_chunks += 1
-            f.progress = self._compute_ratio(f.done_chunks + f.failed_chunks + f.cancelled_chunks, f.total_chunks)
+            self._recompute_file_progress(f)
             f.updated_at = _now()
             self._recompute_task_progress(task)
 
@@ -3632,7 +3693,7 @@ JSON schema:
             c.progress = 1.0
             c.updated_at = _now()
             f.failed_chunks += 1
-            f.progress = self._compute_ratio(f.done_chunks + f.failed_chunks + f.cancelled_chunks, f.total_chunks)
+            self._recompute_file_progress(f)
             if not f.error:
                 f.error = str(error)
             f.updated_at = _now()
@@ -3656,7 +3717,7 @@ JSON schema:
             c.progress = 1.0
             c.updated_at = _now()
             f.cancelled_chunks += 1
-            f.progress = self._compute_ratio(f.done_chunks + f.failed_chunks + f.cancelled_chunks, f.total_chunks)
+            self._recompute_file_progress(f)
             f.updated_at = _now()
             self._recompute_task_progress(task)
 
@@ -3684,6 +3745,9 @@ JSON schema:
             return 1.0
         return max(0.0, min(1.0, float(done) / float(total)))
 
+    def _recompute_file_progress(self, file_record: ImportFileRecord) -> None:
+        file_record.progress = self._compute_ratio(file_record.done_chunks, file_record.total_chunks)
+
     def _recompute_task_progress(self, task: ImportTaskRecord) -> None:
         total = 0
         done = 0
@@ -3698,7 +3762,7 @@ JSON schema:
         task.done_chunks = done
         task.failed_chunks = failed
         task.cancelled_chunks = cancelled
-        task.progress = self._compute_ratio(done + failed + cancelled, total)
+        task.progress = self._compute_ratio(done, total)
         task.updated_at = _now()
 
     async def _should_cleanup_task_temp(self, task_id: str) -> bool:
@@ -3731,9 +3795,7 @@ JSON schema:
                 additional_cancelled += 1
             if additional_cancelled > 0:
                 f.cancelled_chunks += additional_cancelled
-            f.progress = self._compute_ratio(
-                f.done_chunks + f.failed_chunks + f.cancelled_chunks, f.total_chunks
-            )
+            self._recompute_file_progress(f)
             f.updated_at = _now()
         task.status = "cancelled"
         task.current_step = "cancelled"

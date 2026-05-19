@@ -19,12 +19,105 @@ import { cn } from "@/lib/utils"
 import { resolveFieldLabel } from "@/lib/config-label"
 import type { FieldSchema } from "@/types/config-schema"
 
+import { fieldTitleClassName } from "./fieldStyle"
+
+const ARRAY_DRAFT_LINE_PATTERN = /\r\n|\n|\r/
+
 export interface DynamicFieldProps {
   schema: FieldSchema
   value: unknown
   onChange: (value: unknown) => void
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fieldPath?: string // 用于 Hook 系统（未来使用）
+}
+
+const resolvePrimitiveArrayValue = (value: unknown, defaultValue: unknown): unknown[] => {
+  if (Array.isArray(value)) {
+    return value
+  }
+
+  if (Array.isArray(defaultValue)) {
+    return defaultValue
+  }
+
+  return []
+}
+
+const formatPrimitiveArrayDraft = (items: unknown[]) => {
+  return items.map((item) => String(item ?? '')).join('\n')
+}
+
+const parsePrimitiveArrayDraft = (draftValue: string, itemType: string) => {
+  return draftValue
+    .split(ARRAY_DRAFT_LINE_PATTERN)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      if (itemType === 'integer') {
+        return parseInt(line, 10) || 0
+      }
+      if (itemType === 'number') {
+        return parseFloat(line) || 0
+      }
+      if (itemType === 'boolean') {
+        return line === 'true'
+      }
+      return line
+    })
+}
+
+function PrimitiveArrayEditor({
+  onChange,
+  schema,
+  value,
+}: Pick<DynamicFieldProps, 'onChange' | 'schema' | 'value'>) {
+  const itemType = schema.items?.type ?? 'string'
+  const arrayValue = React.useMemo(
+    () => resolvePrimitiveArrayValue(value, schema.default),
+    [schema.default, value],
+  )
+  const formattedValue = React.useMemo(
+    () => formatPrimitiveArrayDraft(arrayValue),
+    [arrayValue],
+  )
+  const [draftValue, setDraftValue] = React.useState(formattedValue)
+  const isFocusedRef = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!isFocusedRef.current) {
+      setDraftValue(formattedValue)
+    }
+  }, [formattedValue])
+
+  const commitDraft = (nextDraftValue: string) => {
+    onChange(parsePrimitiveArrayDraft(nextDraftValue, itemType))
+  }
+
+  const canonicalizeDraft = () => {
+    const nextItems = parsePrimitiveArrayDraft(draftValue, itemType)
+    onChange(nextItems)
+    setDraftValue(formatPrimitiveArrayDraft(nextItems))
+  }
+
+  const draftRows = draftValue ? draftValue.split(ARRAY_DRAFT_LINE_PATTERN).length : 0
+
+  return (
+    <Textarea
+      value={draftValue}
+      onBlur={() => {
+        isFocusedRef.current = false
+        canonicalizeDraft()
+      }}
+      onChange={(e) => {
+        const nextDraftValue = e.target.value
+        setDraftValue(nextDraftValue)
+        commitDraft(nextDraftValue)
+      }}
+      onFocus={() => {
+        isFocusedRef.current = true
+      }}
+      rows={Math.max(4, draftRows, arrayValue.length || 4)}
+    />
+  )
 }
 
 /**
@@ -63,40 +156,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
   }
 
   const renderPrimitiveArrayEditor = () => {
-    const itemType = schema.items?.type ?? 'string'
-    const arrayValue = Array.isArray(value)
-      ? value
-      : Array.isArray(schema.default)
-        ? schema.default
-        : []
-
-    const textareaValue = arrayValue.map((item) => String(item ?? '')).join('\n')
-
-    return (
-      <Textarea
-        value={textareaValue}
-        onChange={(e) => {
-          const nextItems = e.target.value
-            .split('\n')
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0)
-            .map((line) => {
-              if (itemType === 'integer') {
-                return parseInt(line, 10) || 0
-              }
-              if (itemType === 'number') {
-                return parseFloat(line) || 0
-              }
-              if (itemType === 'boolean') {
-                return line === 'true'
-              }
-              return line
-            })
-          onChange(nextItems)
-        }}
-        rows={Math.max(4, arrayValue.length || 4)}
-      />
-    )
+    return <PrimitiveArrayEditor schema={schema} value={value} onChange={onChange} />
   }
 
   const renderObjectEditor = () => {
@@ -158,15 +218,15 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
         const label = (
           <Label
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[15px] font-semibold leading-6",
+              fieldTitleClassName(
+                schema,
+                "inline-flex min-w-0 items-center gap-1.5 text-[15px] leading-6",
+              ),
               descriptionDisplay === 'label-hover' && fieldDescription && "cursor-help",
-              schema.advanced
-                ? "text-amber-800 dark:text-amber-200"
-                : "text-foreground",
             )}
           >
             {renderIcon()}
-            <span>{fieldLabel}</span>
+            <span className="break-words">{fieldLabel}</span>
             {schema.required && <span className="text-destructive">*</span>}
           </Label>
         )
@@ -281,8 +341,8 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
   const renderSwitch = () => {
     const checked = Boolean(value)
     return (
-      <div className="flex items-center justify-between gap-4 py-2">
-        <div className="pr-4">
+      <div className="flex min-w-0 items-center justify-between gap-4 py-2">
+        <div className="min-w-0 pr-4">
           {renderFieldHeader()}
         </div>
         <Switch
@@ -303,7 +363,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
     const step = schema.step ?? 1
 
     return (
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Slider
           value={[numValue]}
           onValueChange={(values) => onChange(values[0])}
@@ -466,7 +526,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
         className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center"
         style={{ '--field-input-width': schema['x-input-width'] ?? '12rem' } as React.CSSProperties}
       >
-        <div className="shrink-0">
+        <div className="min-w-0 sm:shrink-0">
           {renderFieldHeader()}
         </div>
         <div className="min-w-20 flex-1 sm:ml-auto sm:max-w-[var(--field-input-width)]">
@@ -477,7 +537,7 @@ export const DynamicField: React.FC<DynamicFieldProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       {renderFieldHeader()}
 
       {/* Input component */}

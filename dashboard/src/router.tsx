@@ -9,6 +9,7 @@ import {
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { NotFoundPage } from './routes/404'
 import { Layout } from './components/layout'
+import { RoutePendingFallback } from './components/route-pending-fallback'
 import { checkAuth } from './hooks/use-auth'
 import { RouteErrorBoundary } from './components/error-boundary'
 
@@ -68,14 +69,13 @@ const botConfigRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/config/bot'), 'BotConfigPage'),
 })
 
-// 配置路由 - 麦麦模型提供商配置
+// 配置路由 - 旧模型厂商配置入口，已合并到模型配置页
 const modelProviderConfigRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/config/modelProvider',
-  component: lazyRouteComponent(
-    () => import('./routes/config/modelProvider/index.tsx'),
-    'ModelProviderConfigPage'
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: '/config/model' })
+  },
 })
 
 // 配置路由 - 麦麦模型配置
@@ -160,6 +160,12 @@ const logsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/logs',
   component: lazyRouteComponent(() => import('./routes/logs'), 'LogViewerPage'),
+})
+
+const reasoningProcessRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/reasoning-process',
+  component: lazyRouteComponent(() => import('./routes/reasoning-process'), 'ReasoningProcessPage'),
 })
 
 // MaiSaka 聊天流监控路由
@@ -289,6 +295,7 @@ const routeTree = rootRoute.addChildren([
     pluginMirrorsRoute,
     mcpSettingsRoute,
     logsRoute,
+    reasoningProcessRoute,
     plannerMonitorRoute,
     chatRoute,
     settingsRoute,
@@ -318,6 +325,11 @@ export const router = createRouter({
   routeTree,
   defaultNotFoundComponent: NotFoundPage,
   defaultErrorComponent: ({ error }) => <RouteErrorBoundary error={error} />,
+  defaultPendingComponent: RoutePendingFallback,
+  defaultPendingMs: 120,
+  defaultPendingMinMs: 120,
+  defaultPreload: 'intent',
+  defaultPreloadDelay: 80,
 })
 
 // 类型声明

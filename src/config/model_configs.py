@@ -418,6 +418,18 @@ class TaskConfig(ConfigBase):
     )
     """模型选择策略：balance（负载均衡）、random（随机选择）或 sequential（按配置顺序优先选择）"""
 
+    hard_timeout: float = Field(
+        default=240.0,
+        ge=1.0,
+        json_schema_extra={
+            "x-widget": "input",
+            "x-icon": "clock",
+            "step": 1.0,
+            "advanced": True,
+        },
+    )
+    """任务硬超时（秒），到点未返回则取消请求并尝试切换下一个模型；防止上游代理静默排队导致主循环饥饿"""
+
 
 class ModelTaskConfig(ConfigBase):
     """模型配置类"""
@@ -440,6 +452,16 @@ class ModelTaskConfig(ConfigBase):
     )
     """规划模型配置"""
 
+    memory: TaskConfig = Field(
+        default_factory=TaskConfig,
+        json_schema_extra={
+            "x-widget": "custom",
+            "x-icon": "brain",
+            "advanced": True,
+        },
+    )
+    """记忆模型配置，用于长期记忆总结、抽取、写回等高质量记忆任务；留空时由调用方按需回退"""
+
     utils: TaskConfig = Field(
         default_factory=TaskConfig,
         json_schema_extra={
@@ -458,6 +480,16 @@ class ModelTaskConfig(ConfigBase):
         },
     )
     """学习模型配置，用于表达方式学习和黑话学习；留空时自动继用 utils 模型"""
+
+    emoji: TaskConfig = Field(
+        default_factory=TaskConfig,
+        json_schema_extra={
+            "x-widget": "custom",
+            "x-icon": "smile",
+            "advanced": True,
+        },
+    )
+    """表情包发送模型配置；留空时保持原有 planner/vlm 选择逻辑"""
 
     vlm: TaskConfig = Field(
         default_factory=TaskConfig,

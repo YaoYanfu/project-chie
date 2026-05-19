@@ -97,7 +97,7 @@ chats = []
 [episode]
 enabled = true
 generation_enabled = true
-pending_batch_size = 20
+pending_batch_size = 50
 pending_max_retry = 3
 max_paragraphs_per_call = 20
 max_chars_per_call = 6000
@@ -110,6 +110,7 @@ refresh_interval_minutes = 30
 active_window_hours = 72
 max_refresh_per_cycle = 50
 top_k_evidence = 12
+evidence_classification_max_tokens = 1200
 
 [memory]
 enabled = true

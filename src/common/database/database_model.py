@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Enum as SQLEnum, Float, Text
+from sqlalchemy import Column, DateTime, Enum as SQLEnum, Float, Index, Text, UniqueConstraint
 from sqlmodel import Field, LargeBinary, SQLModel
 
 
@@ -132,6 +132,79 @@ class ToolRecord(SQLModel, table=True):
     tool_display_prompt: Optional[str] = Field(default=None)  # 最终输入到 Prompt 的内容
 
 
+class StatisticsAggregationCursor(SQLModel, table=True):
+    """统计汇总增量游标。"""
+
+    __tablename__ = "statistics_aggregation_cursors"  # type: ignore
+
+    source_name: str = Field(primary_key=True, max_length=100)
+    last_processed_id: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, index=True))
+
+
+class StatisticsMessageHourly(SQLModel, table=True):
+    """按小时聚合的消息统计。"""
+
+    __tablename__ = "statistics_message_hourly"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("bucket_time", "chat_id", name="uq_statistics_message_hourly_bucket_chat"),
+        Index("ix_statistics_message_hourly_bucket_time", "bucket_time"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    bucket_time: datetime = Field(sa_column=Column(DateTime, nullable=False))
+    chat_id: str = Field(max_length=255)
+    chat_name: str = Field(max_length=255)
+    chat_type: str = Field(max_length=20)
+    message_count: int = Field(default=0)
+    latest_timestamp: datetime = Field(sa_column=Column(DateTime, nullable=False))
+
+
+class StatisticsToolHourly(SQLModel, table=True):
+    """按小时聚合的工具调用统计。"""
+
+    __tablename__ = "statistics_tool_hourly"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("bucket_time", "tool_name", name="uq_statistics_tool_hourly_bucket_tool"),
+        Index("ix_statistics_tool_hourly_bucket_time", "bucket_time"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    bucket_time: datetime = Field(sa_column=Column(DateTime, nullable=False))
+    tool_name: str = Field(max_length=255)
+    call_count: int = Field(default=0)
+
+
+class StatisticsModelHourly(SQLModel, table=True):
+    """按小时聚合的模型调用统计。"""
+
+    __tablename__ = "statistics_model_hourly"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint(
+            "bucket_time",
+            "request_type",
+            "model_name",
+            "provider_name",
+            name="uq_statistics_model_hourly_bucket_request_model_provider",
+        ),
+        Index("ix_statistics_model_hourly_bucket_time", "bucket_time"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    bucket_time: datetime = Field(sa_column=Column(DateTime, nullable=False))
+    request_type: str = Field(max_length=100)
+    module_name: str = Field(max_length=100)
+    provider_name: str = Field(max_length=255)
+    model_name: str = Field(max_length=255)
+    request_count: int = Field(default=0)
+    prompt_tokens: int = Field(default=0)
+    completion_tokens: int = Field(default=0)
+    total_tokens: int = Field(default=0)
+    cost: float = Field(default=0.0)
+    time_cost_sum: float = Field(default=0.0)
+    time_cost_sq_sum: float = Field(default=0.0)
+
+
 class CommandRecord(SQLModel, table=True):
     """记录命令执行情况"""
 
@@ -185,11 +258,10 @@ class Expression(SQLModel, table=True):
     create_time: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime))  # 创建时间
     session_id: Optional[str] = Field(default=None, max_length=255, nullable=True)  # 会话ID，区分是否为全局表达方式
 
-    checked: bool = Field(default=False)  # 是否已经被检查过
-    rejected: bool = Field(default=False)  # 是否被拒绝但是未更新
+    checked: bool = Field(default=False)  # 是否已经通过人工审核
     modified_by: Optional[ModifiedBy] = Field(
         default=None, sa_column=Column(SQLEnum(ModifiedBy), nullable=True)
-    )  # 最后修改者，标记用户或AI，为空表示未检查
+    )  # 最后修改者，标记用户或AI，为空表示暂无修改来源
 
 
 class Jargon(SQLModel, table=True):
@@ -302,5 +374,10 @@ class ChatSession(SQLModel, table=True):
 
     # 身份元数据
     user_id: Optional[str] = Field(index=True, max_length=255, nullable=True)  # 用户ID
+    user_nickname: Optional[str] = Field(default=None, max_length=255, nullable=True)  # 私聊用户昵称
+    user_cardname: Optional[str] = Field(default=None, max_length=255, nullable=True)  # 私聊用户群名片/备注
     group_id: Optional[str] = Field(index=True, default=None, max_length=255, nullable=True)  # 群组id
+    group_name: Optional[str] = Field(default=None, max_length=255, nullable=True)  # 群组名称
     platform: str = Field(index=True, max_length=100)  # 会话所在平台
+    account_id: Optional[str] = Field(default=None, index=True, max_length=255, nullable=True)  # 平台账号 ID
+    scope: Optional[str] = Field(default=None, index=True, max_length=255, nullable=True)  # 路由作用域

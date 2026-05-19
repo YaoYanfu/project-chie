@@ -49,7 +49,14 @@ import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Save, Search, Info, Power, Check, ChevronsUpDown, RefreshCw, Loader2, GraduationCap, Share2, AlertTriangle, Settings, Zap } from 'lucide-react'
-import { getModelConfig, getModelConfigSchema, testProviderConnection, updateModelConfig, updateModelConfigSection } from '@/lib/config-api'
+import {
+  getModelConfig,
+  getModelConfigCached,
+  getModelConfigSchema,
+  testProviderConnection,
+  updateModelConfig,
+  updateModelConfigSection,
+} from '@/lib/config-api'
 import type { TestConnectionResult } from '@/lib/config-api'
 import { resolveFieldLabel } from '@/lib/config-label'
 import type { ConfigSchema } from '@/types/config-schema'
@@ -76,6 +83,16 @@ function unwrapModelConfig(data: unknown): Record<string, unknown> {
     return (data as { config: Record<string, unknown> }).config
   }
   return data as Record<string, unknown>
+}
+
+const ADVANCED_MODEL_TASK_NAMES = new Set(['memory', 'learner', 'emoji', 'voice'])
+
+function getRequiredTaskNames(schema: ConfigSchema | null): Set<string> {
+  return new Set(
+    (schema?.fields ?? [])
+      .filter((field) => field.type === 'object' && !field.advanced && !ADVANCED_MODEL_TASK_NAMES.has(field.name))
+      .map((field) => field.name)
+  )
 }
 
 // 主导出组件：包装 RestartProvider
@@ -127,6 +144,7 @@ function ModelConfigPageContent() {
     oldProviders: [],
   })
   const [taskConfigSchema, setTaskConfigSchema] = useState<ConfigSchema | null>(null)
+  const taskConfigSchemaRef = useRef<ConfigSchema | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [jumpToPage, setJumpToPage] = useState('')
@@ -174,10 +192,15 @@ function ModelConfigPageContent() {
   })
 
   // 检查任务配置问题
-  const checkTaskConfigIssues = useCallback((taskConf: ModelTaskConfig | null, modelList: ModelInfo[]) => {
+  const checkTaskConfigIssues = useCallback((
+    taskConf: ModelTaskConfig | null,
+    modelList: ModelInfo[],
+    schema?: ConfigSchema | null
+  ) => {
     if (!taskConf) return
     
     const modelNameSet = new Set(modelList.map(m => m.name))
+    const requiredTaskNames = getRequiredTaskNames(schema ?? taskConfigSchemaRef.current)
     const invalidRefs: { taskName: string; invalidModels: string[] }[] = []
     const emptyTaskList: string[] = []
     
@@ -186,7 +209,7 @@ function ModelConfigPageContent() {
       
       // 检查是否有模型
       if (!task.model_list || task.model_list.length === 0) {
-        if (key !== 'learner') {
+        if (requiredTaskNames.has(key)) {
           emptyTaskList.push(key)
         }
         continue
@@ -207,7 +230,7 @@ function ModelConfigPageContent() {
   const loadConfig = useCallback(async () => {
     try {
       setLoading(true)
-      const [result, schemaResult] = await Promise.all([getModelConfig(), getModelConfigSchema()])
+      const [result, schemaResult] = await Promise.all([getModelConfigCached(), getModelConfigSchema()])
       if (!result.success) {
         toast({
           title: '加载失败',
@@ -233,13 +256,16 @@ function ModelConfigPageContent() {
       resetSnapshots(modelList, taskConf)
       
       // 解析 model_task_config 的 schema
+      let nextTaskConfigSchema: ConfigSchema | null = null
       if (schemaResult.success && schemaResult.data) {
         const schema = (schemaResult.data as unknown as Record<string, unknown>).schema as ConfigSchema
-        setTaskConfigSchema(schema.nested?.model_task_config ?? null)
+        nextTaskConfigSchema = schema.nested?.model_task_config ?? null
+        taskConfigSchemaRef.current = nextTaskConfigSchema
+        setTaskConfigSchema(nextTaskConfigSchema)
       }
       
       // 检查任务配置问题
-      checkTaskConfigIssues(taskConf, modelList)
+      checkTaskConfigIssues(taskConf, modelList, nextTaskConfigSchema)
       
       // 初始化上一次的 embedding 模型列表
       const embeddingModels = taskConf?.embedding?.model_list || []
@@ -1152,7 +1178,7 @@ function ModelConfigPageContent() {
       <ScrollArea className="h-full">
         <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">加载中...</p>
+            <p className="text-muted-foreground">Thinking...</p>
           </div>
         </div>
       </ScrollArea>
@@ -1303,7 +1329,7 @@ function ModelConfigPageContent() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="providers" className="w-full" data-tour="providers-tab-trigger">模型厂商设置</TabsTrigger>
-            <TabsTrigger value="models" className="w-full" data-tour="models-tab-trigger">添加模型</TabsTrigger>
+            <TabsTrigger value="models" className="w-full" data-tour="models-tab-trigger">模型列表</TabsTrigger>
             <TabsTrigger value="tasks" className="w-full" data-tour="tasks-tab-trigger">为模型分配功能</TabsTrigger>
           </TabsList>
           {/* 模型厂商设置标签页 */}
@@ -1312,7 +1338,7 @@ function ModelConfigPageContent() {
               <p className="text-sm text-muted-foreground">
                 管理 AI 模型厂商的 API 配置
               </p>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="hidden">
                 {selectedProviders.size > 0 && (
                   <Button
                     onClick={openProviderBatchDeleteDialog}
@@ -1334,7 +1360,7 @@ function ModelConfigPageContent() {
                   <Zap className="mr-2 h-4 w-4" />
                   {testingProviders.size > 0 ? `测试中 (${testingProviders.size})` : '测试全部'}
                 </Button>
-                <Button onClick={() => openProviderDialog(null, null)} size="sm" variant="outline" className="w-full sm:w-auto" data-tour="add-provider-button">
+                <Button onClick={() => openProviderDialog(null, null)} size="sm" variant="outline" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" strokeWidth={2} fill="none" />
                   添加提供商
                 </Button>
@@ -1346,6 +1372,37 @@ function ModelConfigPageContent() {
               testingProviders={testingProviders}
               testResults={testResults}
               selectedProviders={selectedProviders}
+              toolbarActions={(
+                <>
+                  {selectedProviders.size > 0 && (
+                    <Button
+                      onClick={openProviderBatchDeleteDialog}
+                      size="sm"
+                      variant="destructive"
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" strokeWidth={2} fill="none" />
+                      <span className="text-sm">批量删除 ({selectedProviders.size})</span>
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleTestAllProviderConnections}
+                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    disabled={apiProviders.length === 0 || testingProviders.size > 0}
+                  >
+                    <Zap className="mr-2 h-4 w-4" />
+                    <span className="text-sm">
+                      {testingProviders.size > 0 ? `测试中 (${testingProviders.size})` : '测试全部连接'}
+                    </span>
+                  </Button>
+                  <Button onClick={() => openProviderDialog(null, null)} size="sm" variant="outline" className="w-full sm:w-auto" data-tour="add-provider-button">
+                    <Plus className="mr-2 h-4 w-4" strokeWidth={2} fill="none" />
+                    <span className="text-sm">添加厂商</span>
+                  </Button>
+                </>
+              )}
               onEdit={openProviderDialog}
               onDelete={openProviderDeleteDialog}
               onTest={handleTestProviderConnection}
@@ -1359,7 +1416,7 @@ function ModelConfigPageContent() {
               <p className="text-sm text-muted-foreground">
                 配置可用的模型列表
               </p>
-              <div className="flex gap-2 w-full sm:w-auto">
+              <div className="hidden">
                 {selectedModels.size > 0 && (
                   <Button 
                     onClick={openBatchDeleteDialog} 
@@ -1371,7 +1428,7 @@ function ModelConfigPageContent() {
                     批量删除 ({selectedModels.size})
                   </Button>
                 )}
-                <Button onClick={() => openEditDialog(null, null)} size="sm" variant="outline" className="w-full sm:w-auto" data-tour="add-model-button">
+                <Button onClick={() => openEditDialog(null, null)} size="sm" variant="outline" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" strokeWidth={2} fill="none" />
                   添加模型
                 </Button>
@@ -1379,7 +1436,7 @@ function ModelConfigPageContent() {
             </div>
 
           {/* 搜索框 */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:flex-1 sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -1394,9 +1451,27 @@ function ModelConfigPageContent() {
                 找到 {filteredModels.length} 个结果
               </p>
             )}
-          </div>
 
           {/* 模型列表 - 移动端卡片视图 */}
+            <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+              {selectedModels.size > 0 && (
+                <Button
+                  onClick={openBatchDeleteDialog}
+                  size="sm"
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" strokeWidth={2} fill="none" />
+                  <span className="text-sm">批量删除 ({selectedModels.size})</span>
+                </Button>
+              )}
+              <Button onClick={() => openEditDialog(null, null)} size="sm" variant="outline" className="w-full sm:w-auto" data-tour="add-model-button">
+                <Plus className="mr-2 h-4 w-4" strokeWidth={2} fill="none" />
+                <span className="text-sm">添加模型</span>
+              </Button>
+            </div>
+          </div>
+
           <ModelCardList
             paginatedModels={paginatedModels}
             allModels={models}
@@ -1723,54 +1798,51 @@ function ModelConfigPageContent() {
                     <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                       <Command>
                         <CommandInput placeholder="搜索模型..." />
-                        <ScrollArea className="h-[300px]">
-                          <CommandList className="max-h-none overflow-visible">
-                            <CommandEmpty>
-                              {modelFetchError ? (
-                                <div className="py-4 px-2 text-center space-y-2">
-                                  <p className="text-sm text-destructive">{modelFetchError}</p>
-                                  {!modelFetchError.includes('API Key') && (
-                                    <Button
-                                      variant="link"
-                                      size="sm"
-                                      onClick={() => editingModel?.api_provider && fetchModelsForProvider(editingModel.api_provider, true)}
-                                    >
-                                      重试
-                                    </Button>
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty>
+                            {modelFetchError ? (
+                              <div className="py-4 px-2 text-center space-y-2">
+                                <p className="text-sm text-destructive">{modelFetchError}</p>
+                                {!modelFetchError.includes('API Key') && (
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() => editingModel?.api_provider && fetchModelsForProvider(editingModel.api_provider, true)}
+                                  >
+                                    重试
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              '未找到匹配的模型'
+                            )}
+                          </CommandEmpty>
+                          <CommandGroup heading="可用模型">
+                            {availableModels.map((model) => (
+                              <CommandItem
+                                key={model.id}
+                                value={model.id}
+                                className="pr-8"
+                                onSelect={() => {
+                                  setEditingModel((prev) =>
+                                    prev ? { ...prev, model_identifier: model.id } : null
+                                  )
+                                  setModelComboboxOpen(false)
+                                }}
+                              >
+                                {editingModel?.model_identifier === model.id && (
+                                  <Check className="absolute right-2 h-4 w-4" />
+                                )}
+                                <div className="flex min-w-0 flex-col">
+                                  <span className="truncate">{model.id}</span>
+                                  {model.name !== model.id && (
+                                    <span className="truncate text-xs text-muted-foreground">{model.name}</span>
                                   )}
                                 </div>
-                              ) : (
-                                '未找到匹配的模型'
-                              )}
-                            </CommandEmpty>
-                            <CommandGroup heading="可用模型">
-                              {availableModels.map((model) => (
-                                <CommandItem
-                                  key={model.id}
-                                  value={model.id}
-                                  onSelect={() => {
-                                    setEditingModel((prev) =>
-                                      prev ? { ...prev, model_identifier: model.id } : null
-                                    )
-                                    setModelComboboxOpen(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 ${
-                                      editingModel?.model_identifier === model.id ? 'opacity-100' : 'opacity-0'
-                                    }`}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span>{model.id}</span>
-                                    {model.name !== model.id && (
-                                      <span className="text-xs text-muted-foreground">{model.name}</span>
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </ScrollArea>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
@@ -1834,8 +1906,8 @@ function ModelConfigPageContent() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="price_in">输入价格 (¥/M token)</Label>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="price_in" className="w-36 shrink-0">输入价格 (¥/M token)</Label>
                 <Input
                   id="price_in"
                   type="number"
@@ -1851,11 +1923,12 @@ function ModelConfigPageContent() {
                     )
                   }}
                   placeholder="默认: 0"
+                  className="flex-1"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="price_out">输出价格 (¥/M token)</Label>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="price_out" className="w-36 shrink-0">输出价格 (¥/M token)</Label>
                 <Input
                   id="price_out"
                   type="number"
@@ -1871,6 +1944,7 @@ function ModelConfigPageContent() {
                     )
                   }}
                   placeholder="默认: 0"
+                  className="flex-1"
                 />
               </div>
             </div>
@@ -1896,8 +1970,8 @@ function ModelConfigPageContent() {
                 </div>
 
                 {editingModel?.cache && (
-                  <div className="grid gap-2 border-t pt-4">
-                    <Label htmlFor="cache_price_in">缓存输入价格 (¥/M token)</Label>
+                  <div className="flex items-center gap-3 border-t pt-4">
+                    <Label htmlFor="cache_price_in" className="w-40 shrink-0">缓存输入价格 (¥/M token)</Label>
                     <Input
                       id="cache_price_in"
                       type="number"
@@ -1913,6 +1987,7 @@ function ModelConfigPageContent() {
                         )
                       }}
                       placeholder="默认: 0"
+                      className="flex-1"
                     />
                   </div>
                 )}

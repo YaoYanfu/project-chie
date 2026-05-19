@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,6 +18,7 @@ import {
   checkPluginInstalled,
   connectPluginProgressWebSocket,
   fetchPluginList,
+  getCachedPluginList,
   getInstalledPluginVersion,
   getInstalledPlugins,
   getMaimaiVersion,
@@ -28,12 +28,18 @@ import {
   updatePlugin,
   type InstalledPlugin,
 } from '@/lib/plugin-api'
-import { getPluginStats, recordPluginDownload, type PluginStatsData } from '@/lib/plugin-stats'
+import {
+  getCachedPluginStatsSummary,
+  getPluginStatsSummary,
+  recordPluginDownload,
+  type PluginStatsData,
+} from '@/lib/plugin-stats'
 
 import { InstallDialog } from './InstallDialog'
 import { InstalledTab } from './InstalledTab'
 import { MarketplaceTab } from './MarketplaceTab'
-import type { GitStatus, MaimaiVersion, PluginInfo, PluginLoadProgress } from './types'
+import { UpdatesTab } from './UpdatesTab'
+import type { GitStatus, MaimaiVersion, MarketplaceSortKey, PluginInfo, PluginLoadProgress } from './types'
 
 // 主导出组件：包装 RestartProvider
 export function PluginsPage() {
@@ -48,8 +54,12 @@ export function PluginsPage() {
 function PluginsPageContent() {
   const navigate = useNavigate()
   const { triggerRestart, isRestarting } = useRestart()
+  const [restartNoticeVisible, setRestartNoticeVisible] = useState(
+    () => localStorage.getItem('plugins-restart-notice-dismissed') !== 'true'
+  )
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [marketplaceSortBy, setMarketplaceSortBy] = useState<MarketplaceSortKey>('default')
   const [activeTab, setActiveTab] = useState('all')  // all | installed | updates
   const [showCompatibleOnly, setShowCompatibleOnly] = useState(true)  // 默认只显示兼容的
   const [plugins, setPlugins] = useState<PluginInfo[]>([])
@@ -66,29 +76,47 @@ function PluginsPageContent() {
   const [installingPlugin, setInstallingPlugin] = useState<PluginInfo | null>(null)
   
   const { toast } = useToast()
+  const isFetchingMarketplace = loadProgress?.stage === 'loading' && loadProgress.operation === 'fetch'
 
-  // 加载插件统计数据
-  const loadPluginStats = async (pluginList: PluginInfo[]) => {
-    const statsPromises = pluginList.map(async (plugin) => {
-      try {
-        const stats = await getPluginStats(plugin.id)
-        return { id: plugin.id, stats }
-      } catch (error) {
-        console.warn(`Failed to load stats for ${plugin.id}:`, error)
-        return { id: plugin.id, stats: null }
-      }
-    })
+  const dismissRestartNotice = () => {
+    localStorage.setItem('plugins-restart-notice-dismissed', 'true')
+    setRestartNoticeVisible(false)
+  }
 
-    const results = await Promise.all(statsPromises)
+  const resolvePluginStats = (
+    plugin: PluginInfo,
+    statsSummary: Record<string, PluginStatsData>
+  ): PluginStatsData | undefined => {
+    const statsIds = [
+      plugin.manifest?.id,
+    ].filter((id): id is string => Boolean(id))
+
+    return statsIds.map(id => statsSummary[id]).find(Boolean)
+  }
+
+  const buildPluginStatsMap = (
+    pluginList: PluginInfo[],
+    statsSummary: Record<string, PluginStatsData>
+  ): Record<string, PluginStatsData> => {
     const statsMap: Record<string, PluginStatsData> = {}
-    
-    results.forEach(({ id, stats }) => {
-      if (stats) {
-        statsMap[id] = stats
-      }
-    })
 
-    setPluginStats(statsMap)
+    for (const plugin of pluginList) {
+      const stats = resolvePluginStats(plugin, statsSummary)
+      if (!stats) {
+        continue
+      }
+
+      const statsIds = [
+        plugin.manifest?.id,
+        stats.plugin_id,
+      ].filter((id): id is string => Boolean(id))
+
+      for (const statsId of statsIds) {
+        statsMap[statsId] = stats
+      }
+    }
+
+    return statsMap
   }
 
   // 统一管理 WebSocket 和数据加载
@@ -97,6 +125,16 @@ function PluginsPageContent() {
     let isUnmounted = false
 
     const init = async () => {
+      const cachedPluginList = getCachedPluginList()
+      const cachedStatsSummary = getCachedPluginStatsSummary()
+      if (cachedPluginList?.length && !isUnmounted) {
+        setPlugins(cachedPluginList)
+        if (cachedStatsSummary) {
+          setPluginStats(buildPluginStatsMap(cachedPluginList, cachedStatsSummary))
+        }
+        setLoading(false)
+      }
+
       // 1. 先连接 WebSocket（异步获取 token）
       unsubscribeProgress = await connectPluginProgressWebSocket(
         (progress) => {
@@ -167,9 +205,11 @@ function PluginsPageContent() {
       // 4. 加载插件列表（包含已安装信息）
       if (!isUnmounted) {
         try {
-          setLoading(true)
+          if (!cachedPluginList?.length) {
+            setLoading(true)
+          }
           setError(null)
-          const apiResult = await fetchPluginList()
+          const apiResult = await fetchPluginList({ forceRefresh: Boolean(cachedPluginList?.length) })
           if (!apiResult.success) {
             if (!isUnmounted) {
               setError(apiResult.error)
@@ -220,6 +260,7 @@ function PluginsPageContent() {
                   id: installedPlugin.id,
                   manifest: {
                     manifest_version: installedPlugin.manifest.manifest_version || 1,
+                    id: installedPlugin.manifest.id || installedPlugin.id,
                     name: installedPlugin.manifest.name,
                     version: installedPlugin.manifest.version,
                     description: installedPlugin.manifest.description || '',
@@ -240,16 +281,27 @@ function PluginsPageContent() {
                   installed: true,
                   installed_version: installedPlugin.manifest.version,
                   source: 'local',
+                  stats_ids: [installedPlugin.manifest.id].filter(Boolean) as string[],
                   published_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                 })
               }
             }
             
+            if (cachedStatsSummary) {
+              setPluginStats(buildPluginStatsMap(mergedData, cachedStatsSummary))
+            }
             setPlugins(mergedData)
-            
-            // 6. 加载所有插件的统计数据
-            loadPluginStats(mergedData)
+
+            getPluginStatsSummary({ forceRefresh: Boolean(cachedStatsSummary) })
+              .then((statsSummary) => {
+                if (!isUnmounted) {
+                  setPluginStats(buildPluginStatsMap(mergedData, statsSummary))
+                }
+              })
+              .catch((statsError) => {
+                console.warn('刷新插件统计失败:', statsError)
+              })
           }
         } finally {
           if (!isUnmounted) {
@@ -447,9 +499,11 @@ function PluginsPageContent() {
       }
       
       // 记录下载统计
-      recordPluginDownload(installingPlugin.id).catch(err => {
-        console.warn('Failed to record download:', err)
-      })
+      if (installingPlugin.manifest.id) {
+        recordPluginDownload(installingPlugin.manifest.id).catch(err => {
+          console.warn('Failed to record download:', err)
+        })
+      }
       
       toast({
         title: '安装成功',
@@ -659,25 +713,6 @@ function PluginsPageContent() {
     }).length
   }
 
-  // 过滤插件用于可更新标签页
-  const filteredUpdatablePlugins = plugins.filter(plugin => {
-    if (!plugin.manifest) return false
-    
-    const matchesSearch = searchQuery === '' ||
-      plugin.manifest.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plugin.manifest.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (plugin.manifest.keywords && plugin.manifest.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
-    
-    const matchesCategory = categoryFilter === 'all' ||
-      (plugin.manifest.categories && plugin.manifest.categories.includes(categoryFilter))
-    
-    const matchesCompatibility = !showCompatibleOnly || 
-      !maimaiVersion || 
-      checkPluginCompatibility(plugin)
-    
-    return plugin.installed && needsUpdate(plugin) && matchesSearch && matchesCategory && matchesCompatibility
-  })
-
   return (
     <ScrollArea className="h-full">
       <div className="space-y-6 p-4 sm:p-6">
@@ -704,16 +739,23 @@ function PluginsPageContent() {
         </div>
 
         {/* 安装提示 */}
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900">
-          <CardContent className="py-3">
-            <div className="flex items-center gap-2">
-              <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                安装、卸载或更新插件后，需要<span className="font-semibold">重启麦麦</span>才能使更改生效
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {restartNoticeVisible && (
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900">
+            <CardContent className="py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    安装、卸载或更新插件后，部分插件需要<span className="font-semibold">重启麦麦</span>才能生效
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={dismissRestartNotice}>
+                  我知道了
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Git 状态警告 */}
         {gitStatus && !gitStatus.installed && (
@@ -772,21 +814,51 @@ function PluginsPageContent() {
                   <SelectItem value="Other">其他</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* 排序 */}
+              <Select
+                value={marketplaceSortBy}
+                onValueChange={(value) => setMarketplaceSortBy(value as MarketplaceSortKey)}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="排序" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">推荐排序</SelectItem>
+                  <SelectItem value="downloads">下载最多</SelectItem>
+                  <SelectItem value="likes">点赞最多</SelectItem>
+                  <SelectItem value="rating">评分最高</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {/* 兼容性筛选 */}
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="compatible-only" 
-                checked={showCompatibleOnly}
-                onCheckedChange={(checked) => setShowCompatibleOnly(checked === true)}
-              />
-              <label
-                htmlFor="compatible-only"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                只显示兼容当前版本的插件
-              </label>
+            <div className="flex items-center">
+              <div className="relative flex items-center space-x-2">
+                <Checkbox
+                  id="compatible-only"
+                  checked={showCompatibleOnly}
+                  onCheckedChange={(checked) => setShowCompatibleOnly(checked === true)}
+                />
+                <label
+                  htmlFor="compatible-only"
+                  className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  只显示兼容当前版本的插件
+                </label>
+                {isFetchingMarketplace && (
+                  <div
+                    className="absolute top-1/2 left-[calc(100%+0.75rem)] z-10 flex max-w-[34rem] -translate-y-1/2 items-center gap-2 rounded-md border bg-background/85 px-2 py-0.5 text-xs whitespace-nowrap shadow-sm backdrop-blur"
+                    aria-live="polite"
+                  >
+                    <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
+                    <span className="shrink-0 font-medium">加载插件市场</span>
+                    <span className="min-w-0 truncate text-muted-foreground">
+                      {loadProgress.message || '正在获取插件清单'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Card>
@@ -805,30 +877,6 @@ function PluginsPageContent() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-
-        {/* 进度条 - 仅显示插件清单加载进度 */}
-        {loadProgress && loadProgress.stage === 'loading' && loadProgress.operation === 'fetch' && (
-          <Card className="p-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm font-medium">加载插件列表</span>
-                </div>
-                <span className="text-sm font-medium">{loadProgress.progress}%</span>
-              </div>
-              <Progress value={loadProgress.progress} className="h-2" />
-              <div className="text-xs text-muted-foreground">
-                {loadProgress.message}
-              </div>
-              {loadProgress.total_plugins > 0 && (
-                <div className="text-xs text-muted-foreground text-center">
-                  已加载 {loadProgress.loaded_plugins} / {loadProgress.total_plugins} 个插件
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
 
         {/* 加载错误显示 */}
         {loadProgress && loadProgress.stage === 'error' && loadProgress.error && (
@@ -853,7 +901,7 @@ function PluginsPageContent() {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-3 text-muted-foreground">加载插件列表中...</span>
+            <span className="ml-3 text-muted-foreground">Thinking...</span>
           </div>
         ) : error ? (
           <Card className="p-6">
@@ -872,6 +920,7 @@ function PluginsPageContent() {
             searchQuery={searchQuery}
             categoryFilter={categoryFilter}
             showCompatibleOnly={showCompatibleOnly}
+            sortBy={marketplaceSortBy}
             gitStatus={gitStatus}
             maimaiVersion={maimaiVersion}
             pluginStats={pluginStats}
@@ -902,15 +951,25 @@ function PluginsPageContent() {
             getStatusBadge={getStatusBadge}
             getIncompatibleReason={getIncompatibleReason}
           />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredUpdatablePlugins.map((plugin) => (
-              <div key={plugin.id}>
-                {/* PluginCard would go here */}
-              </div>
-            ))}
-          </div>
-        )}
+        ) : activeTab === 'updates' ? (
+          <UpdatesTab
+            plugins={plugins}
+            searchQuery={searchQuery}
+            categoryFilter={categoryFilter}
+            showCompatibleOnly={showCompatibleOnly}
+            gitStatus={gitStatus}
+            maimaiVersion={maimaiVersion}
+            pluginStats={pluginStats}
+            loadProgress={loadProgress}
+            onInstall={openInstallDialog}
+            onUpdate={handleUpdate}
+            onUninstall={handleUninstall}
+            checkPluginCompatibility={checkPluginCompatibility}
+            needsUpdate={needsUpdate}
+            getStatusBadge={getStatusBadge}
+            getIncompatibleReason={getIncompatibleReason}
+          />
+        ) : null}
 
         {/* 安装对话框 */}
         <InstallDialog

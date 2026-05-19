@@ -52,8 +52,7 @@ def get_tool_spec() -> ToolSpec:
 
     return ToolSpec(
         name="send_emoji",
-        brief_description="发送一个合适的表情包来辅助表达情绪。",
-        detailed_description="无需参数，直接发送一个合适的表情包。",
+        description="发送一个合适的表情包来辅助表达情绪。",
         parameters_schema={
             "type": "object",
             "properties": {},
@@ -284,6 +283,15 @@ def _resolve_emoji_selector_model_task_name() -> str:
     """根据 planner 模型视觉能力选择表情选择子代理的模型任务。"""
 
     model_config = config_manager.get_model_config()
+    emoji_task_config = getattr(model_config.model_task_config, "emoji", None)
+    emoji_models = [
+        model_name
+        for model_name in getattr(emoji_task_config, "model_list", [])
+        if str(model_name).strip()
+    ]
+    if emoji_models:
+        return "emoji"
+
     planner_models = [
         model_name
         for model_name in model_config.model_task_config.planner.model_list
@@ -367,6 +375,7 @@ async def _select_emoji_with_sub_agent(
         context_message_limit=_EMOJI_SUB_AGENT_CONTEXT_LIMIT,
         system_prompt=system_prompt,
         extra_messages=[prompt_message, candidate_message],
+        request_kind="emotion",
         model_task_name=model_task_name,
     )
     selection_duration_ms = round((datetime.now() - selection_started_at).total_seconds() * 1000, 2)

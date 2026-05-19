@@ -54,8 +54,9 @@ import { Link } from '@tanstack/react-router'
 import { RestartProvider, useRestart } from '@/lib/restart-context'
 import { RestartOverlay } from '@/components/restart-overlay'
 import { ExpressionReviewer } from '@/components/expression-reviewer'
-import { getBotConfig, getModelConfig } from '@/lib/config-api'
+import { getBotConfigCached, getModelConfigCached } from '@/lib/config-api'
 import { getReviewStats } from '@/lib/expression-api'
+import { APP_VERSION } from '@/lib/version'
 import { ZoomableChart } from '@/components/ui/zoomable-chart'
 
 // 主导出组件：包装 RestartProvider
@@ -73,6 +74,11 @@ interface BotStatus {
   uptime: number
   version: string
   start_time: string
+}
+
+interface ReleaseStatus {
+  version: string
+  url: string
 }
 
 interface StatisticsSummary {
@@ -125,6 +131,18 @@ interface FeatureStatus {
   visualEnabled: boolean
 }
 
+const DEFAULT_TIME_RANGE = 24
+const DASHBOARD_DATA_CACHE_TTL = 30_000
+const dashboardDataCache = new Map<number, { timestamp: number; data: DashboardData }>()
+
+function getCachedDashboardData(hours: number): DashboardData | null {
+  const cached = dashboardDataCache.get(hours)
+  if (!cached || Date.now() - cached.timestamp > DASHBOARD_DATA_CACHE_TTL) {
+    return null
+  }
+  return cached.data
+}
+
 // 为饼图生成更丰富的颜色方案 (HSL色相均匀分布)
 const generatePieColors = (count: number): string[] => {
   const colors: string[] = []
@@ -152,14 +170,17 @@ function FeatureStatusLight({ enabled, label }: { enabled: boolean; label: strin
 
 function IndexPageContent() {
   const { t } = useTranslation()
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const initialDashboardData = getCachedDashboardData(DEFAULT_TIME_RANGE)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(initialDashboardData)
+  const [loading, setLoading] = useState(!initialDashboardData)
   const [loadingProgress, setLoadingProgress] = useState(0)
-  const [timeRange, setTimeRange] = useState(24) // 默认24小时
-  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE) // 默认24小时
+  const [autoRefresh, setAutoRefresh] = useState(false)
   const [hitokoto, setHitokoto] = useState<{ hitokoto: string; from: string } | null>(null)
   const [hitokotoLoading, setHitokotoLoading] = useState(true)
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null)
+  const [maibotStableRelease, setMaibotStableRelease] = useState<ReleaseStatus | null>(null)
+  const [maibotTestRelease, setMaibotTestRelease] = useState<ReleaseStatus | null>(null)
   const [featureStatus, setFeatureStatus] = useState<FeatureStatus>({
     memoryEnabled: false,
     visualEnabled: false,
@@ -183,6 +204,53 @@ function IndexPageContent() {
         clearInterval(refreshIntervalRef.current)
         refreshIntervalRef.current = null
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadLatestVersions = async () => {
+      try {
+        const response = await fetch('https://api.github.com/repos/Mai-with-u/MaiBot/releases?per_page=20', {
+          headers: { Accept: 'application/vnd.github+json' },
+        })
+        if (!response.ok) {
+          throw new Error(`GitHub release status ${response.status}`)
+        }
+        const releases = await response.json() as Array<{
+          draft?: boolean
+          prerelease?: boolean
+          tag_name?: string
+          html_url?: string
+        }>
+        const visibleReleases = releases.filter((release) => !release.draft)
+        const stableRelease = visibleReleases.find((release) => !release.prerelease)
+        const testRelease = visibleReleases[0]
+        if (mounted) {
+          if (stableRelease?.tag_name) {
+            setMaibotStableRelease({
+              version: String(stableRelease.tag_name).replace(/^v/i, '').trim(),
+              url: stableRelease.html_url || 'https://github.com/Mai-with-u/MaiBot/releases',
+            })
+          }
+          if (testRelease?.tag_name) {
+            setMaibotTestRelease({
+              version: String(testRelease.tag_name).replace(/^v/i, '').trim(),
+              url: testRelease.html_url || 'https://github.com/Mai-with-u/MaiBot/releases',
+            })
+          }
+        }
+      } catch (error) {
+        console.debug('检查 MaiBot 最新版本失败:', error)
+      }
+
+    }
+
+    void loadLatestVersions()
+
+    return () => {
+      mounted = false
     }
   }, [])
 
@@ -247,8 +315,8 @@ function IndexPageContent() {
   const fetchFeatureStatus = useCallback(async () => {
     try {
       const [botConfigResult, modelConfigResult] = await Promise.all([
-        getBotConfig(),
-        getModelConfig(),
+        getBotConfigCached(),
+        getModelConfigCached(),
       ])
 
       if (!isMountedRef.current || !botConfigResult.success) return
@@ -288,10 +356,20 @@ function IndexPageContent() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
+      const cachedData = getCachedDashboardData(timeRange)
+      if (cachedData) {
+        setDashboardData(cachedData)
+        setLoading(false)
+        setLoadingProgress(100)
+        return
+      }
+
+      setLoading(true)
       const response = await fetchWithAuth(`/api/webui/statistics/dashboard?hours=${timeRange}`)
       if (!isMountedRef.current) return
       if (response.ok) {
         const data = await response.json()
+        dashboardDataCache.set(timeRange, { timestamp: Date.now(), data })
         setDashboardData(data)
       }
       setLoading(false)
@@ -538,8 +616,71 @@ function IndexPageContent() {
       </div>
 
       {/* 机器人状态和快速操作 */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_max-content]">
         {/* 机器人状态卡片 */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              麦麦版本
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">主程序版本</span>
+                <Badge variant="secondary" className="border border-primary/20 bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+                  {botStatus?.version ? `v${botStatus.version}` : '未知'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">WebUI 版本</span>
+                <Badge variant="secondary" className="border border-primary/20 bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+                  v{APP_VERSION}
+                </Badge>
+              </div>
+              <div className="hidden">
+                <a
+                  href={maibotTestRelease?.url || 'https://github.com/Mai-with-u/MaiBot/releases'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 transition-colors hover:text-muted-foreground"
+                >
+                  最新版本 {maibotTestRelease ? `v${maibotTestRelease.version}` : 'GitHub Releases'}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-1 border-t border-border/50 pt-2 text-xs text-muted-foreground/60">
+                <a
+                  href={maibotStableRelease?.url || 'https://github.com/Mai-with-u/MaiBot/releases'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 transition-colors hover:text-muted-foreground"
+                >
+                  <span>正式版最新</span>
+                  <span className="inline-flex items-center gap-1">
+                    {maibotStableRelease ? `v${maibotStableRelease.version}` : 'GitHub Releases'}
+                    <ExternalLink className="h-3 w-3" />
+                  </span>
+                </a>
+                <a
+                  href={maibotTestRelease?.url || 'https://github.com/Mai-with-u/MaiBot/releases'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 transition-colors hover:text-muted-foreground"
+                >
+                  <span>测试版最新</span>
+                  <span className="inline-flex items-center gap-1">
+                    {maibotTestRelease ? `v${maibotTestRelease.version}` : 'GitHub Releases'}
+                    <ExternalLink className="h-3 w-3" />
+                  </span>
+                </a>
+
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -549,12 +690,12 @@ function IndexPageContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
                   {botStatus?.running ? (
                     <>
                       <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
-                      <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                      <Badge variant="outline" className="whitespace-nowrap text-green-600 border-green-300 bg-green-50">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         {t('home.botStatus.running')}
                       </Badge>
@@ -562,7 +703,7 @@ function IndexPageContent() {
                   ) : (
                     <>
                       <div className="h-3 w-3 rounded-full bg-red-500" />
-                      <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">
+                      <Badge variant="outline" className="whitespace-nowrap text-red-600 border-red-300 bg-red-50">
                         <AlertCircle className="h-3 w-3 mr-1" />
                         {t('home.botStatus.stopped')}
                       </Badge>
@@ -570,11 +711,7 @@ function IndexPageContent() {
                   )}
                 </div>
                 {botStatus && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="secondary" className="border border-primary/20 bg-primary/10 px-2 py-0.5 font-semibold text-primary">
-                      v{botStatus.version}
-                    </Badge>
-                    <span className="mx-2">|</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{t('home.botStatus.uptime', { time: formatTime(botStatus.uptime) })}</span>
                   </div>
                 )}
@@ -651,25 +788,22 @@ function IndexPageContent() {
         </Card>
 
         {/* 问卷调查卡片 */}
-        <Card>
+        <Card className="lg:w-[190px]">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               {t('home.survey.title')}
             </CardTitle>
-            <CardDescription className="text-xs">
-              {t('home.survey.description')}
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" asChild className="gap-2">
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2">
                 <Link to="/survey/webui-feedback">
                   <FileText className="h-4 w-4" />
                   {t('home.survey.webui')}
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" asChild className="gap-2">
+              <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2">
                 <Link to="/survey/maibot-feedback">
                   <MessageSquare className="h-4 w-4" />
                   {t('home.survey.maibot')}

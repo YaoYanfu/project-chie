@@ -26,7 +26,7 @@
       "home": "首页",
       "botMainConfig": "麦麦设置",
       "aiModelProvider": "模型厂商设置",
-      "modelManagement": "模型管理与分配",
+      "modelManagement": "模型管理",
       "promptManagement": "Prompt 管理",
       "adapterConfig": "麦麦适配器配置",
       "emojiManagement": "表情包",
@@ -40,6 +40,7 @@
       "pluginConfig": "插件管理",
       "mcpSettings": "MCP 设置",
       "logViewer": "日志查看器",
+      "reasoningProcess": "推理过程",
       "maisakaMonitor": "麦麦观察",
       "localChat": "本地聊天室",
       "settings": "系统设置"
@@ -63,7 +64,9 @@
     },
     "actions": {
       "cancel": "取消",
+      "addImage": "添加图片",
       "reconnect": "重新连接",
+      "removeImage": "移除图片",
       "save": "保存",
       "send": "发送消息"
     },
@@ -109,7 +112,7 @@
       "groupName": "虚拟群名（可选）",
       "groupNameHint": "麦麦会认为这是一个名为此名称的群聊",
       "knownUserSuffix": " · 已认识",
-      "loading": "加载中...",
+      "loading": "Thinking...",
       "noUsers": "没有找到用户",
       "personCount": "({{count}} 人)",
       "platform": "选择平台",
@@ -140,6 +143,12 @@
       "currentSessionUnavailable": "当前聊天会话不可用，请稍后重试",
       "error": "错误",
       "incompleteConfig": "配置不完整",
+      "imageLimit": "图片数量已达上限",
+      "imageLimitDesc": "一次最多可以发送 {{count}} 张图片。",
+      "imageReadFailed": "图片读取失败",
+      "imageReadFailedDesc": "请换一张图片后重试。",
+      "imageUnsupported": "不支持的文件",
+      "imageUnsupportedDesc": "请选择图片文件。",
       "networkError": "网络错误",
       "platformFailed": "获取平台失败",
       "selectPlatformAndUser": "请选择平台和用户",
@@ -512,12 +521,12 @@
       }
     },
     "loading": {
-      "title": "加载配置中...",
-      "description": "正在读取现有配置"
+      "title": "Thinking...",
+      "description": "Thinking..."
     },
     "header": {
       "title": "首次配置向导",
-      "description": "让我们一起完成 {{appName}} 的初始配置"
+      "description": "让我们一起完成麦麦的初始配置"
     },
     "progress": {
       "stepCounter": "步骤 {{current}} / {{total}}"
@@ -690,8 +699,8 @@
       "modelSetup": {
         "planner": {
           "identifier": {
-            "label": "planner 模型标识符 *",
-            "description": "API 服务商提供的真实模型 ID，模型名称会自动初始化为该标识符"
+            "label": "用于规划的 模型 名称 *",
+            "description": "API 服务商提供的真实模型 ID"
           },
           "visual": {
             "label": "启用视觉"
@@ -699,8 +708,8 @@
         },
         "replyer": {
           "identifier": {
-            "label": "replyer 模型标识符 *",
-            "description": "API 服务商提供的真实模型 ID，模型名称会自动初始化为该标识符"
+            "label": "用于回复的 模型 名称 *",
+            "description": "API 服务商提供的真实模型 ID"
           },
           "visual": {
             "label": "启用视觉"
@@ -711,7 +720,7 @@
     }
   },
   "common": {
-    "loading": "加载中...",
+    "loading": "Thinking...",
     "error": "错误",
     "retry": "重试",
     "save": "保存",
@@ -734,7 +743,7 @@
     "restartingTip": "🔄 配置已保存，正在重启主程序...",
     "checking": "检查服务状态",
     "checkingDesc": "等待服务恢复... ({{current}}/{{max}})",
-    "checkingTip": "⏳ 正在等待服务恢复，请勿关闭页面...",
+    "checkingTip": "重启中，请勿关闭页面...",
     "success": "重启成功",
     "successDesc": "正在跳转到登录页面...",
     "successTip": "✅ 配置已生效，服务运行正常",
@@ -793,6 +802,7 @@
       "pluginsDesc": "浏览和安装插件",
       "logs": "日志查看器",
       "logsDesc": "查看系统日志",
+      "reasoningProcessDesc": "浏览 Maisaka prompt 推理记录",
       "settings": "系统设置",
       "settingsDesc": "配置系统参数"
     }
@@ -806,8 +816,8 @@
   "home": {
     "title": "实时监控面板",
     "subtitle": "麦麦运行状态和统计数据一览",
-    "loading": "加载统计数据中...",
-    "loadingHint": "正在获取麦麦运行数据",
+    "loading": "Thinking...",
+    "loadingHint": "Thinking...",
     "timeRange": {
       "24h": "24小时",
       "7d": "7天",

@@ -388,7 +388,6 @@ class EmojiManager:
                 if existing_record := session.exec(statement).first():
                     existing_record.full_path = str(emoji.full_path)
                     existing_record.no_file_flag = False
-                    existing_record.is_banned = False
                     existing_record.last_used_time = datetime.now()
                     existing_record.query_count += 1
                     session.add(existing_record)
@@ -473,7 +472,6 @@ class EmojiManager:
                     image_record.full_path = str(new_emoji.full_path)
                     image_record.description = new_emoji.description
                     image_record.no_file_flag = False
-                    image_record.is_banned = False
                     session.add(image_record)
             except Exception as exc:
                 logger.error(f"Update cached emoji description failed: {exc}")
@@ -531,6 +529,9 @@ class EmojiManager:
                 statement = select(Images).filter_by(image_hash=emoji.file_hash, image_type=ImageType.EMOJI).limit(1)
                 existing_record = session.exec(statement).first()
                 if existing_record:
+                    if existing_record.is_banned:
+                        logger.info(f"[register_emoji] Emoji is banned, skipping: {emoji.file_hash}")
+                        return "skipped"
                     if existing_record.is_registered and _is_available_emoji_record(existing_record):
                         # logger.info(f"[register_emoji] Emoji already registered, skipping: {emoji.file_hash}")
                         return "skipped"
@@ -734,8 +735,10 @@ class EmojiManager:
                 if image_record := session.exec(statement).first():
                     image_record.is_banned = True
                     session.add(image_record)
-                    if emoji in self.emojis:
-                        self.emojis.remove(emoji)
+                    # 按 file_hash 从内存列表移除（MaiEmoji 未定义 __eq__，
+                    # 依赖身份比较的 remove 在跨实例调用时静默失败）
+                    self.emojis = [e for e in self.emojis if e.file_hash != emoji.file_hash]
+                    self._emoji_num = len(self.emojis)
                     logger.info(f"[封禁表情包] 成功封禁表情包: {emoji.file_name}")
                 else:
                     logger.warning(f"[封禁表情包] 未找到表情包记录: {emoji.file_name}")
@@ -768,11 +771,8 @@ class EmojiManager:
         selected_emoji, similarity = random.choice(top_emojis)
         self.update_emoji_usage(selected_emoji)
         logger.info(
-            "[获取表情包] 为[%s]选中表情包: %s(%s)，相似度: %.4f",
-            emotion_label,
-            selected_emoji.file_name,
-            ",".join(_get_emoji_emotions(selected_emoji)),
-            similarity,
+            f"[获取表情包] 为[{emotion_label}]选中表情包: "
+            f"{selected_emoji.file_name}({','.join(_get_emoji_emotions(selected_emoji))})，相似度: {similarity:.4f}",
         )
         return selected_emoji
 
@@ -1037,12 +1037,13 @@ class EmojiManager:
                 self._emoji_num < global_config.emoji.max_reg_num
                 or (self._emoji_num > global_config.emoji.max_reg_num and global_config.emoji.do_replace)
             ):
+                registered_paths = {Path(emoji.full_path).resolve() for emoji in self.emojis}
                 logger.info("[emoji_maintenance] Scanning data/emoji for new emojis...")
                 for emoji_file in EMOJI_DIR.iterdir():
                     if not emoji_file.is_file():
                         continue
                     resolved_file = emoji_file.absolute().resolve()
-                    if resolved_file in self._known_emoji_file_paths:
+                    if resolved_file in registered_paths:
                         continue
                     try:
                         register_status = await self.register_emoji_by_filename(emoji_file)
@@ -1087,6 +1088,10 @@ class EmojiManager:
             return "failed"
 
         if existing_record is not None:
+            if existing_record.is_banned:
+                logger.info(f"[register_emoji] Emoji is banned, skipping: {target_emoji.file_name}")
+                return "skipped"
+
             if existing_record.is_registered and _is_available_emoji_record(existing_record):
                 logger.info(f"[register_emoji] Emoji already registered, skipping: {target_emoji.file_name}")
                 return "skipped"

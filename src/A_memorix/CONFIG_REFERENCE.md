@@ -72,7 +72,7 @@ chats = []
 [episode]
 enabled = true
 generation_enabled = true
-pending_batch_size = 20
+pending_batch_size = 50
 pending_max_retry = 3
 max_paragraphs_per_call = 20
 max_chars_per_call = 6000
@@ -85,6 +85,7 @@ refresh_interval_minutes = 30
 active_window_hours = 72
 max_refresh_per_cycle = 50
 top_k_evidence = 12
+evidence_classification_max_tokens = 1200
 
 [memory]
 enabled = true
@@ -278,7 +279,7 @@ chats = ["group:123", "user:456", "stream:abc"]
 
 - `episode.enabled` (默认 `true`)
 - `episode.generation_enabled` (默认 `true`)
-- `episode.pending_batch_size` (默认 `20`，部分路径默认 `12`)
+- `episode.pending_batch_size` (默认 `50`)
 - `episode.pending_max_retry` (默认 `3`)
 - `episode.max_paragraphs_per_call` (默认 `20`)
 - `episode.max_chars_per_call` (默认 `6000`)
@@ -295,6 +296,7 @@ chats = ["group:123", "user:456", "stream:abc"]
 - `person_profile.active_window_hours` (默认 `72`)
 - `person_profile.max_refresh_per_cycle` (默认 `50`)
 - `person_profile.top_k_evidence` (默认 `12`)
+- `person_profile.evidence_classification_max_tokens` (默认 `1200`)
 
 ## 7. 记忆演化与回收
 
