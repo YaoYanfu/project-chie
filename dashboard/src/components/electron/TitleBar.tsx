@@ -7,7 +7,12 @@ import { getPlatform, isElectron } from '@/lib/runtime'
 const dragStyle = { WebkitAppRegion: 'drag' } as React.CSSProperties & { WebkitAppRegion: string }
 const noDragStyle = { WebkitAppRegion: 'no-drag' } as React.CSSProperties & { WebkitAppRegion: string }
 
-export function TitleBar() {
+interface TitleBarProps {
+  title?: string
+  variant?: 'default' | 'amadeus'
+}
+
+export function TitleBar({ title = 'MaiBot', variant = 'default' }: TitleBarProps) {
   const { close, isMaximized, minimize, toggleMaximize } = useWindowControls()
   const isMac = useMemo(() => getPlatform() === 'darwin', [])
 
@@ -15,7 +20,8 @@ export function TitleBar() {
 
   return (
     <div
-      className={`flex items-center justify-between border-b border-border bg-background select-none ${isMac ? 'h-7' : 'h-8'}`}
+      className={`flex items-center justify-between border-b border-border bg-background select-none ${isMac ? 'h-7' : 'h-8'} ${variant === 'amadeus' ? 'amadeus-titlebar' : ''}`}
+      data-amadeus-titlebar={variant === 'amadeus' ? 'true' : undefined}
       style={dragStyle}
     >
       {/* macOS traffic light padding */}
@@ -23,7 +29,7 @@ export function TitleBar() {
 
       {/* Title / Drag area */}
       <div className="flex flex-1 items-center justify-center text-xs font-semibold text-foreground/80">
-        MaiBot
+        {title}
       </div>
 
       {/* Windows / Linux Controls */}

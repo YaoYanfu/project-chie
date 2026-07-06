@@ -22,7 +22,8 @@ function ElectronShell() {
     window.electronAPI!.isFirstLaunch().then(setIsFirstLaunch)
   }, [])
 
-  return <BackendSetupWizard open={isFirstLaunch} />
+  const isAmadeusWorkspace = window.location.pathname === '/' || window.location.pathname.startsWith('/amadeus')
+  return <BackendSetupWizard open={isFirstLaunch && !isAmadeusWorkspace} />
 }
 
 createRoot(document.getElementById('root')!).render(

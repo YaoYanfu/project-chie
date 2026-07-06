@@ -28,6 +28,7 @@ dependencies = [
     "openai>=1.95.0",
     "pandas>=2.3.1",
     "pillow>=11.3.0",
+    "psutil>=6.1.0",
     "playwright>=1.54.0",
     "pyarrow>=20.0.0",
     "pydantic>=2.11.7",

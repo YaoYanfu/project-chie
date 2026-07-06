@@ -4,6 +4,7 @@ param(
     [string]$HostAddress = "127.0.0.1",
     [int]$Port = 9880,
     [int]$TimeoutSeconds = 60,
+    [string]$PidFile = "",
     [switch]$NoBrowser,
     [switch]$Background
 )
@@ -135,6 +136,13 @@ if ($Background) {
         -PassThru
 
     Write-Host "[TTS] GPT-SoVITS started in background (PID $($proc.Id))"
+    if ($PidFile) {
+        $pidDirectory = Split-Path -Parent $PidFile
+        if ($pidDirectory) {
+            New-Item -ItemType Directory -Path $pidDirectory -Force | Out-Null
+        }
+        Set-Content -LiteralPath $PidFile -Value $proc.Id -Encoding ASCII
+    }
 
     if (Wait-TtsReady -Url $checkUrl -TimeoutSeconds $TimeoutSeconds) {
         Write-Host "`n[TTS] GPT-SoVITS is ready at $checkUrl"

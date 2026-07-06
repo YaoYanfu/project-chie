@@ -11,7 +11,6 @@ import { NotFoundPage } from './routes/404'
 import { AmadeusAuthPage } from './routes/amadeus-auth'
 import { Layout } from './components/layout'
 import { RoutePendingFallback } from './components/route-pending-fallback'
-import { checkAuth } from './hooks/use-auth'
 import { RouteErrorBoundary } from './components/error-boundary'
 
 // Root 路由
@@ -23,9 +22,8 @@ const rootRoute = createRootRoute({
     </>
   ),
   beforeLoad: () => {
-    // 如果访问根路径且未认证，重定向到认证页面
-    if (window.location.pathname === '/' && !checkAuth()) {
-      throw redirect({ to: '/auth' })
+    if (window.location.pathname === '/') {
+      throw redirect({ to: '/amadeus' })
     }
   },
 })
@@ -67,10 +65,6 @@ const protectedRoute = createRoute({
 const amadeusRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/amadeus',
-  beforeLoad: async () => {
-    const authed = await checkAuth()
-    if (!authed) throw redirect({ to: '/auth' })
-  },
   component: lazyRouteComponent(() => import('./routes/amadeus/index'), 'AmadeusHome'),
 })
 
@@ -78,11 +72,9 @@ const amadeusRoute = createRoute({
 const amadeusChatRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/amadeus/chat',
-  beforeLoad: async () => {
-    const authed = await checkAuth()
-    if (!authed) throw redirect({ to: '/auth' })
+  beforeLoad: () => {
+    throw redirect({ to: '/amadeus' })
   },
-  component: lazyRouteComponent(() => import('./routes/amadeus/chat'), 'AmadeusChat'),
 })
 
 // 首页路由 — 重定向到 Amadeus

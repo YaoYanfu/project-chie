@@ -12,6 +12,7 @@ from src.webui.core import (
     set_auth_cookie,
 )
 from src.webui.dependencies import require_auth, verify_token_optional
+from src.webui.routers.amadeus_bridge import router as amadeus_bridge_router
 from src.webui.routers.config import router as config_router
 from src.webui.routers.emoji import router as emoji_router
 from src.webui.routers.expression import router as expression_router
@@ -59,6 +60,8 @@ router.include_router(ws_auth_router)
 router.include_router(unified_ws_router)
 # 注册 Amadeus 管理面板路由
 router.include_router(amadeus_router)
+# 注册仅供本机 Amadeus 使用的云端桥接路由
+router.include_router(amadeus_bridge_router)
 
 
 class TokenVerifyRequest(BaseModel):

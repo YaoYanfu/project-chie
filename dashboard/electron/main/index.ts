@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain, protocol, session, shell } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { spawn, exec } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
+import { existsSync } from 'fs'
 
 import { registerAppProtocol } from './protocol'
 import {
@@ -21,6 +22,25 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 let mainWindow: BrowserWindow | null = null
+let amadeusBackendProcess: ChildProcess | null = null
+
+function startLocalAmadeusBackend() {
+  const projectRoot = path.resolve(__dirname, '..', '..', '..')
+  const amadeusPackage = path.join(projectRoot, 'src', 'amadeus')
+  if (!existsSync(amadeusPackage)) return
+
+  const venvPython = path.join(projectRoot, '.venv', 'Scripts', 'python.exe')
+  const pythonExecutable = existsSync(venvPython) ? venvPython : 'python'
+  const childProcess = spawn(pythonExecutable, ['-m', 'src.amadeus'], {
+    cwd: projectRoot,
+    stdio: 'ignore',
+    windowsHide: true,
+  })
+  amadeusBackendProcess = childProcess
+  childProcess.on('exit', () => {
+    if (amadeusBackendProcess === childProcess) amadeusBackendProcess = null
+  })
+}
 
 /**
  * Register app:// custom protocol BEFORE app.whenReady()
@@ -211,7 +231,14 @@ app.whenReady().then(() => {
   })
 
   registerIpcHandlers()
+  startLocalAmadeusBackend()
   createWindow()
+})
+
+app.on('before-quit', () => {
+  if (amadeusBackendProcess && !amadeusBackendProcess.killed) {
+    amadeusBackendProcess.kill()
+  }
 })
 
 /**

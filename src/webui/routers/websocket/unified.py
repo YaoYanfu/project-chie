@@ -21,6 +21,7 @@ from src.webui.routers.chat.service import (
 from src.webui.routers.plugin.progress import get_current_progress
 from src.webui.routers.websocket.auth import verify_ws_token
 from src.webui.routers.websocket.manager import websocket_manager
+from src.webui.services.amadeus_bridge import get_amadeus_bridge_token_manager
 
 logger = get_logger("webui.unified_ws")
 router = APIRouter()
@@ -508,7 +509,11 @@ async def _handle_call(connection_id: str, message: Dict[str, Any]) -> None:
     )
 
 
-async def handle_client_message(connection_id: str, message: Dict[str, Any]) -> None:
+async def handle_client_message(
+    connection_id: str,
+    message: Dict[str, Any],
+    amadeus_only: bool = False,
+) -> None:
     """处理统一 WebSocket 客户端消息。
 
     Args:
@@ -517,6 +522,15 @@ async def handle_client_message(connection_id: str, message: Dict[str, Any]) -> 
     """
     operation = str(message.get("op") or "").strip()
     request_id = cast(Optional[str], message.get("id"))
+
+    if amadeus_only and operation != "ping" and message.get("domain") != "chat":
+        await websocket_manager.send_response(
+            connection_id,
+            request_id=request_id,
+            ok=False,
+            error=_build_error("amadeus_scope_denied", "Amadeus token 仅允许访问聊天域"),
+        )
+        return
 
     if operation == "ping":
         await websocket_manager.send_pong(connection_id, time.time())
@@ -543,14 +557,21 @@ async def handle_client_message(connection_id: str, message: Dict[str, Any]) -> 
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = Query(None)) -> None:
+async def websocket_endpoint(
+    websocket: WebSocket,
+    token: Optional[str] = Query(None),
+) -> None:
     """统一 WebSocket 入口。
 
     Args:
         websocket: FastAPI WebSocket 对象。
         token: 可选的一次性握手 Token。
     """
-    if not await authenticate_websocket_connection(websocket, token):
+    webui_authenticated = await authenticate_websocket_connection(websocket, token)
+    amadeus_authenticated = get_amadeus_bridge_token_manager().verify(
+        websocket.headers.get("x-amadeus-token", "")
+    )
+    if not webui_authenticated and not amadeus_authenticated:
         logger.warning("统一 WebSocket 连接被拒绝：认证失败")
         await websocket.close(code=4001, reason="认证失败，请重新登录")
         return
@@ -576,7 +597,11 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = Query(
                     error=_build_error("invalid_message", "消息必须是 JSON 对象"),
                 )
                 continue
-            await handle_client_message(connection_id, cast(Dict[str, Any], raw_message))
+            await handle_client_message(
+                connection_id,
+                cast(Dict[str, Any], raw_message),
+                amadeus_only=amadeus_authenticated and not webui_authenticated,
+            )
     except WebSocketDisconnect:
         logger.info(f"统一 WebSocket 客户端已断开: connection={connection_id}")
     except asyncio.CancelledError:
