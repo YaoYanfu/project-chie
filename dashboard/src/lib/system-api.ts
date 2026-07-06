@@ -5,7 +5,7 @@ import { fetchWithAuth, getAuthHeaders } from './fetch-with-auth'
  */
 
 /**
- * 重启麦麦主程序
+ * 重启千惠主程序
  */
 export async function restartMaiBot(): Promise<{ success: boolean; message: string }> {
   const response = await fetchWithAuth('/api/webui/system/restart', {
@@ -22,7 +22,7 @@ export async function restartMaiBot(): Promise<{ success: boolean; message: stri
 }
 
 /**
- * 检查麦麦运行状态
+ * 检查千惠运行状态
  */
 export async function getMaiBotStatus(): Promise<{
   running: boolean

@@ -154,6 +154,40 @@ class ConversationStore:
         with self._lock:
             return sorted(path.stem for path in self._session_dir.glob("*.json") if path.is_file())
 
+    def list_sessions_with_meta(self) -> List[Dict[str, Any]]:
+        """返回会话列表，附带最近一条消息预览和消息数量。"""
+        with self._lock:
+            result: List[Dict[str, Any]] = []
+            session_files = sorted(
+                self._session_dir.glob("*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for path in session_files:
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                messages_payload = payload.get("messages", [])
+                if not isinstance(messages_payload, list):
+                    continue
+                messages = [
+                    ChatMessage.from_dict(item) for item in messages_payload if isinstance(item, dict)
+                ]
+                preview = ""
+                last_role = ""
+                if messages:
+                    last_msg = messages[-1]
+                    preview = last_msg.content[:80] + ("..." if len(last_msg.content) > 80 else "")
+                    last_role = last_msg.role
+                result.append({
+                    "session_id": path.stem,
+                    "last_message_preview": preview,
+                    "last_message_role": last_role,
+                    "message_count": len(messages),
+                })
+            return result
+
     def _write_messages(self, session_id: str, messages: List[ChatMessage]) -> None:
         path = self._session_path(session_id)
         payload = {

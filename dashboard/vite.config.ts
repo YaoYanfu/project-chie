@@ -10,7 +10,7 @@ export default defineConfig({
     port: 7999,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8001',  // WebUI 后端服务器
+        target: 'http://82.156.88.63:8001',  // 云端千惠 WebUI
         changeOrigin: true,
         ws: true,
         // 确保 Cookie 正确转发

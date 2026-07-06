@@ -6,8 +6,8 @@
     "viewAnnualSummary": "查看年度总结",
     "annualSummary": "2025 年度总结",
     "searchPlaceholder": "搜索...",
-    "viewDocs": "查看麦麦文档",
-    "docs": "麦麦文档",
+    "viewDocs": "查看千惠文档",
+    "docs": "千惠文档",
     "switchToLight": "切换到浅色模式",
     "switchToDark": "切换到深色模式",
     "logout": "登出系统",
@@ -17,18 +17,18 @@
   "sidebar": {
     "groups": {
       "overview": "概览",
-      "botConfig": "麦麦配置编辑",
-      "botResources": "麦麦资源管理",
+      "botConfig": "千惠配置编辑",
+      "botResources": "千惠资源管理",
       "extensionsMonitor": "插件与扩展",
       "system": "系统"
     },
     "menu": {
       "home": "首页",
-      "botMainConfig": "麦麦设置",
+      "botMainConfig": "千惠设置",
       "aiModelProvider": "模型厂商设置",
       "modelManagement": "模型管理",
       "promptManagement": "Prompt 管理",
-      "adapterConfig": "麦麦适配器配置",
+      "adapterConfig": "千惠适配器配置",
       "emojiManagement": "表情包",
       "expressionManagement": "表达方式",
       "slangManagement": "黑话",
@@ -41,19 +41,19 @@
       "mcpSettings": "MCP 设置",
       "logViewer": "日志查看器",
       "reasoningProcess": "推理过程",
-      "maisakaMonitor": "麦麦观察",
+      "maisakaMonitor": "千惠观察",
       "localChat": "本地聊天室",
       "settings": "系统设置"
     }
   },
   "workspace": {
-    "switcherLabel": "切换麦麦工作区",
-    "settings": "麦麦设置",
-    "chat": "麦麦聊天"
+    "switcherLabel": "切换千惠工作区",
+    "settings": "千惠设置",
+    "chat": "千惠聊天"
   },
   "chat": {
     "defaultTab": "WebUI",
-    "botNameFallback": "麦麦",
+    "botNameFallback": "千惠",
     "userFallback": "用户",
     "userNameFallback": "WebUI用户",
     "virtualGroupFallback": "WebUI虚拟群聊",
@@ -108,9 +108,9 @@
     },
     "dialog": {
       "create": "创建对话",
-      "description": "选择一个麦麦已认识的用户，以该用户的身份与麦麦对话。麦麦将使用她对该用户的记忆和认知来回应。",
+      "description": "选择一个千惠已认识的用户，以该用户的身份与千惠对话。千惠将使用她对该用户的记忆和认知来回应。",
       "groupName": "虚拟群名（可选）",
-      "groupNameHint": "麦麦会认为这是一个名为此名称的群聊",
+      "groupNameHint": "千惠会认为这是一个名为此名称的群聊",
       "knownUserSuffix": " · 已认识",
       "loading": "Thinking...",
       "noUsers": "没有找到用户",
@@ -425,7 +425,7 @@
       "openSourceLicense": "开源许可",
       "openSourceDesc": "本项目在 GitHub 开源，欢迎 Star ⭐ 支持！",
       "visitGitHub": "前往 GitHub",
-      "appDesc": "麦麦（MaiBot）的现代化 Web 管理界面",
+      "appDesc": "千惠（MaiBot）的现代化 Web 管理界面",
       "maimaiCore": "MaiBot 核心",
       "uiFrameworkGroup": "UI 框架与组件",
       "routingStateGroup": "路由与状态管理",
@@ -526,7 +526,7 @@
     },
     "header": {
       "title": "首次配置向导",
-      "description": "让我们一起完成麦麦的初始配置"
+      "description": "让我们一起完成千惠的初始配置"
     },
     "progress": {
       "stepCounter": "步骤 {{current}} / {{total}}"
@@ -589,7 +589,7 @@
         "platform": {
           "label": "平台 *",
           "placeholder": "请选择平台",
-          "description": "选择麦麦Bot运行的平台",
+          "description": "选择千惠Bot运行的平台",
           "options": {
             "custom": "其他平台"
           }
@@ -601,7 +601,7 @@
         "qqAccount": {
           "label": "QQ账号 *",
           "placeholder": "请输入机器人的 QQ 账号",
-          "description": "运行麦麦Bot的 QQ 账号"
+          "description": "运行千惠Bot的 QQ 账号"
         },
         "primaryAccount": {
           "label": "账号 ID *",
@@ -611,7 +611,7 @@
         "nickname": {
           "label": "昵称 *",
           "placeholder": "请输入机器人的昵称",
-          "description": "麦麦Bot的名称"
+          "description": "千惠Bot的名称"
         },
         "alias": {
           "label": "别名",
@@ -635,7 +635,7 @@
         "multipleReplyStyle": {
           "label": "备用表达风格",
           "placeholder": "每行输入一种备用表达风格",
-          "description": "当列表不为空时，麦麦会按概率从这些风格中随机替换默认表达风格"
+          "description": "当列表不为空时，千惠会按概率从这些风格中随机替换默认表达风格"
         },
         "multipleProbability": {
           "label": "备用风格触发概率",
@@ -737,9 +737,9 @@
   "restart": {
     "preparing": "准备重启",
     "preparingDesc": "正在发送重启请求...",
-    "preparingTip": "🔄 正在准备重启麦麦...",
-    "restarting": "正在重启麦麦",
-    "restartingDesc": "请稍候，麦麦正在重启中...",
+    "preparingTip": "🔄 正在准备重启千惠...",
+    "restarting": "正在重启千惠",
+    "restartingDesc": "请稍候，千惠正在重启中...",
     "restartingTip": "🔄 配置已保存，正在重启主程序...",
     "checking": "检查服务状态",
     "checkingDesc": "等待服务恢复... ({{current}}/{{max}})",
@@ -782,20 +782,20 @@
     "items": {
       "home": "首页",
       "homeDesc": "查看仪表板概览",
-      "botConfig": "麦麦设置",
-      "botConfigDesc": "配置麦麦的核心设置",
+      "botConfig": "千惠设置",
+      "botConfigDesc": "配置千惠的核心设置",
       "modelProvider": "模型厂商设置",
       "modelProviderDesc": "配置模型提供商",
-      "model": "麦麦模型配置",
+      "model": "千惠模型配置",
       "modelDesc": "配置模型参数",
       "emoji": "表情包",
-      "emojiDesc": "管理麦麦的表情包",
+      "emojiDesc": "管理千惠的表情包",
       "expression": "表达方式",
-      "expressionDesc": "管理麦麦的表达方式",
+      "expressionDesc": "管理千惠的表达方式",
       "person": "人物信息管理",
       "personDesc": "管理人物信息",
       "jargon": "黑话",
-      "jargonDesc": "管理麦麦学习到的黑话和俚语",
+      "jargonDesc": "管理千惠学习到的黑话和俚语",
       "statistics": "统计信息",
       "statisticsDesc": "查看使用统计",
       "plugins": "插件市场",
@@ -815,7 +815,7 @@
   },
   "home": {
     "title": "实时监控面板",
-    "subtitle": "麦麦运行状态和统计数据一览",
+    "subtitle": "千惠运行状态和统计数据一览",
     "loading": "Thinking...",
     "loadingHint": "Thinking...",
     "timeRange": {
@@ -825,14 +825,14 @@
     },
     "autoRefresh": "自动刷新",
     "botStatus": {
-      "title": "麦麦状态",
+      "title": "千惠状态",
       "running": "运行中",
       "stopped": "已停止",
       "uptime": "运行 {{time}}"
     },
     "quickActions": {
       "title": "快速操作",
-      "restart": "重启麦麦",
+      "restart": "重启千惠",
       "restarting": "重启中...",
       "expressionReview": "表达审核",
       "viewLogs": "查看日志",
@@ -843,7 +843,7 @@
       "title": "反馈问卷",
       "description": "帮助我们改进产品体验",
       "webui": "WebUI 反馈",
-      "maibot": "麦麦反馈"
+      "maibot": "千惠反馈"
     },
     "stats": {
       "totalRequests": "总请求数",

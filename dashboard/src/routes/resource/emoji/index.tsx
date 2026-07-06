@@ -282,7 +282,7 @@ export function EmojiManagementPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">表情包</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            管理麦麦的表情包资源
+            管理千惠的表情包资源
           </p>
         </div>
         <Button

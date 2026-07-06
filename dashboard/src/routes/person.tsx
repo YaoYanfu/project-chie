@@ -278,7 +278,7 @@ export function PersonManagementPage() {
               人物信息管理
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              管理麦麦认识的所有人物信息
+              管理千惠认识的所有人物信息
             </p>
           </div>
         </div>

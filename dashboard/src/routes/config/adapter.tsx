@@ -390,9 +390,9 @@ export function AdapterConfigPage() {
         {/* 页面标题 */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">麦麦适配器配置</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">千惠适配器配置</h1>
             <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
-              管理麦麦的 QQ 适配器的配置文件
+              管理千惠的 QQ 适配器的配置文件
             </p>
           </div>
         </div>
@@ -716,8 +716,8 @@ export function AdapterConfigPage() {
                   <span className="sm:hidden">Napcat</span>
                 </TabsTrigger>
                 <TabsTrigger value="maibot" className="flex-shrink-0 text-xs sm:text-sm whitespace-nowrap">
-                  <span className="hidden sm:inline">麦麦连接</span>
-                  <span className="sm:hidden">麦麦</span>
+                  <span className="hidden sm:inline">千惠连接</span>
+                  <span className="sm:hidden">千惠</span>
                 </TabsTrigger>
                 <TabsTrigger value="chat" className="flex-shrink-0 text-xs sm:text-sm whitespace-nowrap">
                   <span className="hidden sm:inline">聊天控制</span>
@@ -742,7 +742,7 @@ export function AdapterConfigPage() {
               />
             </TabsContent>
 
-            {/* 麦麦服务器配置 */}
+            {/* 千惠服务器配置 */}
             <TabsContent value="maibot" className="space-y-4">
               <MaiBotServerSection 
                 config={config} 
@@ -931,7 +931,7 @@ function NapcatServerSection({
   )
 }
 
-// 麦麦服务器配置组件
+// 千惠服务器配置组件
 function MaiBotServerSection({
   config,
   onChange,
@@ -942,7 +942,7 @@ function MaiBotServerSection({
   return (
     <div className="rounded-lg border bg-card p-4 md:p-6 space-y-4 md:space-y-6">
       <div>
-        <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">麦麦 WebSocket 服务设置</h3>
+        <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">千惠 WebSocket 服务设置</h3>
         <div className="grid gap-3 md:gap-4">
           <div className="grid gap-2">
             <Label htmlFor="maibot-host" className="text-sm md:text-base">主机地址</Label>
@@ -958,7 +958,7 @@ function MaiBotServerSection({
               placeholder="localhost"
               className="text-sm md:text-base"
             />
-            <p className="text-xs text-muted-foreground">麦麦在 .env 文件中设置的 HOST 字段</p>
+            <p className="text-xs text-muted-foreground">千惠在 .env 文件中设置的 HOST 字段</p>
           </div>
 
           <div className="grid gap-2">
@@ -976,7 +976,7 @@ function MaiBotServerSection({
               placeholder="8000"
               className="text-sm md:text-base"
             />
-            <p className="text-xs text-muted-foreground">麦麦在 .env 文件中设置的 PORT 字段（留空使用默认值 8000）</p>
+            <p className="text-xs text-muted-foreground">千惠在 .env 文件中设置的 PORT 字段（留空使用默认值 8000）</p>
           </div>
         </div>
       </div>
@@ -1312,7 +1312,7 @@ function VoiceSection({
             className="text-sm md:text-base"
           />
           <p className="text-xs text-muted-foreground">
-            转发消息中图片数量超过此值时使用占位符（避免麦麦VLM处理卡死）
+            转发消息中图片数量超过此值时使用占位符（避免千惠VLM处理卡死）
           </p>
         </div>
       </div>

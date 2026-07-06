@@ -8,7 +8,7 @@
   <br>
   <br>
 
-  <h1>麦麦 MaiBot <sub><small>MaiSaka</small></sub></h1>
+  <h1>千惠 MaiBot <sub><small>MaiSaka</small></sub></h1>
   <sub><sup>An interactive agent based on large language models.</sup></sub>
 
   <!-- Badges Row -->
@@ -33,19 +33,19 @@
 ## 介绍
 <sub><sup>Introduction</sup></sub>
 
-麦麦 MaiSaka 是一个基于大语言模型的可交互智能体。  
+千惠 MaiSaka 是一个基于大语言模型的可交互智能体。  
 <sub><sup>MaiSaka is an interactive agent based on large language models.</sup></sub>
 
 MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务的“有帮助的助手”，她还是一个致力于了解你，并以真实人类的风格进行交互的数字生命。她不追求完美，不追求高效，但追求亲切和真实。  
 <sub><sup>MaiSaka is more than just a bot, and more than a "helpful assistant" that completes tasks. She is a digital life form that tries to understand you and interact in a genuinely human style. She does not pursue perfection or efficiency above all else. She pursues warmth and authenticity.</sup></sub>
 
-- 💭 **没有人喜欢 GPT 的语言风格**：麦麦使用了更加自然、贴合人类对话习惯的交互方式，不是长篇大论或者 markdown 格式的分点，而是或长或短的闲谈。  
+- 💭 **没有人喜欢 GPT 的语言风格**：千惠使用了更加自然、贴合人类对话习惯的交互方式，不是长篇大论或者 markdown 格式的分点，而是或长或短的闲谈。  
   <sub><sup><strong>No one likes GPT-sounding dialogue</strong>: MaiSaka uses a more natural conversational style. Instead of long-winded markdown-heavy replies, she chats in a way that feels casual, varied, and human.</sup></sub>
 - 🎭 **不再是傻乎乎的一问一答**：懂得在合适的时间说话，把握聊天中的气氛，在合适的时候开口，在合适的时候闭嘴。  
   <sub><sup><strong>No longer stuck in rigid Q&A</strong>: She knows when to speak, how to read the room, when to join a conversation, and when to stay quiet.</sup></sub>
-- 🧠 **麦麦·成为人类**：在多人对话中，麦麦会模仿其他人的说话风格，还会自主理解新词或者小圈子里的黑话，不断进化。  
+- 🧠 **千惠·成为人类**：在多人对话中，千惠会模仿其他人的说话风格，还会自主理解新词或者小圈子里的黑话，不断进化。  
   <sub><sup><strong>MaiSaka becoming human</strong>: In group conversations, MaiSaka imitates how people around her speak, learns new slang and in-group language, and keeps evolving.</sup></sub>
-- ❤️ **永远都在更加了解你**：基于心理学中人格理论，麦麦会不断积累对于你的了解，不论是你的信息、喜恶或是行为风格，她都记在心里。  
+- ❤️ **永远都在更加了解你**：基于心理学中人格理论，千惠会不断积累对于你的了解，不论是你的信息、喜恶或是行为风格，她都记在心里。  
   <sub><sup><strong>Always learning more about you</strong>: Inspired by personality theory in psychology, MaiSaka gradually builds an understanding of your preferences, traits, habits, and behavior style.</sup></sub>
 - 🔌 **插件系统**：提供强大的 API 和事件系统，拥有无限扩展可能。  
   <sub><sup><strong>Plugin system</strong>: Provides powerful APIs and an event system with virtually unlimited room for extension.</sup></sub>
@@ -68,10 +68,10 @@ MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务
   <a href="https://www.bilibili.com/video/BV1amAneGE3P" target="_blank">
     <picture>
       <source media="(max-width: 600px)" srcset="depends-data/video.png" width="100%">
-      <img src="depends-data/video.png" width="60%" alt="麦麦演示视频" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+      <img src="depends-data/video.png" width="60%" alt="千惠演示视频" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
     </picture>
     <br>
-    <small>前往观看麦麦演示视频 / Watch the MaiSaka demo video</small>
+    <small>前往观看千惠演示视频 / Watch the MaiSaka demo video</small>
   </a>
 </div>
 
@@ -115,12 +115,12 @@ MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务
 
 | 类别 / Category | 群组 / Group | 说明 / Description |
 | :--- | :--- | :--- |
-| **技术交流**<br><sub><sup>Technical</sup></sub> | 麦麦脑电图:571780722
+| **技术交流**<br><sub><sup>Technical</sup></sub> | 千惠脑电图:571780722
 <br><sub><sup>MaiBrain EEG</sup></sub> | 技术交流 / 答疑<br><sub><sup>Technical discussion / Q&A</sup></sub> |
-| **技术交流**<br><sub><sup>Technical</sup></sub> | 麦麦大脑磁共振:766798517
+| **技术交流**<br><sub><sup>Technical</sup></sub> | 千惠大脑磁共振:766798517
 <br><sub><sup>MaiBrain MRI</sup></sub> | 技术交流 / 答疑<br><sub><sup>Technical discussion / Q&A</sup></sub> |
-| **技术交流**<br><sub><sup>Technical</sup></sub> | [麦麦要当 VTB](https://qm.qq.com/q/wGePTl1UyY)<br><sub><sup>Mai Wants to Be a VTuber</sup></sub> | 技术交流 / 答疑<br><sub><sup>Technical discussion / Q&A</sup></sub> |
-| **闲聊吹水**<br><sub><sup>Casual Chat</sup></sub> | [麦麦之闲聊群](https://qm.qq.com/q/JxvHZnxyec)<br><sub><sup>Mai Casual Chat Group</sup></sub> | 仅限闲聊，不答疑<br><sub><sup>Casual chat only, no support</sup></sub> |
+| **技术交流**<br><sub><sup>Technical</sup></sub> | [千惠要当 VTB](https://qm.qq.com/q/wGePTl1UyY)<br><sub><sup>Mai Wants to Be a VTuber</sup></sub> | 技术交流 / 答疑<br><sub><sup>Technical discussion / Q&A</sup></sub> |
+| **闲聊吹水**<br><sub><sup>Casual Chat</sup></sub> | [千惠之闲聊群](https://qm.qq.com/q/JxvHZnxyec)<br><sub><sup>Mai Casual Chat Group</sup></sub> | 仅限闲聊，不答疑<br><sub><sup>Casual chat only, no support</sup></sub> |
 | **插件开发**<br><sub><sup>Plugin Development</sup></sub> | 插件开发群:1036092828
 <br><sub><sup>Plugin Dev Group</sup></sub> | 进阶开发与测试<br><sub><sup>Advanced development and testing</sup></sub> |
 
@@ -133,17 +133,17 @@ MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务
 > 部分内容可能更新不够及时，请注意版本对应。  
 > <sub><sup>Some content may not be updated promptly, so please pay attention to version compatibility.</sup></sub>
 
-- **[📚 核心 Wiki 文档](https://docs.mai-mai.org)**：最全面的文档中心，了解麦麦的一切。  
+- **[📚 核心 Wiki 文档](https://docs.mai-mai.org)**：最全面的文档中心，了解千惠的一切。  
   <sub><sup><strong><a href="https://docs.mai-mai.org">📚 Core Wiki Documentation</a></strong>: The most comprehensive documentation hub for everything about MaiSaka.</sup></sub>
 
 ### 🧩 衍生项目
 <sub><sup>Related Projects</sup></sub>
 
-- **[Amaidesu](https://github.com/MaiM-with-u/Amaidesu)**：让麦麦在 B 站开播。  
+- **[Amaidesu](https://github.com/MaiM-with-u/Amaidesu)**：让千惠在 B 站开播。  
   <sub><sup>Let MaiSaka stream on Bilibili.</sup></sub>
 - **[MoFox_Bot](https://github.com/MoFox-Studio/MoFox-Core)**：基于 MaiCore 0.10.0 的增强型 Fork，更稳定更有趣。  
   <sub><sup>An enhanced fork based on MaiCore 0.10.0, with improved stability and more fun features.</sup></sub>
-- **[MaiCraft](https://github.com/MaiM-with-u/Maicraft)**：让麦麦陪你玩 Minecraft（暂时停止维护中）。  
+- **[MaiCraft](https://github.com/MaiM-with-u/Maicraft)**：让千惠陪你玩 Minecraft（暂时停止维护中）。  
   <sub><sup>Let MaiSaka accompany you in Minecraft (currently paused).</sup></sub>
 
 ---
@@ -189,7 +189,7 @@ MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务
 
 - **[萨卡班甲鱼](https://en.wikipedia.org/wiki/Sacabambaspis)**：千石可乐很喜欢的生物。  
   <sub><sup><strong><a href="https://en.wikipedia.org/wiki/Sacabambaspis">Sacabambaspis</a></strong>: SengokuCola's favorite creature.</sup></sub>
-- **[略nd](https://space.bilibili.com/1344099355)**：为麦麦绘制早期的精美人设。  
+- **[略nd](https://space.bilibili.com/1344099355)**：为千惠绘制早期的精美人设。  
   <sub><sup>Drew MaiSaka's beautiful early character design.</sup></sub>
 - **[NapCat](https://github.com/NapNeko/NapCatQQ)**：现代化的基于 NTQQ 的 Bot 协议实现。  
   <sub><sup>A modern NTQQ-based bot protocol implementation.</sup></sub>
@@ -199,7 +199,7 @@ MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务
 ## 📊 仓库状态
 <sub><sup>Repository Status</sup></sub>
 
-![Alt](https://repobeats.axiom.co/api/embed/9faca9fccfc467931b87dd357b60c6362b5cfae0.svg "麦麦仓库状态")
+![Alt](https://repobeats.axiom.co/api/embed/9faca9fccfc467931b87dd357b60c6362b5cfae0.svg "千惠仓库状态")
 
 ### Star 趋势
 <sub><sup>Star History</sup></sub>

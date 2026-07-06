@@ -53,8 +53,15 @@ class MessagesResponse(BaseModel):
     messages: List[MessagePayload]
 
 
+class SessionInfo(BaseModel):
+    session_id: str
+    last_message_preview: str = ""
+    last_message_role: str = ""
+    message_count: int = 0
+
+
 class SessionsResponse(BaseModel):
-    sessions: List[str]
+    sessions: List[SessionInfo]
 
 
 class StatusResponse(BaseModel):
@@ -172,7 +179,7 @@ def create_app(settings: Optional[LocalConsoleSettings] = None) -> FastAPI:
 
     @app.get("/api/sessions", response_model=SessionsResponse, dependencies=[Depends(require_auth)])
     async def list_sessions() -> SessionsResponse:
-        return SessionsResponse(sessions=store.list_sessions())
+        return SessionsResponse(sessions=[SessionInfo(**s) for s in store.list_sessions_with_meta()])
 
     @app.get(
         "/api/sessions/{session_id}/messages",

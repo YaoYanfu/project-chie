@@ -70,7 +70,7 @@ export const PersonalitySection = React.memo(function PersonalitySection({ confi
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              可以定义多个不同的人格状态，麦麦会随机切换
+              可以定义多个不同的人格状态，千惠会随机切换
             </p>
             <div className="space-y-2">
               {config.states.map((state, index) => (
@@ -142,7 +142,7 @@ export const PersonalitySection = React.memo(function PersonalitySection({ confi
               id="plan_style"
               value={config.plan_style}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange({ ...config, plan_style: e.target.value })}
-              placeholder="麦麦的说话规则和行为风格"
+              placeholder="千惠的说话规则和行为风格"
               rows={5}
             />
           </div>

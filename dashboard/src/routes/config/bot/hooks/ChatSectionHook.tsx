@@ -304,7 +304,7 @@ export const ChatSectionHook: FieldHookComponent = ({ value, onChange }) => {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              控制麦麦的思考深度。经典模式回复快但简单；深度模式更深入但较慢；动态模式根据情况自动选择
+              控制千惠的思考深度。经典模式回复快但简单；深度模式更深入但较慢；动态模式根据情况自动选择
             </p>
           </div>
 

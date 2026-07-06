@@ -443,7 +443,7 @@ export function ReplierMonitor({ autoRefresh, refreshKey }: ReplierMonitorProps)
               回复生成详情
             </DialogTitle>
             <DialogDescription>
-              查看麦麦的详细回复生成过程
+              查看千惠的详细回复生成过程
             </DialogDescription>
           </DialogHeader>
 

@@ -225,7 +225,7 @@ function MessageSentCard({ data }: { data: MessageSentEvent }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-medium text-sm">{data.speaker_name || '麦麦'}</span>
+          <span className="font-medium text-sm">{data.speaker_name || '千惠'}</span>
           <Badge variant="outline" className="text-[10px]">已发送</Badge>
           <span className="text-xs text-muted-foreground">{formatTimestamp(data.timestamp)}</span>
         </div>

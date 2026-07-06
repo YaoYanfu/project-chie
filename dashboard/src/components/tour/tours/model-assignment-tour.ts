@@ -174,7 +174,7 @@ export const modelAssignmentTourSteps: Step[] = [
   },
   {
     target: '[data-tour="tasks-tab-trigger"]',
-    content: '最后切换到"为模型分配功能"，为麦麦的各个组件选择合适的模型。',
+    content: '最后切换到"为模型分配功能"，为千惠的各个组件选择合适的模型。',
     placement: 'bottom' as Placement,
     disableBeacon: true,
     disableOverlayClose: true,

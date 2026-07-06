@@ -625,7 +625,7 @@ function MCPSettingsPageContent() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>MCP 设置保存后需要重启麦麦才会生效。这里与主程序配置中的 MCP 栏目使用同一份配置。</span>
+              <span>MCP 设置保存后需要重启千惠才会生效。这里与主程序配置中的 MCP 栏目使用同一份配置。</span>
               <Button type="button" variant="outline" size="sm" onClick={dismissRestartNotice}>
                 我知道了
               </Button>

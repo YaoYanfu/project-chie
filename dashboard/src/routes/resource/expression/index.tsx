@@ -573,7 +573,7 @@ export function ExpressionManagementPage() {
               表达方式
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              管理麦麦的表达方式和话术模板
+              管理千惠的表达方式和话术模板
             </p>
           </div>
           <div className="flex items-center gap-2">

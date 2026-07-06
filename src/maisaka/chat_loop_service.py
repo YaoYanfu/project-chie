@@ -501,7 +501,7 @@ class MaisakaChatLoopService:
 
             return f"你的名字是{bot_name}{bot_nickname}。\n{prompt_personality}"
         except Exception:
-            return "你的名字是麦麦。\n是人类。"
+            return "你的名字是千惠。\n是人类。"
 
     async def ensure_chat_prompt_loaded(self, tools_section: str = "") -> None:
         """确保主聊天提示词已经加载完成。

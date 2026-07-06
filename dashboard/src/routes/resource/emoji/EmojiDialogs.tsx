@@ -715,7 +715,7 @@ export function EmojiUploadDialog({
                 }
               />
               <Label htmlFor="single-is-registered" className="cursor-pointer">
-                上传后立即注册(可被麦麦使用)
+                上传后立即注册(可被千惠使用)
               </Label>
             </div>
           </div>

@@ -87,7 +87,7 @@ class InstallPluginRequest(BaseModel):
 
 
 class VersionResponse(BaseModel):
-    version: str = Field(..., description="麦麦版本号")
+    version: str = Field(..., description="千惠版本号")
     version_major: int = Field(..., description="主版本号")
     version_minor: int = Field(..., description="次版本号")
     version_patch: int = Field(..., description="补丁版本号")

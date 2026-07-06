@@ -441,7 +441,7 @@ export function PlannerMonitor({ autoRefresh, refreshKey }: PlannerMonitorProps)
               计划执行详情
             </DialogTitle>
             <DialogDescription>
-              查看麦麦的详细计划推理过程和执行动作
+              查看千惠的详细计划推理过程和执行动作
             </DialogDescription>
           </DialogHeader>
 

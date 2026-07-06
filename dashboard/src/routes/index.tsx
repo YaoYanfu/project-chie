@@ -622,7 +622,7 @@ function IndexPageContent() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              麦麦版本
+              千惠版本
             </CardTitle>
           </CardHeader>
           <CardContent>

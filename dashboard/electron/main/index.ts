@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, protocol, session } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, session, shell } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { spawn, exec } from 'child_process'
 
 import { registerAppProtocol } from './protocol'
 import {
@@ -71,6 +72,38 @@ function registerIpcHandlers() {
   ipcMain.handle('electron:is-first-launch', () => isFirstLaunch())
   ipcMain.handle('electron:mark-first-launch-complete', () => markFirstLaunchComplete())
   ipcMain.handle('electron:get-app-version', () => app.getVersion())
+
+  // ── Amadeus: launch external scripts ───────────────────────────────────
+  ipcMain.handle('electron:launch-powershell', async (_e, scriptPath: string, args: string[] = []) => {
+    return new Promise((resolve) => {
+      const proc = spawn('powershell.exe', [
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptPath,
+        ...args,
+      ], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: false,
+      })
+      proc.unref()
+      resolve({ success: true, pid: proc.pid })
+    })
+  })
+
+  ipcMain.handle('electron:open-external-url', async (_e, url: string) => {
+    await shell.openExternal(url)
+    return { success: true }
+  })
+
+  ipcMain.handle('electron:get-project-root', () => {
+    // Project root is the parent of the dashboard directory
+    return path.resolve(__dirname, '..', '..', '..')
+  })
+
+  ipcMain.handle('electron:file-exists', async (_e, filePath: string) => {
+    const fs = await import('fs')
+    return fs.existsSync(filePath)
+  })
 }
 
 /**

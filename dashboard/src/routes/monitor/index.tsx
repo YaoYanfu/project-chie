@@ -15,7 +15,7 @@ export function PlannerMonitorPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Activity className="h-6 w-6 sm:h-7 sm:w-7" />
-            麦麦观察
+            千惠观察
           </h1>
         </div>
       </div>

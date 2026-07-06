@@ -47,13 +47,13 @@
     }
   },
   "workspace": {
-    "switcherLabel": "麦麦ワークスペースを切り替え",
-    "settings": "麦麦設定",
-    "chat": "麦麦チャット"
+    "switcherLabel": "千惠ワークスペースを切り替え",
+    "settings": "千惠設定",
+    "chat": "千惠チャット"
   },
   "chat": {
     "defaultTab": "WebUI",
-    "botNameFallback": "麦麦",
+    "botNameFallback": "千惠",
     "userFallback": "ユーザー",
     "userNameFallback": "WebUIユーザー",
     "virtualGroupFallback": "WebUI仮想グループチャット",
@@ -108,9 +108,9 @@
     },
     "dialog": {
       "create": "会話を作成",
-      "description": "麦麦がすでに知っているユーザーを選び、そのユーザーとして麦麦と会話します。麦麦はそのユーザーへの記憶と理解を使って返信します。",
+      "description": "千惠がすでに知っているユーザーを選び、そのユーザーとして千惠と会話します。千惠はそのユーザーへの記憶と理解を使って返信します。",
       "groupName": "仮想グループ名（任意）",
-      "groupNameHint": "麦麦はこれをこの名前のグループチャットとして認識します",
+      "groupNameHint": "千惠はこれをこの名前のグループチャットとして認識します",
       "knownUserSuffix": " · 既知",
       "loading": "Thinking...",
       "noUsers": "ユーザーが見つかりません",

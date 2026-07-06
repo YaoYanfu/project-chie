@@ -73,6 +73,16 @@ export interface ElectronAPI {
   // Platform detection
   /** Get platform identifier (darwin, win32, linux) */
   getPlatform(): string
+
+  // ── Amadeus: external process management ─────────────────────────────
+  /** Launch a PowerShell script with arguments (detached process) */
+  launchPowershell(scriptPath: string, args: string[]): Promise<{ success: boolean; pid: number }>
+  /** Open a URL in the system default browser */
+  openExternalUrl(url: string): Promise<{ success: boolean }>
+  /** Get the MaiBot project root directory path */
+  getProjectRoot(): Promise<string>
+  /** Check if a file exists at the given path */
+  fileExists(filePath: string): Promise<boolean>
 }
 
 // Extend Window interface to include electronAPI

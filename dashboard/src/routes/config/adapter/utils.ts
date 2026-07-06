@@ -159,15 +159,15 @@ function addComments(toml: string): string {
 
     // [maibot_server] section
     if (line === '[maibot_server]') {
-      result.push('[maibot_server] # 连接麦麦的ws服务设置')
+      result.push('[maibot_server] # 连接千惠的ws服务设置')
       continue
     }
     if (line.startsWith('host = ') && result[result.length - 1]?.includes('[maibot_server]')) {
-      result.push(`${line} # 麦麦在.env文件中设置的主机地址，即HOST字段`)
+      result.push(`${line} # 千惠在.env文件中设置的主机地址，即HOST字段`)
       continue
     }
-    if (line.startsWith('port = ') && result[result.length - 1]?.includes('麦麦在.env')) {
-      result.push(`${line}        # 麦麦在.env文件中设置的端口，即PORT字段`)
+    if (line.startsWith('port = ') && result[result.length - 1]?.includes('千惠在.env')) {
+      result.push(`${line}        # 千惠在.env文件中设置的端口，即PORT字段`)
       continue
     }
 
@@ -225,7 +225,7 @@ function addComments(toml: string): string {
       continue
     }
     if (line.startsWith('image_threshold = ')) {
-      result.push(`${line} # 图片数量阈值：转发消息中图片数量超过此值时使用占位符(避免麦麦VLM处理卡死)`)
+      result.push(`${line} # 图片数量阈值：转发消息中图片数量超过此值时使用占位符(避免千惠VLM处理卡死)`)
       continue
     }
 

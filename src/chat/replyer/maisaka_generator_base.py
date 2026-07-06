@@ -103,7 +103,7 @@ class BaseMaisakaReplyGenerator:
             return f"你的名字是{bot_name}{bot_aliases}。\n{prompt_personality}"
         except Exception as exc:
             logger.warning(f"构建 Maisaka 人设提示词失败: {exc}")
-            return "你的名字是麦麦。\n是人类。"
+            return "你的名字是千惠。\n是人类。"
 
     @staticmethod
     def _select_reply_style() -> str:

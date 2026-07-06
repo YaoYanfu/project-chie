@@ -55,7 +55,7 @@ function invalidateConfigDataCache(key?: string): void {
 }
 
 /**
- * 获取麦麦主程序配置架构
+ * 获取千惠主程序配置架构
  */
 export async function getBotConfigSchema(): Promise<ApiResponse<ConfigSchema>> {
   return getCachedSchema('bot', `${API_BASE}/schema/bot`)
@@ -76,7 +76,7 @@ export async function getConfigSectionSchema(sectionName: string): Promise<ApiRe
 }
 
 /**
- * 获取麦麦主程序配置数据
+ * 获取千惠主程序配置数据
  */
 export async function getBotConfig(): Promise<ApiResponse<Record<string, unknown>>> {
   const response = await fetchWithAuth(`${API_BASE}/bot`, { cache: 'no-store' })
@@ -102,7 +102,7 @@ export async function getModelConfigCached(): Promise<ApiResponse<Record<string,
 }
 
 /**
- * 更新麦麦主程序配置
+ * 更新千惠主程序配置
  */
 export async function updateBotConfig(
   config: Record<string, unknown>
@@ -117,7 +117,7 @@ export async function updateBotConfig(
 }
 
 /**
- * 获取麦麦主程序配置的原始 TOML 内容
+ * 获取千惠主程序配置的原始 TOML 内容
  */
 export async function getBotConfigRaw(): Promise<ApiResponse<string>> {
   const response = await fetchWithAuth(`${API_BASE}/bot/raw`, { cache: 'no-store' })
@@ -125,7 +125,7 @@ export async function getBotConfigRaw(): Promise<ApiResponse<string>> {
 }
 
 /**
- * 更新麦麦主程序配置（原始 TOML 内容）
+ * 更新千惠主程序配置（原始 TOML 内容）
  */
 export async function updateBotConfigRaw(rawContent: string): Promise<ApiResponse<Record<string, unknown>>> {
   const response = await fetchWithAuth(`${API_BASE}/bot/raw`, {
@@ -153,7 +153,7 @@ export async function updateModelConfig(
 }
 
 /**
- * 更新麦麦主程序配置的指定节
+ * 更新千惠主程序配置的指定节
  */
 export async function updateBotConfigSection(
   sectionName: string,

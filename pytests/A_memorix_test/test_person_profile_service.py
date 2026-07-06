@@ -150,7 +150,7 @@ async def test_profile_classification_uses_llm_buckets_and_guards_uncertain_stab
                 response=json.dumps(
                     {
                         "identity_settings": ["测试用户是画师。"],
-                        "relationship_settings": ["测试用户把麦麦当搭档。"],
+                        "relationship_settings": ["测试用户把千惠当搭档。"],
                         "stable_facts": ["测试用户可能长期熬夜。"],
                         "interaction_preferences": ["测试用户喜欢直接沟通。"],
                         "recent_interactions": ["测试用户刚聊过记忆优化。"],
@@ -178,7 +178,7 @@ async def test_profile_classification_uses_llm_buckets_and_guards_uncertain_stab
     )
 
     assert buckets["identity_settings"] == ["测试用户是画师。"]
-    assert buckets["relationship_settings"] == ["测试用户把麦麦当搭档。"]
+    assert buckets["relationship_settings"] == ["测试用户把千惠当搭档。"]
     assert "测试用户可能长期熬夜。" not in buckets["stable_facts"]
     assert "测试用户可能长期熬夜。" in buckets["uncertain_notes"]
     assert "测试用户似乎偏好蓝色。" in buckets["uncertain_notes"]

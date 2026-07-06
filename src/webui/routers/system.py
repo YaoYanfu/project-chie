@@ -277,10 +277,10 @@ async def _delayed_restart() -> None:
 @router.post("/restart", response_model=RestartResponse)
 async def restart_maibot():
     """
-    重启麦麦主程序
+    重启千惠主程序
 
     请求重启当前进程，配置更改将在重启后生效。
-    注意：此操作会使麦麦暂时离线。
+    注意：此操作会使千惠暂时离线。
     """
     try:
         global _restart_task
@@ -293,7 +293,7 @@ async def restart_maibot():
             _restart_task = asyncio.create_task(_delayed_restart())
 
         # 立即返回成功响应
-        return RestartResponse(success=True, message="麦麦正在重启中...")
+        return RestartResponse(success=True, message="千惠正在重启中...")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"重启失败: {str(e)}") from e
 
@@ -301,9 +301,9 @@ async def restart_maibot():
 @router.get("/status", response_model=StatusResponse)
 async def get_maibot_status():
     """
-    获取麦麦运行状态
+    获取千惠运行状态
 
-    返回麦麦的运行状态、运行时长和版本信息。
+    返回千惠的运行状态、运行时长和版本信息。
     """
     try:
         uptime = time.time() - _start_time

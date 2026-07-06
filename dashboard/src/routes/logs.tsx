@@ -263,7 +263,7 @@ export function LogViewerPage() {
           <div>
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">日志查看器</h1>
             <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-              实时查看和分析麦麦运行日志
+              实时查看和分析千惠运行日志
             </p>
           </div>
           {/* 连接状态指示器 */}

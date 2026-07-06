@@ -9,7 +9,7 @@ export interface GitStatus {
 }
 
 /**
- * 麦麦版本信息
+ * 千惠版本信息
  */
 export interface MaimaiVersion {
   version: string

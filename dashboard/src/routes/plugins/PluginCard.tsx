@@ -128,7 +128,7 @@ export function PluginCard({
                   !gitStatus?.installed
                     ? 'Git 未安装'
                     : (maimaiVersion !== null && !checkPluginCompatibility(plugin))
-                      ? (getIncompatibleReason(plugin) ?? '插件与当前麦麦版本不兼容')
+                      ? (getIncompatibleReason(plugin) ?? '插件与当前千惠版本不兼容')
                       : undefined
                 }
                 onClick={() => onUpdate(plugin)}
@@ -160,7 +160,7 @@ export function PluginCard({
                 !gitStatus?.installed 
                   ? 'Git 未安装' 
                   : (maimaiVersion !== null && !checkPluginCompatibility(plugin))
-                    ? (getIncompatibleReason(plugin) ?? '插件与当前麦麦版本不兼容')
+                    ? (getIncompatibleReason(plugin) ?? '插件与当前千惠版本不兼容')
                     : undefined
               }
               onClick={() => onInstall(plugin)}

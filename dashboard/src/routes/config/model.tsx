@@ -306,7 +306,7 @@ function ModelConfigPageContent() {
     }
   }, [editDialogOpen, editingModel?.api_provider, fetchModelsForProvider])
 
-  // 重启麦麦
+  // 重启千惠
   const handleRestart = async () => {
     await triggerRestart()
   }
@@ -570,7 +570,7 @@ function ModelConfigPageContent() {
       setHasUnsavedChanges(false)
       toast({
         title: '保存成功',
-        description: '正在重启麦麦...',
+        description: '正在重启千惠...',
       })
       await handleRestart()
     } catch (error) {
@@ -1221,18 +1221,18 @@ function ModelConfigPageContent() {
                   className="flex-1 sm:flex-none sm:min-w-[120px]"
                 >
                   <Power className="mr-2 h-4 w-4" />
-                  {isRestarting ? '重启中...' : hasUnsavedChanges ? '保存并重启' : '重启麦麦'}
+                  {isRestarting ? '重启中...' : hasUnsavedChanges ? '保存并重启' : '重启千惠'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>确认重启麦麦？</AlertDialogTitle>
+                  <AlertDialogTitle>确认重启千惠？</AlertDialogTitle>
                   <AlertDialogDescription asChild>
                     <div>
                       <p>
                         {hasUnsavedChanges 
-                          ? '当前有未保存的配置更改。点击确认将先保存配置,然后重启麦麦使新配置生效。重启过程中麦麦将暂时离线。'
-                          : '即将重启麦麦主程序。重启过程中麦麦将暂时离线,配置将在重启后生效。'
+                          ? '当前有未保存的配置更改。点击确认将先保存配置,然后重启千惠使新配置生效。重启过程中千惠将暂时离线。'
+                          : '即将重启千惠主程序。重启过程中千惠将暂时离线,配置将在重启后生效。'
                         }
                       </p>
                     </div>
@@ -1255,7 +1255,7 @@ function ModelConfigPageContent() {
             <Info className="h-4 w-4" />
             <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>
-                配置更新后需要<strong>重启麦麦</strong>才能生效。你可以点击右上角的"保存并重启"按钮一键完成保存和重启。
+                配置更新后需要<strong>重启千惠</strong>才能生效。你可以点击右上角的"保存并重启"按钮一键完成保存和重启。
               </span>
               <Button type="button" variant="outline" size="sm" onClick={dismissRestartNotice}>
                 我知道了
@@ -1311,7 +1311,7 @@ function ModelConfigPageContent() {
           <GraduationCap className="h-4 w-4 text-primary" />
           <AlertDescription className="flex items-center justify-between">
             <span>
-              <strong className="text-primary">新手引导：</strong>不知道如何配置模型？点击这里开始学习如何为麦麦的组件分配模型。
+              <strong className="text-primary">新手引导：</strong>不知道如何配置模型？点击这里开始学习如何为千惠的组件分配模型。
             </span>
             <div className="ml-4 flex shrink-0 items-center gap-2">
             <Button variant="outline" size="sm">

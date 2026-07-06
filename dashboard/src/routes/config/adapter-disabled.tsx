@@ -13,7 +13,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 /**
- * 麦麦适配器配置 —— 禁用页
+ * 千惠适配器配置 —— 禁用页
  *
  * 原页面（{@link import('./adapter').AdapterConfigPage}）的能力已迁移至
  * 「插件配置」中的对应适配器插件。这里保留路由占位并引导用户跳转，
@@ -24,7 +24,7 @@ export function AdapterConfigPage() {
     <ScrollArea className="h-full">
       <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:space-y-6 sm:p-6">
         <div>
-          <h1 className="text-2xl font-bold sm:text-3xl">麦麦适配器配置</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">千惠适配器配置</h1>
           <p className="text-muted-foreground mt-1 text-sm sm:mt-2 sm:text-base">
             该界面已停用
           </p>

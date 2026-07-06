@@ -82,7 +82,7 @@ class BotConfig(ConfigBase):
     """其他平台"""
 
     nickname: str = Field(
-        default="麦麦",
+        default="千惠",
         json_schema_extra={
             "label": {
                 "zh_CN": "机器人昵称",
@@ -150,7 +150,7 @@ class PersonalityConfig(ConfigBase):
             "x-description-display": "icon",
         },
     )
-    """默认表达风格，描述麦麦说话的表达风格，表达习惯，如要修改，可以酌情新增内容，建议1-2行"""
+    """默认表达风格，描述千惠说话的表达风格，表达习惯，如要修改，可以酌情新增内容，建议1-2行"""
 
     multiple_reply_style: list[str] = Field(
         default_factory=lambda: [
@@ -709,7 +709,7 @@ class AMemorixIntegrationConfig(ConfigBase):
             "x-icon": "database",
         },
     )
-    """是否允许麦麦在聊天时查询长期记忆"""
+    """是否允许千惠在聊天时查询长期记忆"""
 
     memory_query_default_limit: int = Field(
         default=5,
@@ -739,7 +739,7 @@ class AMemorixIntegrationConfig(ConfigBase):
             "x-icon": "user-round-search",
         },
     )
-    """是否允许麦麦查询人物画像记忆"""
+    """是否允许千惠查询人物画像记忆"""
 
     enable_person_profile_injection: bool = Field(
         default=True,
@@ -2088,7 +2088,7 @@ class AMemorixConfig(ConfigBase):
             },
         },
     )
-    """控制麦麦在聊天中如何使用长期记忆"""
+    """控制千惠在聊天中如何使用长期记忆"""
 
     plugin: AMemorixPluginConfig = Field(
         default_factory=AMemorixPluginConfig,
@@ -2472,7 +2472,7 @@ class VoiceConfig(ConfigBase):
             "x-icon": "mic",
         },
     )
-    """是否启用语音识别，启用后麦麦可以识别语音消息"""
+    """是否启用语音识别，启用后千惠可以识别语音消息"""
 
     enable_tts: bool = Field(
         default=True,
@@ -2764,7 +2764,7 @@ class EmojiConfig(ConfigBase):
             "x-icon": "copy",
         },
     )
-    """是否偷取表情包，让麦麦可以将一些表情包据为己有"""
+    """是否偷取表情包，让千惠可以将一些表情包据为己有"""
 
     content_filtration: bool = Field(
         default=False,

@@ -53,4 +53,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('electron:backend-changed', listener)
     return () => ipcRenderer.removeListener('electron:backend-changed', listener)
   },
+
+  // ── Amadeus: launch external processes ──────────────────────────────────
+  launchPowershell: (scriptPath: string, args: string[]) =>
+    ipcRenderer.invoke('electron:launch-powershell', scriptPath, args),
+  openExternalUrl: (url: string) =>
+    ipcRenderer.invoke('electron:open-external-url', url),
+  getProjectRoot: () =>
+    ipcRenderer.invoke('electron:get-project-root'),
+  fileExists: (filePath: string) =>
+    ipcRenderer.invoke('electron:file-exists', filePath),
 })

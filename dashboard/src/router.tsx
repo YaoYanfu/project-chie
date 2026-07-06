@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { NotFoundPage } from './routes/404'
+import { AmadeusAuthPage } from './routes/amadeus-auth'
 import { Layout } from './components/layout'
 import { RoutePendingFallback } from './components/route-pending-fallback'
 import { checkAuth } from './hooks/use-auth'
@@ -29,10 +30,17 @@ const rootRoute = createRootRoute({
   },
 })
 
-// 认证路由（无 Layout）
-const authRoute = createRoute({
+// Amadeus 认证路由（无 Layout）
+const amadeusAuthRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth',
+  component: AmadeusAuthPage,
+})
+
+// 旧认证路由（保留兼容）
+const legacyAuthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/legacy-auth',
   component: lazyRouteComponent(() => import('./routes/auth'), 'AuthPage'),
 })
 
@@ -55,14 +63,38 @@ const protectedRoute = createRoute({
   errorComponent: ({ error }) => <RouteErrorBoundary error={error} />,
 })
 
-// 首页路由
+// Amadeus 首页路由（无 Layout 的沉浸式视图）
+const amadeusRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/amadeus',
+  beforeLoad: async () => {
+    const authed = await checkAuth()
+    if (!authed) throw redirect({ to: '/auth' })
+  },
+  component: lazyRouteComponent(() => import('./routes/amadeus/index'), 'AmadeusHome'),
+})
+
+// Amadeus 对话路由
+const amadeusChatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/amadeus/chat',
+  beforeLoad: async () => {
+    const authed = await checkAuth()
+    if (!authed) throw redirect({ to: '/auth' })
+  },
+  component: lazyRouteComponent(() => import('./routes/amadeus/chat'), 'AmadeusChat'),
+})
+
+// 首页路由 — 重定向到 Amadeus
 const indexRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/',
-  component: lazyRouteComponent(() => import('./routes/index'), 'IndexPage'),
+  beforeLoad: () => {
+    throw redirect({ to: '/amadeus' })
+  },
 })
 
-// 配置路由 - 麦麦主程序配置
+// 配置路由 - 千惠主程序配置
 const botConfigRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/config/bot',
@@ -78,14 +110,14 @@ const modelProviderConfigRoute = createRoute({
   },
 })
 
-// 配置路由 - 麦麦模型配置
+// 配置路由 - 千惠模型配置
 const modelConfigRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/config/model',
   component: lazyRouteComponent(() => import('./routes/config/model'), 'ModelConfigPage'),
 })
 
-// 配置路由 - 麦麦适配器配置（已停用，引导跳转到插件配置；旧实现保留在 ./routes/config/adapter）
+// 配置路由 - 千惠适配器配置（已停用，引导跳转到插件配置；旧实现保留在 ./routes/config/adapter）
 const promptManagementRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/config/prompts',
@@ -145,7 +177,7 @@ const knowledgeGraphRoute = createRoute({
   ),
 })
 
-// 资源管理路由 - 麦麦知识库管理
+// 资源管理路由 - 千惠知识库管理
 const knowledgeBaseRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/resource/knowledge-base',
@@ -254,7 +286,7 @@ const webuiFeedbackSurveyRoute = createRoute({
   ),
 })
 
-// 问卷调查路由 - 麦麦体验反馈
+// 问卷调查路由 - 千惠体验反馈
 const maibotFeedbackSurveyRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/survey/maibot-feedback',
@@ -273,7 +305,10 @@ const notFoundRoute = createRoute({
 
 // 路由树
 const routeTree = rootRoute.addChildren([
-  authRoute,
+  amadeusAuthRoute,
+  legacyAuthRoute,
+  amadeusRoute,
+  amadeusChatRoute,
   setupRoute,
   protectedRoute.addChildren([
     indexRoute,

@@ -269,7 +269,7 @@ export function JargonManagementPage() {
               黑话
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              管理麦麦学习到的黑话和俗语
+              管理千惠学习到的黑话和俗语
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">

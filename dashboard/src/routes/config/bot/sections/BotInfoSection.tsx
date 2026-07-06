@@ -94,7 +94,7 @@ export const BotInfoSection = React.memo(function BotInfoSection({ config, onCha
               id="nickname"
               value={config.nickname}
               onChange={(e) => onChange({ ...config, nickname: e.target.value })}
-              placeholder="麦麦"
+              placeholder="千惠"
             />
           </div>
 

@@ -356,7 +356,7 @@ function SetupPageContent() {
         }),
       })
 
-      // 3. 触发麦麦重启（使用新的重启组件）
+      // 3. 触发千惠重启（使用新的重启组件）
       await triggerRestart()
     } catch (error) {
       toast({

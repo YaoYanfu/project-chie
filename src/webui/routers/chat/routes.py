@@ -1,4 +1,4 @@
-"""本地聊天室路由 - WebUI 与麦麦直接对话。"""
+"""本地聊天室路由 - WebUI 与千惠直接对话。"""
 
 from typing import Dict, Optional
 

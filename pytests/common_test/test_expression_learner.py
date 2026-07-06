@@ -168,7 +168,7 @@ async def test_ai_self_reflect_expression_stays_unchecked(
         expression_learner_module,
         "global_config",
         SimpleNamespace(
-            bot=SimpleNamespace(nickname="麦麦", alias_names=[]),
+            bot=SimpleNamespace(nickname="千惠", alias_names=[]),
             expression=SimpleNamespace(expression_self_reflect=True),
         ),
     )

@@ -750,7 +750,7 @@ class PersonProfileService:
             f"别名: {json.dumps(aliases, ensure_ascii=False)}\n\n"
             "分类定义：\n"
             "- identity_settings: 稳定身份、角色、长期自我描述、重要背景。\n"
-            "- relationship_settings: 与麦麦、群友、组织、作品角色等长期关系或称呼关系。\n"
+            "- relationship_settings: 与千惠、群友、组织、作品角色等长期关系或称呼关系。\n"
             "- stable_facts: 长期稳定、证据明确的人物事实。\n"
             "- interaction_preferences: 互动偏好、雷点、沟通习惯、喜欢/讨厌的相处方式。\n"
             "- recent_interactions: 最近发生、对当前聊天有帮助但不应上升为长期事实的内容。\n"

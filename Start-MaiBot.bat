@@ -3,6 +3,7 @@ setlocal
 
 title MaiBot
 cd /d "C:\Users\Legiony\Documents\GitHub\MaiBot"
+set "MAIBOT_PROJECT_ROOT=C:\Users\Legiony\Documents\GitHub\MaiBot"
 
 echo [MaiBot] Project: %cd%
 echo [MaiBot] Tip: keep NapCat running before chatting on QQ.

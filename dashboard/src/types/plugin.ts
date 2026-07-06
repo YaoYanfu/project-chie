@@ -11,9 +11,9 @@ export interface PluginAuthor {
 }
 
 export interface HostApplication {
-  /** 插件适配麦麦最低版本 */
+  /** 插件适配千惠最低版本 */
   min_version: string
-  /** 插件适配麦麦最高版本（可选） */
+  /** 插件适配千惠最高版本（可选） */
   max_version?: string
 }
 

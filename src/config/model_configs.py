@@ -469,7 +469,7 @@ class ModelTaskConfig(ConfigBase):
             "x-icon": "wrench",
         },
     )
-    """组件使用的模型, 例如表情包模块, 取名模块, 关系模块, 麦麦的情绪变化等，是麦麦必须的模型"""
+    """组件使用的模型, 例如表情包模块, 取名模块, 关系模块, 千惠的情绪变化等，是千惠必须的模型"""
 
     learner: TaskConfig = Field(
         default_factory=TaskConfig,

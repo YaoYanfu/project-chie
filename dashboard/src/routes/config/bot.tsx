@@ -613,7 +613,7 @@ function BotConfigPageContent() {
       setHasUnsavedChanges(false)
       toast({
         title: '保存成功',
-        description: '麦麦设置已保存',
+        description: '千惠设置已保存',
       })
     } catch (error) {
       console.error('保存配置失败:', error)
@@ -627,7 +627,7 @@ function BotConfigPageContent() {
     }
   }
 
-  // 重启麦麦
+  // 重启千惠
   const handleRestart = async () => {
     await triggerRestart()
   }
@@ -670,7 +670,7 @@ function BotConfigPageContent() {
       setHasUnsavedChanges(false)
       toast({
         title: '保存成功',
-        description: '配置已保存，即将重启麦麦...',
+        description: '配置已保存，即将重启千惠...',
       })
       // 等待一下让用户看到保存成功的提示
       await new Promise(resolve => setTimeout(resolve, TOAST_DISPLAY_DELAY))
@@ -792,8 +792,8 @@ function BotConfigPageContent() {
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">麦麦设置</h1>
-              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">管理麦麦的核心功能和行为设置</p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">千惠设置</h1>
+              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">管理千惠的核心功能和行为设置</p>
             </div>
             {/* 按钮组 - 桌面端靠右 */}
             <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto sm:flex-shrink-0 sm:justify-end">
@@ -850,13 +850,13 @@ function BotConfigPageContent() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>确认重启麦麦？</AlertDialogTitle>
+                  <AlertDialogTitle>确认重启千惠？</AlertDialogTitle>
                   <AlertDialogDescription asChild>
                     <div>
                       <p>
                         {hasUnsavedChanges 
-                          ? '当前有未保存的配置更改。点击确认将先保存配置,然后重启麦麦使新配置生效。重启过程中麦麦将暂时离线。'
-                          : '即将重启麦麦主程序。重启过程中麦麦将暂时离线,配置将在重启后生效。'
+                          ? '当前有未保存的配置更改。点击确认将先保存配置,然后重启千惠使新配置生效。重启过程中千惠将暂时离线。'
+                          : '即将重启千惠主程序。重启过程中千惠将暂时离线,配置将在重启后生效。'
                         }
                       </p>
                     </div>
@@ -880,7 +880,7 @@ function BotConfigPageContent() {
             <Info className="h-4 w-4" />
             <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>
-                配置更新后需要<strong>重启麦麦</strong>才能生效。你可以点击右上角的"保存并重启"按钮一键完成保存和重启。
+                配置更新后需要<strong>重启千惠</strong>才能生效。你可以点击右上角的"保存并重启"按钮一键完成保存和重启。
               </span>
               <Button type="button" variant="outline" size="sm" onClick={dismissRestartNotice}>
                 我知道了

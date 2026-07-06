@@ -341,7 +341,7 @@ export const ExpressionSection = React.memo(function ExpressionSection({
             <div>
               <h3 className="text-lg font-semibold">表达学习配置</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                配置麦麦如何学习和使用表达方式
+                配置千惠如何学习和使用表达方式
               </p>
             </div>
             <Button onClick={addLearningRule} size="sm" variant="outline">
@@ -489,7 +489,7 @@ export const ExpressionSection = React.memo(function ExpressionSection({
                       <div>
                         <Label className="text-xs font-medium">使用学到的表达</Label>
                         <p className="text-xs text-muted-foreground mt-1">
-                          允许麦麦使用从聊天中学到的表达方式
+                          允许千惠使用从聊天中学到的表达方式
                         </p>
                       </div>
                       <Switch
@@ -507,7 +507,7 @@ export const ExpressionSection = React.memo(function ExpressionSection({
                       <div>
                         <Label className="text-xs font-medium">学习表达</Label>
                         <p className="text-xs text-muted-foreground mt-1">
-                          允许麦麦从聊天中学习新的表达方式
+                          允许千惠从聊天中学习新的表达方式
                         </p>
                       </div>
                       <Switch
@@ -525,7 +525,7 @@ export const ExpressionSection = React.memo(function ExpressionSection({
                       <div>
                         <Label className="text-xs font-medium">启用黑话学习</Label>
                         <p className="text-xs text-muted-foreground mt-1">
-                          允许麦麦在此聊天流中学习和记录黑话
+                          允许千惠在此聊天流中学习和记录黑话
                         </p>
                       </div>
                       <Switch
@@ -635,7 +635,7 @@ export const ExpressionSection = React.memo(function ExpressionSection({
                   手动表达优化
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  启用后，麦麦会主动向管理员询问表达方式是否合适
+                  启用后，千惠会主动向管理员询问表达方式是否合适
                 </p>
               </div>
               <Switch

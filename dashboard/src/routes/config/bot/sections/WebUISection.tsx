@@ -265,7 +265,7 @@ export const WebUISection = React.memo(function WebUISection({ config, onChange 
           <AlertDialogHeader>
             <AlertDialogTitle>警告：即将关闭 WebUI</AlertDialogTitle>
             <AlertDialogDescription>
-              关闭 WebUI 后，在您下次重启麦麦之前，WebUI 界面将无法访问。
+              关闭 WebUI 后，在您下次重启千惠之前，WebUI 界面将无法访问。
               <br />
               <br />
               您需要通过修改配置文件或命令行重新启用 WebUI 才能再次访问此界面。

@@ -197,7 +197,7 @@ export function Header({
         {/* 搜索对话框 */}
         <SearchDialog open={searchOpen} onOpenChange={onSearchOpenChange} />
 
-        {/* 麦麦文档链接 */}
+        {/* 千惠文档链接 */}
         <Button
           variant="ghost"
           size="icon"

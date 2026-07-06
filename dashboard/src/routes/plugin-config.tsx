@@ -721,7 +721,7 @@ function PluginConfigEditor({ plugin, onBack }: PluginConfigEditorProps) {
             disabled={isRestarting}
           >
             <RotateCw className={`h-4 w-4 mr-2 ${isRestarting ? 'animate-spin' : ''}`} />
-            重启麦麦
+            重启千惠
           </Button>
           <Button
             variant="outline"

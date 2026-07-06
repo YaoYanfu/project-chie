@@ -10,7 +10,7 @@ import time
 
 
 class MaisakaStageStatusBoard:
-    """维护 Maisaka 阶段状态，并推送给 WebUI 麦麦观察。"""
+    """维护 Maisaka 阶段状态，并推送给 WebUI 千惠观察。"""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -101,7 +101,7 @@ def update_stage_status(
     round_text: str = "",
     agent_state: str = "",
 ) -> None:
-    """更新 WebUI 麦麦观察中的阶段状态。"""
+    """更新 WebUI 千惠观察中的阶段状态。"""
 
     _stage_board.update(
         session_id=session_id,
@@ -114,7 +114,7 @@ def update_stage_status(
 
 
 def remove_stage_status(session_id: str) -> None:
-    """移除 WebUI 麦麦观察中的阶段状态。"""
+    """移除 WebUI 千惠观察中的阶段状态。"""
 
     _stage_board.remove(session_id)
 

@@ -277,7 +277,7 @@ export async function checkGitStatus(): Promise<ApiResponse<GitStatus>> {
 }
 
 /**
- * 获取麦麦版本信息
+ * 获取千惠版本信息
  */
 export async function getMaimaiVersion(): Promise<ApiResponse<MaimaiVersion>> {
   const response = await fetchWithAuth('/api/webui/plugins/version')
@@ -304,7 +304,7 @@ export async function getMaimaiVersion(): Promise<ApiResponse<MaimaiVersion>> {
  * 
  * @param pluginMinVersion 插件要求的最小版本
  * @param pluginMaxVersion 插件要求的最大版本(可选)
- * @param maimaiVersion 麦麦当前版本
+ * @param maimaiVersion 千惠当前版本
  * @returns true 表示兼容,false 表示不兼容
  */
 export function isPluginCompatible(

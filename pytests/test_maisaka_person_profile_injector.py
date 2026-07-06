@@ -193,7 +193,7 @@ async def test_injection_compacts_structured_profile_text(monkeypatch: pytest.Mo
         primary_name="Alice",
         aliases=["Alice", "小爱"],
         identity_settings=["Alice 是长期参与记忆测试的用户。"],
-        relationship_settings=["Alice 把麦麦当作协作搭档。"],
+        relationship_settings=["Alice 把千惠当作协作搭档。"],
         stable_facts=["Alice 熟悉模型记忆模块。"],
         interaction_preferences=["Alice 喜欢直接、可编辑的文本。"],
         recent_interactions=["Alice 最近讨论了画像结构。", "Alice 最近调整了注入策略。", "Alice 最近补充了第三条。"],
