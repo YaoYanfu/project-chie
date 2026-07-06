@@ -278,6 +278,9 @@ logs
 .vscode
 
 /config/*
+/deploy/config/model_config.toml
+/deploy/config/bot_config.toml
+/deploy/config/old/
 config/mcp_config.json
 !config/mcp_config.json.template
 config/old/bot_config_20250405_212257.toml
