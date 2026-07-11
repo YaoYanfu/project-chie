@@ -59,12 +59,12 @@ async def get_identity_mapping(person_id: str) -> Dict[str, Any]:
     with get_db_session() as session:
         statement = select(PersonInfo).where(col(PersonInfo.person_id) == person_id).limit(1)
         person = session.exec(statement).first()
-    if person is None:
-        return {"online": True, "mapped": False, "person_id": person_id}
-    return {
-        "online": True,
-        "mapped": True,
-        "person_id": person.person_id,
-        "display_name": person.person_name or person.user_nickname or person.user_id,
-        "source_platform": person.platform,
-    }
+        if person is None:
+            return {"online": True, "mapped": False, "person_id": person_id}
+        return {
+            "online": True,
+            "mapped": True,
+            "person_id": person.person_id,
+            "display_name": person.person_name or person.user_nickname or person.user_id,
+            "source_platform": person.platform,
+        }

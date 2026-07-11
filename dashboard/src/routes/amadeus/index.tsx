@@ -72,6 +72,27 @@ function eventTitle(event: AmadeusEvent): string {
   return labels[event.event_type] || event.event_type.replaceAll('.', ' · ')
 }
 
+function keepExistingIfEqual<T>(current: T, incoming: T): T {
+  return JSON.stringify(current) === JSON.stringify(incoming) ? current : incoming
+}
+
+function keepStatusIfVisuallyEqual(
+  current: AmadeusStatus | null,
+  incoming: AmadeusStatus,
+): AmadeusStatus {
+  if (!current) return incoming
+  const visibleSnapshot = (value: AmadeusStatus) => ({
+    ...value,
+    remote: {
+      ...value.remote,
+      uptime_seconds: Math.floor((value.remote.uptime_seconds || 0) / 60),
+    },
+  })
+  return JSON.stringify(visibleSnapshot(current)) === JSON.stringify(visibleSnapshot(incoming))
+    ? current
+    : incoming
+}
+
 export function AmadeusHome() {
   const [status, setStatus] = useState<AmadeusStatus | null>(null)
   const [events, setEvents] = useState<AmadeusEvent[]>([])
@@ -101,7 +122,7 @@ export function AmadeusHome() {
     ])
 
     if (statusResult.status === 'fulfilled') {
-      setStatus(statusResult.value)
+      setStatus((current) => keepStatusIfVisuallyEqual(current, statusResult.value))
       setBackendOnline(true)
       setNotice('')
     } else {
@@ -109,8 +130,12 @@ export function AmadeusHome() {
       setStatus(null)
       setNotice(statusResult.reason instanceof Error ? statusResult.reason.message : '本机 Amadeus 没有响应')
     }
-    if (eventsResult.status === 'fulfilled') setEvents(eventsResult.value.events)
-    if (commandsResult.status === 'fulfilled') setCommands(commandsResult.value.commands)
+    if (eventsResult.status === 'fulfilled') {
+      setEvents((current) => keepExistingIfEqual(current, eventsResult.value.events))
+    }
+    if (commandsResult.status === 'fulfilled') {
+      setCommands((current) => keepExistingIfEqual(current, commandsResult.value.commands))
+    }
     setLoading(false)
   }, [])
 

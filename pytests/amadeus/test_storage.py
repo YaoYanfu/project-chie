@@ -34,6 +34,30 @@ def test_sensitive_action_stays_pending_until_decided(tmp_path: Path) -> None:
     assert decided["decision_reason"] == "不需要执行"
 
 
+def test_chat_messages_are_persisted_in_order_and_can_be_cleared(tmp_path: Path) -> None:
+    store = AmadeusStore(tmp_path)
+    store.add_chat_message("assistant", "第二条", message_id="message-2", timestamp=20)
+    store.add_chat_message("user", "第一条", message_id="message-1", timestamp=10)
+    store.add_chat_message("user", "第一条（已更新）", message_id="message-1", timestamp=10)
+
+    messages = store.list_chat_messages()
+
+    assert [message["id"] for message in messages] == ["message-1", "message-2"]
+    assert messages[0]["content"] == "第一条（已更新）"
+    assert store.clear_chat_messages() == 2
+    assert store.list_chat_messages() == []
+
+
+def test_remote_message_id_replaces_nearby_temporary_message(tmp_path: Path) -> None:
+    store = AmadeusStore(tmp_path)
+    temporary = store.add_chat_message("assistant", "我在", timestamp=20)
+
+    official = store.add_chat_message("assistant", "我在", message_id="bot-1", timestamp=21)
+
+    assert temporary["id"] != official["id"]
+    assert [message["id"] for message in store.list_chat_messages()] == ["bot-1"]
+
+
 def test_unknown_action_is_rejected_without_default_fallback(tmp_path: Path) -> None:
     store = AmadeusStore(tmp_path)
 

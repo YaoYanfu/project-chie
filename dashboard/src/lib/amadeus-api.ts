@@ -58,6 +58,13 @@ export interface AmadeusCommand {
   decision_reason: string
 }
 
+export interface AmadeusStoredChatMessage {
+  id: string
+  created_at: string
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export interface RemoteConfig {
   remote_base_url: string
   remote_token_configured: boolean
@@ -89,6 +96,8 @@ export const amadeusApi = {
   events: () => request<{ events: AmadeusEvent[]; total: number }>('/api/events?limit=80'),
   deleteEvent: (eventId: string) => request<{ success: boolean }>(`/api/events/${eventId}`, { method: 'DELETE' }),
   commands: () => request<{ commands: AmadeusCommand[]; total: number }>('/api/commands?limit=80'),
+  chatMessages: () => request<{ messages: AmadeusStoredChatMessage[]; total: number }>('/api/chat/messages?limit=200'),
+  clearChatMessages: () => request<{ success: boolean; deleted: number }>('/api/chat/messages', { method: 'DELETE' }),
   decideCommand: (commandId: string, approved: boolean, reason = '') =>
     request<AmadeusCommand>(`/api/commands/${commandId}/decision`, {
       method: 'POST',

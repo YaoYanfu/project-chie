@@ -14,7 +14,7 @@ export default defineConfig({
         output: {
           format: 'cjs',
         },
-        external: ['electron', 'electron-store'],
+        external: ['electron'],
       },
     },
     resolve: {

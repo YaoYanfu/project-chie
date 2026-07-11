@@ -164,6 +164,15 @@ def create_app(
             raise HTTPException(status_code=404, detail="事件不存在")
         return {"success": True}
 
+    @app.get("/api/chat/messages")
+    async def list_chat_messages(limit: int = Query(default=200, ge=1, le=500)) -> Dict[str, Any]:
+        messages = store.list_chat_messages(limit)
+        return {"messages": messages, "total": len(messages)}
+
+    @app.delete("/api/chat/messages")
+    async def clear_chat_messages() -> Dict[str, Any]:
+        return {"success": True, "deleted": store.clear_chat_messages()}
+
     @app.post("/api/commands")
     async def create_command(request: CommandRequest) -> Dict[str, Any]:
         try:

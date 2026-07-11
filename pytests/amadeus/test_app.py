@@ -118,6 +118,25 @@ def test_remote_configuration_rejects_blank_owner_mapping(tmp_path: Path) -> Non
     assert response.status_code == 422
 
 
+def test_chat_history_can_be_loaded_and_cleared(tmp_path: Path) -> None:
+    app = create_app(
+        tmp_path,
+        remote_client=FakeRemoteClient(),  # type: ignore[arg-type]
+        tts_service=FakeTtsService(),  # type: ignore[arg-type]
+        start_monitor=False,
+    )
+    app.state.store.add_chat_message("user", "你好", message_id="message-1", timestamp=10)
+
+    with TestClient(app) as client:
+        loaded = client.get("/api/chat/messages")
+        cleared = client.delete("/api/chat/messages")
+        loaded_after_clear = client.get("/api/chat/messages")
+
+    assert loaded.json()["messages"][0]["content"] == "你好"
+    assert cleared.json() == {"success": True, "deleted": 1}
+    assert loaded_after_clear.json()["messages"] == []
+
+
 @pytest.mark.asyncio
 async def test_monitor_reports_initial_configured_offline_state(tmp_path: Path) -> None:
     store = AmadeusStore(tmp_path)

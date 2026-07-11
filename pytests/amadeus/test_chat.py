@@ -1,8 +1,11 @@
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
-from src.amadeus.chat import build_remote_websocket_url, prepare_client_message
+from src.amadeus.chat import ChatRelay, build_remote_websocket_url, prepare_client_message
+from src.amadeus.settings import AmadeusSettings
+from src.amadeus.storage import AmadeusStore
 
 
 def test_build_remote_websocket_url_keeps_transport_security() -> None:
@@ -30,6 +33,43 @@ def test_session_open_forces_owner_mapping_and_independent_chat_flow() -> None:
     assert prepared["data"]["person_id"] == "real-owner"
     assert prepared["data"]["platform"] == "amadeus"
     assert prepared["data"]["group_id"] == "amadeus_desktop"
+
+
+def test_remote_history_is_persisted_without_duplicates(tmp_path: Path) -> None:
+    store = AmadeusStore(tmp_path)
+    relay = ChatRelay(AmadeusSettings(tmp_path), store)
+    payload = {
+        "op": "event",
+        "domain": "chat",
+        "data": {
+            "type": "history",
+            "messages": [
+                {
+                    "id": "user-1",
+                    "type": "user",
+                    "content": "你好",
+                    "timestamp": 10,
+                    "is_bot": False,
+                },
+                {
+                    "id": "bot-1",
+                    "type": "bot",
+                    "content": "我在",
+                    "timestamp": 20,
+                    "is_bot": True,
+                },
+            ],
+        },
+    }
+
+    relay._record_remote_event(payload)
+    relay._record_remote_event(payload)
+
+    messages = store.list_chat_messages()
+    assert [(message["role"], message["content"]) for message in messages] == [
+        ("user", "你好"),
+        ("assistant", "我在"),
+    ]
 
 
 def test_non_chat_domain_is_rejected() -> None:

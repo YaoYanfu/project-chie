@@ -142,12 +142,49 @@ class ChatRelay:
         if not isinstance(data, dict):
             return
         event_type = str(data.get("type") or payload.get("event") or "")
+
+        if event_type == "history":
+            messages = data.get("messages")
+            if not isinstance(messages, list):
+                return
+            for message in messages:
+                if not isinstance(message, dict):
+                    continue
+                self._store_chat_message(
+                    message,
+                    role="assistant" if message.get("is_bot") or message.get("type") == "bot" else "user",
+                )
+            return
+
+        if event_type == "user_message":
+            self._store_chat_message(data, role="user")
+            return
+
         if event_type not in {"bot_message", "assistant_message"}:
             return
-        content = str(data.get("content") or "")
+
+        self._store_chat_message(data, role="assistant")
+        content = str(data.get("content") or "").strip()
+        if not content:
+            return
         self._store.add_event(
             "remote.maibot",
             "chat.assistant_message",
             content[:160],
             metadata={"session": str(payload.get("session") or "")},
+        )
+
+    def _store_chat_message(self, message: Dict[str, Any], role: str) -> None:
+        content = str(message.get("content") or "").strip()
+        if not content:
+            return
+
+        raw_timestamp = message.get("timestamp")
+        timestamp = float(raw_timestamp) if isinstance(raw_timestamp, (int, float)) else None
+        message_id = str(message.get("id") or message.get("message_id") or "").strip() or None
+        self._store.add_chat_message(
+            role=role,
+            content=content,
+            message_id=message_id,
+            timestamp=timestamp,
         )
