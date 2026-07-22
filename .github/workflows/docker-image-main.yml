@@ -1,15 +1,6 @@
 name: Docker Build and Push (Main)
 
 on:
-  push:
-    branches:
-      - main
-      - classical
-    tags:
-      - "v*.*.*"
-      - "v*"
-      - "*.*.*"
-      - "*.*.*-*"
   workflow_dispatch: # 允许手动触发工作流
     inputs:
       branch:

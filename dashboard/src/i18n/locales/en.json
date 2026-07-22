@@ -546,7 +546,7 @@
     },
     "header": {
       "title": "Initial Setup Wizard",
-      "description": "Let's complete the initial setup for {{appName}}"
+      "description": "Let's complete the initial setup"
     },
     "progress": {
       "stepCounter": "Step {{current}} / {{total}}"
@@ -1038,9 +1038,7 @@
       "title": "MaiBot Version",
       "mainVersion": "Core version",
       "webuiVersion": "WebUI version",
-      "latestVersion": "Latest version",
       "stableLatest": "Latest stable",
-      "testLatest": "Latest test",
       "githubReleases": "GitHub Releases",
       "unknown": "Unknown"
     },
