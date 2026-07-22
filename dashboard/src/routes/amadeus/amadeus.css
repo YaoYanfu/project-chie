@@ -130,6 +130,11 @@
 
 .amadeus-chat-panel { display: flex; min-width: 0; flex-direction: column; }
 .amadeus-panel-heading { display: flex; min-height: 86px; flex: none; align-items: center; justify-content: space-between; padding: 20px 28px; border-bottom: 1px solid var(--ama-line); }
+.amadeus-center-tabs { display: flex; align-items: center; gap: 6px; padding: 4px; border: 1px solid var(--ama-line); border-radius: 13px; background: rgba(255,255,255,.018); }
+.amadeus-center-tabs button { display: flex; min-height: 34px; align-items: center; gap: 7px; padding: 0 13px; border-radius: 9px; color: var(--ama-muted); font-size: 11px; transition: .2s ease; }
+.amadeus-center-tabs button:hover { color: var(--ama-text); background: rgba(255,255,255,.025); }
+.amadeus-center-tabs button.is-active { background: rgba(119,216,207,.1); color: var(--ama-cyan); box-shadow: inset 0 0 0 1px rgba(119,216,207,.12); }
+.amadeus-center-tabs svg { width: 14px; }
 .amadeus-eyebrow { color: var(--ama-cyan); font: 500 9px/1.4 "JetBrains Mono", monospace; letter-spacing: .18em; }
 .amadeus-panel-heading h1, .amadeus-side-heading h2, .amadeus-settings-header h2 { margin: 4px 0 0; font-size: 20px; font-weight: 620; letter-spacing: -.02em; }
 .amadeus-channel-state { display: flex; align-items: center; gap: 7px; color: var(--ama-muted); font-size: 11px; }
@@ -141,12 +146,15 @@
 .amadeus-empty-chat svg { width: 28px; margin-bottom: 16px; color: var(--ama-pink); opacity: .8; }
 .amadeus-empty-chat strong { color: var(--ama-text); font-size: 18px; font-weight: 560; }
 .amadeus-empty-chat p { margin-top: 8px; font-size: 12px; line-height: 1.7; }
-.amadeus-message { max-width: min(78%, 620px); }
-.amadeus-message > span { display: block; margin: 0 4px 5px; color: var(--ama-muted); font: 500 9px/1.4 "JetBrains Mono", monospace; letter-spacing: .05em; }
+.amadeus-message { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: start; gap: 12px; max-width: min(82%, 660px); }
+.amadeus-message-avatar { display: block; width: 56px; height: 56px; aspect-ratio: 1; object-fit: cover; object-position: 50% 14%; border: 1px solid rgba(233,143,168,.28); border-radius: 50%; background: #1b2632; box-shadow: 0 0 0 3px rgba(233,143,168,.045), 0 8px 18px rgba(0,0,0,.24); }
+.amadeus-message-content { min-width: 0; }
+.amadeus-message-content > span { display: block; margin: 0 4px 5px; color: var(--ama-muted); font: 500 9px/1.4 "JetBrains Mono", monospace; letter-spacing: .05em; }
 .amadeus-message p { margin: 0; padding: 12px 15px; border: 1px solid var(--ama-line); border-radius: 5px 17px 17px 17px; background: var(--ama-panel); color: #dbe1e5; font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
-.amadeus-message.is-user { align-self: flex-end; }
-.amadeus-message.is-user > span { text-align: right; }
+.amadeus-message.is-user { display: block; align-self: flex-end; }
+.amadeus-message.is-user .amadeus-message-content > span { text-align: right; }
 .amadeus-message.is-user p { border-color: rgba(119,216,207,.14); border-radius: 17px 5px 17px 17px; background: rgba(119,216,207,.085); color: #e5f5f3; }
+.amadeus-thinking-row { display: flex; align-items: flex-start; gap: 9px; }
 .amadeus-thinking { display: flex; align-items: center; gap: 4px; width: 46px; padding: 13px 14px; border-radius: 5px 17px 17px 17px; background: var(--ama-panel); }
 .amadeus-thinking i { width: 4px; height: 4px; border-radius: 50%; background: var(--ama-pink); animation: ama-thinking 1.2s ease-in-out infinite; }
 .amadeus-thinking i:nth-child(2) { animation-delay: .18s; }.amadeus-thinking i:nth-child(3) { animation-delay: .36s; }
@@ -160,6 +168,44 @@
 .amadeus-composer > button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 24px rgba(119,216,207,.18); }
 .amadeus-composer > button:disabled { background: #29343e; color: #69757f; }
 .amadeus-composer > button svg { width: 17px; }
+
+.amadeus-mind-panel { display: flex; min-height: 0; flex: 1; flex-direction: column; background: radial-gradient(circle at 50% 0, rgba(233,143,168,.045), transparent 28rem); }
+.amadeus-mind-now { flex: none; padding: 18px 28px 16px; border-bottom: 1px solid var(--ama-line); }
+.amadeus-mind-section-label { display: flex; align-items: center; gap: 7px; margin-bottom: 11px; color: var(--ama-cyan); }
+.amadeus-mind-section-label > svg { width: 13px; }
+.amadeus-mind-section-label > span { font: 600 9px/1 "JetBrains Mono", monospace; letter-spacing: .16em; }
+.amadeus-mind-section-label > small { margin-left: auto; color: var(--ama-muted); font-size: 9px; }
+.amadeus-mind-stage-list { display: flex; gap: 9px; overflow-x: auto; padding: 1px 1px 3px; }
+.amadeus-mind-stage { display: grid; min-width: min(310px, 78vw); grid-template-columns: 20px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 11px 12px; border: 1px solid rgba(119,216,207,.15); border-radius: 12px; background: rgba(119,216,207,.045); }
+.amadeus-mind-stage-pulse { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid rgba(119,216,207,.3); border-radius: 50%; }
+.amadeus-mind-stage-pulse i { width: 5px; height: 5px; border-radius: 50%; background: var(--ama-cyan); box-shadow: 0 0 10px var(--ama-cyan); animation: ama-mind-pulse 1.8s ease-in-out infinite; }
+.amadeus-mind-stage > div { display: grid; min-width: 0; gap: 2px; }
+.amadeus-mind-stage small { overflow: hidden; color: var(--ama-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.amadeus-mind-stage strong { font-size: 11px; font-weight: 620; }
+.amadeus-mind-stage p { margin: 0; overflow: hidden; color: #9cabb5; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.amadeus-mind-stage em { color: var(--ama-cyan); font: normal 500 8px/1 "JetBrains Mono", monospace; }
+.amadeus-mind-stage-empty { margin: 2px 0; color: var(--ama-muted); font-size: 11px; }
+.amadeus-mind-stream { display: flex; min-height: 0; flex: 1; flex-direction: column; padding: 18px 28px 0; }
+.amadeus-mind-timeline { min-height: 0; flex: 1; overflow-y: auto; padding: 4px 8px 28px 1px; scroll-behavior: smooth; }
+.amadeus-mind-entry { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 11px; padding: 0 0 18px; }
+.amadeus-mind-entry::after { content: ""; position: absolute; width: 1px; top: 34px; bottom: 0; left: 16px; background: linear-gradient(var(--ama-line), rgba(177,201,215,.025)); }
+.amadeus-mind-entry-icon { z-index: 1; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--ama-line); border-radius: 11px; background: #121c27; color: var(--ama-muted); }
+.amadeus-mind-entry-icon svg { width: 14px; }
+.amadeus-mind-entry.is-think .amadeus-mind-entry-icon { border-color: rgba(233,143,168,.22); color: var(--ama-pink); background: rgba(233,143,168,.065); }
+.amadeus-mind-entry.is-observe .amadeus-mind-entry-icon { border-color: rgba(119,216,207,.2); color: var(--ama-cyan); }
+.amadeus-mind-entry.is-act .amadeus-mind-entry-icon { border-color: rgba(239,183,119,.2); color: var(--ama-warning); }
+.amadeus-mind-entry.is-reply .amadeus-mind-entry-icon { border-color: rgba(145,174,229,.22); color: #9fb8ea; }
+.amadeus-mind-entry-body { min-width: 0; padding-top: 1px; }
+.amadeus-mind-entry-body > div { display: flex; gap: 8px; align-items: center; margin-bottom: 3px; }
+.amadeus-mind-entry-body span { overflow: hidden; color: var(--ama-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.amadeus-mind-entry-body time { margin-left: auto; color: #687681; font: 500 8px/1 "JetBrains Mono", monospace; }
+.amadeus-mind-entry-body > strong { font-size: 12px; font-weight: 620; }
+.amadeus-mind-entry-body > p { max-width: 680px; margin: 5px 0 0; color: #aab5bd; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.amadeus-mind-empty { display: grid; flex: 1; place-content: center; justify-items: center; padding-bottom: 50px; color: var(--ama-muted); text-align: center; }
+.amadeus-mind-empty svg { width: 30px; margin-bottom: 12px; color: var(--ama-pink); opacity: .72; }
+.amadeus-mind-empty strong { color: #cfd6db; font-size: 14px; }
+.amadeus-mind-empty p { max-width: 330px; margin: 7px 0 0; font-size: 10px; line-height: 1.6; }
+.amadeus-mind-error { margin-bottom: 10px; padding: 9px 11px; border: 1px solid rgba(239,183,119,.18); border-radius: 9px; background: rgba(239,183,119,.055); color: #d8b88f; font-size: 10px; }
 
 .amadeus-activity-panel { overflow-y: auto; padding: 22px 18px; }
 .amadeus-approval-section { padding-bottom: 22px; border-bottom: 1px solid var(--ama-line); }
@@ -214,6 +260,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 @keyframes ama-thinking { 0%,60%,100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-4px); opacity: 1; } }
 @keyframes ama-pulse { 50% { opacity: .35; } }
 @keyframes ama-spin { to { transform: rotate(360deg); } }
+@keyframes ama-mind-pulse { 50% { opacity: .35; transform: scale(.65); } }
 
 @media (max-width: 1100px) {
   .amadeus-workspace { grid-template-columns: 240px minmax(420px, 1fr); overflow-y: auto; }
@@ -227,10 +274,12 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
   .amadeus-chat-panel { order: 1; min-height: 70vh; }.amadeus-identity-panel { order: 2; }.amadeus-activity-panel { order: 3; display: block; max-height: none; }
   .amadeus-portrait-stage { min-height: 300px; }.amadeus-approval-section { padding: 0 0 22px; border-right: 0; border-bottom: 1px solid var(--ama-line); }.amadeus-events-section { padding-top: 22px; }
   .amadeus-panel-heading { padding: 17px; }.amadeus-messages { padding: 22px 16px; }.amadeus-message { max-width: 88%; }.amadeus-composer { padding: 12px; }
+  .amadeus-center-tabs button { padding: 0 9px; }.amadeus-channel-state { font-size: 9px; }
+  .amadeus-mind-now, .amadeus-mind-stream { padding-left: 16px; padding-right: 16px; }
   .amadeus-command-copy { min-width: 0; width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .amadeus-workspace, .amadeus-settings-dialog, .amadeus-neural-link i, .amadeus-thinking i, .is-spinning { animation: none !important; }
+  .amadeus-workspace, .amadeus-settings-dialog, .amadeus-neural-link i, .amadeus-thinking i, .amadeus-mind-stage-pulse i, .is-spinning { animation: none !important; }
   * { scroll-behavior: auto !important; }
 }

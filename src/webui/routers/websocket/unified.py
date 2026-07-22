@@ -580,7 +580,17 @@ async def handle_client_message(
     operation = str(message.get("op") or "").strip()
     request_id = cast(Optional[str], message.get("id"))
 
-    if amadeus_only and operation != "ping" and message.get("domain") != "chat":
+    amadeus_monitor_subscription = (
+        operation in {"subscribe", "unsubscribe"}
+        and message.get("domain") == "maisaka_monitor"
+        and message.get("topic") == "main"
+    )
+    if (
+        amadeus_only
+        and operation != "ping"
+        and message.get("domain") != "chat"
+        and not amadeus_monitor_subscription
+    ):
         await websocket_manager.send_response(
             connection_id,
             request_id=request_id,

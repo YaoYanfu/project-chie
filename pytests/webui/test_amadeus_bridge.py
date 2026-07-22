@@ -50,3 +50,21 @@ async def test_amadeus_websocket_scope_cannot_subscribe_to_logs(monkeypatch: pyt
 
     send_response.assert_awaited_once()
     assert send_response.await_args.kwargs["error"]["code"] == "amadeus_scope_denied"
+
+
+@pytest.mark.asyncio
+async def test_amadeus_websocket_scope_can_subscribe_to_mind_monitor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    subscribe = AsyncMock()
+    monkeypatch.setattr(unified, "_handle_subscribe", subscribe)
+    message = {
+        "op": "subscribe",
+        "id": "request-id",
+        "domain": "maisaka_monitor",
+        "topic": "main",
+    }
+
+    await unified.handle_client_message("connection-id", message, amadeus_only=True)
+
+    subscribe.assert_awaited_once_with("connection-id", message)

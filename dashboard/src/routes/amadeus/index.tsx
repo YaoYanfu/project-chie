@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
+  BrainCircuit,
   Check,
   ChevronRight,
   CircleEllipsis,
@@ -29,7 +30,9 @@ import {
 import { isElectron } from '@/lib/runtime'
 
 import './amadeus.css'
+import { AmadeusMindPanel } from './mind-panel'
 import { useAmadeusChat } from './use-amadeus-chat'
+import { useAmadeusMind } from './use-amadeus-mind'
 
 const ACTION_LABELS: Record<string, string> = {
   'application.open': '打开程序',
@@ -104,10 +107,12 @@ export function AmadeusHome() {
   const [serviceBusy, setServiceBusy] = useState(false)
   const [decisionBusy, setDecisionBusy] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
+  const [centerTab, setCenterTab] = useState<'chat' | 'mind'>('chat')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const chatEnabled = Boolean(status?.remote.online && status?.identity.mapped)
   const chat = useAmadeusChat(chatEnabled)
+  const mind = useAmadeusMind(chatEnabled)
   const pendingCommands = useMemo(
     () => commands.filter((command) => command.status === 'pending_approval'),
     [commands],
@@ -279,16 +284,40 @@ export function AmadeusHome() {
 
             <section className="amadeus-chat-panel">
               <div className="amadeus-panel-heading">
-                <div>
-                  <span className="amadeus-eyebrow">PRIVATE CHANNEL</span>
-                  <h1>和千惠说话</h1>
+                <div className="amadeus-center-tabs" role="tablist" aria-label="Amadeus 中央视图">
+                  <button
+                    className={centerTab === 'chat' ? 'is-active' : ''}
+                    role="tab"
+                    aria-selected={centerTab === 'chat'}
+                    onClick={() => setCenterTab('chat')}
+                  >
+                    <MessageCircle />
+                    对话
+                  </button>
+                  <button
+                    className={centerTab === 'mind' ? 'is-active' : ''}
+                    role="tab"
+                    aria-selected={centerTab === 'mind'}
+                    onClick={() => setCenterTab('mind')}
+                  >
+                    <BrainCircuit />
+                    心理活动
+                  </button>
                 </div>
-                <span className={`amadeus-channel-state is-${chat.connectionState}`}>
+                <span className={`amadeus-channel-state is-${centerTab === 'chat' ? chat.connectionState : mind.connectionState}`}>
                   <i />
-                  {chat.connectionState === 'online' ? '通道已接通' : chat.connectionState === 'connecting' ? '正在接通' : '通道离线'}
+                  {(centerTab === 'chat' ? chat.connectionState : mind.connectionState) === 'online'
+                    ? centerTab === 'chat' ? '对话已接通' : '意识流在线'
+                    : (centerTab === 'chat' ? chat.connectionState : mind.connectionState) === 'connecting'
+                      ? '正在接通'
+                      : '通道离线'}
                 </span>
               </div>
 
+              {centerTab === 'mind' ? (
+                <AmadeusMindPanel events={mind.events} stages={mind.stages} error={mind.error} />
+              ) : (
+                <>
               <div className="amadeus-messages" aria-live="polite">
                 {chat.messages.length === 0 && (
                   <div className="amadeus-empty-chat">
@@ -305,12 +334,20 @@ export function AmadeusHome() {
                 )}
                 {chat.messages.map((message) => (
                   <article key={message.id} className={`amadeus-message is-${message.role}`}>
-                    <span>{message.role === 'assistant' ? '千惠' : '你'} · {formatTime(message.createdAt)}</span>
-                    <p>{message.content}</p>
+                    {message.role === 'assistant' && (
+                      <img className="amadeus-message-avatar" src="/amadeus-avatar.png" alt="" />
+                    )}
+                    <div className="amadeus-message-content">
+                      <span>{message.role === 'assistant' ? '千惠' : '你'} · {formatTime(message.createdAt)}</span>
+                      <p>{message.content}</p>
+                    </div>
                   </article>
                 ))}
                 {chat.awaitingReply && (
-                  <div className="amadeus-thinking" aria-label="千惠正在思考"><i /><i /><i /></div>
+                  <div className="amadeus-thinking-row" aria-label="千惠正在思考">
+                    <img className="amadeus-message-avatar" src="/amadeus-avatar.png" alt="" />
+                    <div className="amadeus-thinking"><i /><i /><i /></div>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -344,6 +381,8 @@ export function AmadeusHome() {
                   <Send />
                 </button>
               </div>
+                </>
+              )}
             </section>
 
             <aside className="amadeus-activity-panel">

@@ -72,6 +72,16 @@ def test_remote_history_is_persisted_without_duplicates(tmp_path: Path) -> None:
     ]
 
 
+def test_mind_monitor_subscription_is_allowed() -> None:
+    message = {
+        "op": "subscribe",
+        "domain": "maisaka_monitor",
+        "topic": "main",
+    }
+
+    assert prepare_client_message(message, "owner") == message
+
+
 def test_non_chat_domain_is_rejected() -> None:
     with pytest.raises(ValueError, match="只允许聊天"):
         prepare_client_message({"op": "subscribe", "domain": "logs"}, "owner")

@@ -27,6 +27,12 @@ def prepare_client_message(message: Dict[str, Any], owner_person_id: str) -> Dic
     operation = str(message.get("op") or "")
     if operation == "ping":
         return message
+
+    if operation in {"subscribe", "unsubscribe"}:
+        if message.get("domain") == "maisaka_monitor" and message.get("topic") == "main":
+            return message
+        raise ValueError("Amadeus 代理只允许聊天或订阅千惠心理活动")
+
     if operation != "call" or message.get("domain") != "chat":
         raise ValueError("Amadeus 代理只允许聊天调用")
 
