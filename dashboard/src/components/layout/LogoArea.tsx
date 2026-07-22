@@ -28,7 +28,7 @@ export function LogoArea({ sidebarOpen }: LogoAreaProps) {
             data-dashboard-logo-title="true"
             className="max-w-full truncate whitespace-nowrap text-xl font-bold text-primary-gradient"
           >
-            MaiBot WebUI
+            Chie WebUI
           </span>
           <div className="flex max-w-full items-center gap-2 overflow-hidden">
             <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-primary/70">
@@ -36,7 +36,7 @@ export function LogoArea({ sidebarOpen }: LogoAreaProps) {
             </span>
           </div>
           <div className="hidden">
-            <span className="font-bold text-xl text-primary-gradient whitespace-nowrap">MaiBot WebUI</span>
+            <span className="font-bold text-xl text-primary-gradient whitespace-nowrap">Chie WebUI</span>
             <span className="text-base font-semibold text-primary/70 whitespace-nowrap">
               {formatVersion()}
             </span>

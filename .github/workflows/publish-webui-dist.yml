@@ -39,7 +39,7 @@ jobs:
           [project]
           name = "maibot-dashboard"
           version = "${WEBUI_VERSION}"
-          description = "MaiBot WebUI static assets"
+          description = "Project Chie WebUI static assets"
           readme = "README.md"
           requires-python = ">=3.10"
 
@@ -59,9 +59,9 @@ jobs:
           maibot_dashboard = ["dist/**"]
           EOF
           cat > .webui_dist_pkg/README.md <<'EOF'
-          # MaiBot WebUI Dist
+          # Project Chie WebUI Dist
 
-          该包仅包含 MaiBot WebUI 的前端构建产物（dist）。
+          该包仅包含 Project Chie WebUI 的前端构建产物（dist）。
           EOF
           cat > .webui_dist_pkg/maibot_dashboard/__init__.py <<'EOF'
           from .resources import get_dist_path

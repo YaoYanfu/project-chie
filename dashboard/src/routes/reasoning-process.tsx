@@ -653,7 +653,7 @@ function normalizeDisplayName(name: string): string {
 }
 
 function extractBotSelfNames(prompt: StructuredPromptPayload | null): Set<string> {
-  const names = new Set<string>(['麦麦'])
+  const names = new Set<string>(['千惠'])
 
   for (const message of prompt?.messages ?? []) {
     if (String(message.role || '').toLowerCase() !== 'system') continue
@@ -2193,7 +2193,7 @@ export function ReasoningProcessPage({
       size="sm"
       className="h-9 shrink-0 gap-1.5 sm:h-10"
       onClick={() => navigate({ to: returnTo })}
-      title="返回麦麦观察"
+      title="返回千惠观察"
     >
       <ArrowLeft className="h-4 w-4" />
       返回观察

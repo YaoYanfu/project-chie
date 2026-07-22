@@ -7,7 +7,7 @@
   "config.api_provider_name_empty": "API provider name cannot be empty. Please set a valid name in the configuration.",
   "config.api_providers_empty": "API provider list cannot be empty. Please set a valid list of API providers in the configuration.",
   "config.change_summary_header": "-------- Config File Change Summary --------",
-  "config.current_version": "MaiCore current version: {version}",
+  "config.current_version": "Project Chie current version: {version}",
   "config.file_change_detected": "Config file change detected, triggering hot reload",
   "config.file_updated": "{file_name} config file has been updated. Old: {old_version} -> New: {new_version}. It is recommended to review the new config file to avoid losing important settings.",
   "config.file_watcher_started": "Config file watcher started",

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -531,12 +531,12 @@ function PluginMarketplacePageContent({ embedded }: Required<PluginMarketplacePa
 
   // 检查插件兼容性
   // 规则：
-  // 1. manifest_version === 1 的插件在麦麦 >= 1.0.0 时一律视为不兼容（旧 manifest 已不再被宿主接受）；
+  // 1. manifest_version === 1 的插件在千惠 >= 1.0.0 时一律视为不兼容（旧 manifest 已不再被宿主接受）；
   // 2. 否则若声明了 host_application 范围，则按版本范围判定。
   const checkPluginCompatibility = (plugin: PluginInfo): boolean => {
     if (!maimaiVersion) return true
 
-    // manifest v1 在 1.0.0+ 麦麦上不再兼容
+    // manifest v1 在 1.0.0+ 千惠上不再兼容
     const manifestVersion = plugin.manifest?.manifest_version ?? 1
     if (manifestVersion <= 1 && maimaiVersion.version_major >= 1) {
       return false
@@ -556,7 +556,7 @@ function PluginMarketplacePageContent({ embedded }: Required<PluginMarketplacePa
     if (!maimaiVersion) return null
     const manifestVersion = plugin.manifest?.manifest_version ?? 1
     if (manifestVersion <= 1 && maimaiVersion.version_major >= 1) {
-      return `该插件使用旧版 manifest (v${manifestVersion})，已不被麦麦 ${maimaiVersion.version} 支持`
+      return `该插件使用旧版 manifest (v${manifestVersion})，已不被千惠 ${maimaiVersion.version} 支持`
     }
     if (plugin.manifest?.host_application && !isPluginCompatible(
       plugin.manifest.host_application.min_version,
@@ -616,7 +616,7 @@ function PluginMarketplacePageContent({ embedded }: Required<PluginMarketplacePa
     if (maimaiVersion && !checkPluginCompatibility(plugin)) {
       toast({
         title: '无法安装',
-        description: getIncompatibleReason(plugin) ?? '插件与当前麦麦版本不兼容',
+        description: getIncompatibleReason(plugin) ?? '插件与当前千惠版本不兼容',
         variant: 'destructive',
       })
       return
@@ -849,7 +849,7 @@ function PluginMarketplacePageContent({ embedded }: Required<PluginMarketplacePa
     if (maimaiVersion && !checkPluginCompatibility(plugin)) {
       toast({
         title: '无法更新',
-        description: getIncompatibleReason(plugin) ?? '插件与当前麦麦版本不兼容',
+        description: getIncompatibleReason(plugin) ?? '插件与当前千惠版本不兼容',
         variant: 'destructive',
       })
       return
@@ -967,7 +967,7 @@ function PluginMarketplacePageContent({ embedded }: Required<PluginMarketplacePa
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    安装、卸载或更新插件后，部分插件需要<span className="font-semibold">重启麦麦</span>才能生效
+                    安装、卸载或更新插件后，部分插件需要<span className="font-semibold">重启千惠</span>才能生效
                   </p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={dismissRestartNotice}>
@@ -997,7 +997,7 @@ function PluginMarketplacePageContent({ embedded }: Required<PluginMarketplacePa
             <CardContent>
               <p className="text-sm text-orange-800 dark:text-orange-200">
                 您可以从 <a href="https://git-scm.com/downloads" target="_blank" rel="noopener noreferrer" className="underline font-medium">git-scm.com</a> 下载并安装 Git。
-                安装完成后，请重启麦麦应用。
+                安装完成后，请重启千惠应用。
               </p>
             </CardContent>
           </Card>

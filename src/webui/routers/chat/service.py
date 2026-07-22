@@ -614,7 +614,7 @@ def normalize_chat_client_info(client_info: Optional[Dict[str, Any]]) -> Dict[st
 
     normalized: Dict[str, Any] = {
         "type": client_type,
-        "name": _normalize_client_text(raw_client.get("name"), "MaiBot WebUI"),
+        "name": _normalize_client_text(raw_client.get("name"), "Project Chie WebUI"),
     }
     version = str(raw_client.get("version") or "").strip()
     if version:

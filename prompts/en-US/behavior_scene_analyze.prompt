@@ -25,7 +25,7 @@ Analysis rules:
 - Do not put parallel topics from the same scenario into one tag_cluster. For example, "AI performance feedback / response latency" may share one cluster, but "personified interaction" must be a separate domain cluster.
 - If a domain includes an entity, protocol/framework, failure type, operation, media form, community meme, or character attribute at the same time, these are usually different concepts and should preferably be split into multiple domain clusters.
 - need usually outputs 1 strategy object. If there are two possible strategies, choose the most important one for the current segment.
-- other_traits usually outputs 1 to 3 clusters, such as "confused help-seeking user", "playful teasing group members", "forceful questioning", or "serious technical requester". It describes the other side's state, not what the bot should do.
+- other_traits usually outputs 1 to 3 clusters, such as "confused help-seeking user", "playful teasing group members", "forceful questioning", or "serious technical requester". It describes the other side's state, not what Chie should do.
 - Do not output phase, risk, kind, domain_tags, behavior_need, cluster_key, display_name, or other fields.
 - If the context has no clear scenario, still output one low-confidence segment.
 

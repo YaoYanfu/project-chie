@@ -442,7 +442,7 @@ class ModelTaskConfig(ConfigBase):
             "x-icon": "message-square",
         },
     )
-    """回复模型，影响麦麦的回复表现"""
+    """回复模型，影响千惠的回复表现"""
 
     planner: TaskConfig = Field(
         default_factory=TaskConfig,
@@ -451,7 +451,7 @@ class ModelTaskConfig(ConfigBase):
             "x-icon": "map",
         },
     )
-    """规划模型，决定麦麦的行动，需要有一定Agent能力的模型"""
+    """规划模型，决定千惠的行动，需要有一定Agent能力的模型"""
 
     memory: TaskConfig = Field(
         default_factory=TaskConfig,

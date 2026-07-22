@@ -32,7 +32,7 @@ class MCPRootRuntimeConfig:
 class MCPClientRuntimeConfig:
     """MCP 客户端宿主能力运行时配置。"""
 
-    client_name: str = "MaiBot"
+    client_name: str = "Project Chie"
     client_version: str = "1.0.0"
     enable_roots: bool = False
     roots: list[MCPRootRuntimeConfig] = field(default_factory=list)
@@ -109,7 +109,7 @@ def build_mcp_client_runtime_config(mcp_config: "MCPConfig") -> MCPClientRuntime
     ]
 
     return MCPClientRuntimeConfig(
-        client_name=mcp_config.client.client_name.strip() or "MaiBot",
+        client_name=mcp_config.client.client_name.strip() or "Project Chie",
         client_version=mcp_config.client.client_version.strip() or "1.0.0",
         enable_roots=mcp_config.client.roots.enable and bool(roots),
         roots=roots,

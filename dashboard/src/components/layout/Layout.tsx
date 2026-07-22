@@ -136,9 +136,9 @@ export function Layout({ children }: LayoutProps) {
     pathToLabel['/reasoning-process'] = t('sidebar.menu.reasoningProcess')
 
     return router.subscribe('onResolved', () => {
-      const pageTitle = pathToLabel[router.state.location.pathname] ?? 'MaiBot Dashboard'
+      const pageTitle = pathToLabel[router.state.location.pathname] ?? 'Project Chie'
       const fullTitle =
-        pageTitle === 'MaiBot Dashboard' ? 'MaiBot Dashboard' : `${pageTitle} — MaiBot Dashboard`
+        pageTitle === 'Project Chie' ? 'Project Chie' : `${pageTitle} — Project Chie`
 
       // 更新 document.title
       document.title = fullTitle

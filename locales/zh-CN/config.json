@@ -7,7 +7,7 @@
   "config.api_provider_name_empty": "API提供商名称不能为空，请在配置中设置有效的名称。",
   "config.api_providers_empty": "API提供商列表不能为空，请在配置中设置有效的API提供商列表。",
   "config.change_summary_header": "-------- 配置文件变更信息 --------",
-  "config.current_version": "MaiCore 当前版本: {version}",
+  "config.current_version": "Project Chie 当前版本: {version}",
   "config.file_change_detected": "检测到配置文件变更，触发热重载",
   "config.file_updated": "{file_name} 配置文件已经更新。Old: {old_version} -> New: {new_version}，建议检查新配置文件中的内容，以免丢失重要信息",
   "config.file_watcher_started": "配置文件监视器已启动",

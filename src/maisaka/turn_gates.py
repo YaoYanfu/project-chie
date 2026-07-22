@@ -99,7 +99,7 @@ class ReplyNecessityTurnGate:
         return TurnGateResult(decision=decision, detail=gate_detail, pressure_score=score_result.pressure_score)
 
     def _count_recent_presence_messages(self, window_seconds: float = 300.0) -> tuple[int, int]:
-        """统计最近一段时间内麦麦发言数和总消息数。"""
+        """统计最近一段时间内千惠发言数和总消息数。"""
 
         now = datetime.now()
         recent_self_count = 0

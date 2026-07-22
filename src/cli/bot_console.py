@@ -64,7 +64,7 @@ class BotConsoleDriver(PlatformIODriver):
         console.print(
             Panel(
                 Markdown(content),
-                title=global_config.bot.nickname.strip() or "MaiBot",
+                title=global_config.bot.nickname.strip() or "Project Chie",
                 border_style="magenta",
                 padding=(1, 2),
             )
@@ -198,7 +198,7 @@ class BotConsole:
         """显示本地管理终端说明。"""
 
         banner = Text()
-        banner.append("MaiBot 管理终端\n", style="bold cyan")
+        banner.append("Project Chie 管理终端\n", style="bold cyan")
         banner.append("输入消息或管理指令，使用 /help 查看帮助\n", style="muted")
         banner.append("Tab 补全 | ↑↓ 历史 | exit() 关闭终端输入 | Ctrl+C 退出 Bot", style="muted")
         console.print(Panel(banner, box=box.DOUBLE_EDGE, border_style="cyan", padding=(1, 2)))
@@ -228,7 +228,7 @@ class BotConsole:
         console.print(
             Panel(
                 Markdown(help_text),
-                title="MaiBot 管理终端帮助",
+                title="Project Chie 管理终端帮助",
                 border_style="cyan",
                 padding=(1, 2),
             )

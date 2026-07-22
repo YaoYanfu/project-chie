@@ -1,7 +1,7 @@
 /**
  * 请求客户端的两个适配器实例。
  *
- * - backendApi：主后端（MaiBot 本体 HTTP API），Cookie 认证，401 跳转登录页
+ * - backendApi：主后端（Project Chie 本体 HTTP API），Cookie 认证，401 跳转登录页
  * - statsApi：统计服务（Cloudflare Workers 上的问卷/插件统计），无认证
  */
 import { getApiBaseUrl } from '@/lib/api-base'

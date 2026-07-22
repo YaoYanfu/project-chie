@@ -339,7 +339,7 @@ export function PluginDetailPage({
       ? (pluginQuery.error instanceof Error ? pluginQuery.error.message : '加载失败')
       : null
 
-  // 运行时信息（Git 状态、麦麦版本、已安装列表）并行加载；
+  // 运行时信息（Git 状态、千惠版本、已安装列表）并行加载；
   // 这些信息原本失败时静默降级（不打断页面），故用 data ?? 默认值，不强制报错
   const [gitStatusQuery, maimaiVersionQuery, installedPluginsQuery] = useQueries({
     queries: [

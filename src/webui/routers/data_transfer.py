@@ -1,4 +1,4 @@
-"""MaiBot 数据导入导出路由。"""
+"""Project Chie 数据导入导出路由。"""
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -242,7 +242,7 @@ def _run_export_job(job_id: str, request: DataExportRequest) -> None:
         job.manifest = manifest
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"maibot-data-{timestamp}.zip"
+        filename = f"project-chie-data-{timestamp}.zip"
         archive_path = _TRANSFER_TEMP_DIR / f"{job.job_id}.zip"
         job.filename = filename
         job.file_path = archive_path
@@ -267,12 +267,12 @@ def _run_export_job(job_id: str, request: DataExportRequest) -> None:
             except OSError as exc:
                 logger.warning(f"清理已取消导出文件失败: {archive_path}, error={exc}")
     except HTTPException as exc:
-        logger.warning(f"导出 MaiBot 数据失败: {exc.detail}")
+        logger.warning(f"导出 Project Chie 数据失败: {exc.detail}")
         job.status = "failed"
         job.error = str(exc.detail)
         job.message = "导出失败"
     except Exception as exc:
-        logger.exception(f"导出 MaiBot 数据失败: {exc}")
+        logger.exception(f"导出 Project Chie 数据失败: {exc}")
         job.status = "failed"
         job.error = str(exc)
         job.message = "导出失败"
@@ -357,17 +357,17 @@ def _run_import_job(job_id: str, archive_path: Path, enabled_parts: set[str]) ->
         job.progress = 100
         job.message = "导入完成"
     except HTTPException as exc:
-        logger.warning(f"导入 MaiBot 数据包失败: {exc.detail}")
+        logger.warning(f"导入 Project Chie 数据包失败: {exc.detail}")
         job.status = "failed"
         job.error = str(exc.detail)
         job.message = "导入失败"
     except zipfile.BadZipFile as exc:
-        logger.warning(f"导入 MaiBot 数据包失败，文件不是合法 zip: {exc}")
+        logger.warning(f"导入 Project Chie 数据包失败，文件不是合法 zip: {exc}")
         job.status = "failed"
         job.error = "上传文件不是合法的 zip 压缩包"
         job.message = "导入失败"
     except Exception as exc:
-        logger.exception(f"导入 MaiBot 数据包失败: {exc}")
+        logger.exception(f"导入 Project Chie 数据包失败: {exc}")
         job.status = "failed"
         job.error = str(exc)
         job.message = "导入失败"
@@ -389,7 +389,7 @@ async def _save_upload_file(file: UploadFile, target_path: Path) -> None:
 
 @router.post("/export", response_model=DataTransferJobResponse)
 async def create_data_export(request: DataExportRequest, background_tasks: BackgroundTasks) -> DataTransferJobResponse:
-    """创建 MaiBot 数据导出任务。"""
+    """创建 Project Chie 数据导出任务。"""
     job = _new_job("export")
     background_tasks.add_task(_run_export_job, job.job_id, request)
     return job.to_response()
@@ -410,7 +410,7 @@ async def download_data_export(job_id: str) -> FileResponse:
     return FileResponse(
         job.file_path,
         media_type="application/zip",
-        filename=job.filename or "maibot-data.zip",
+        filename=job.filename or "project-chie-data.zip",
     )
 
 
@@ -434,7 +434,7 @@ async def create_data_import(
     import_plugins: bool = Form(False),
     import_logs: bool = Form(False),
 ) -> DataImportResponse:
-    """上传 MaiBot 数据压缩包并创建导入任务。"""
+    """上传 Project Chie 数据压缩包并创建导入任务。"""
     filename = file.filename or ""
     if not filename.lower().endswith(".zip"):
         raise HTTPException(status_code=400, detail="请上传 .zip 格式的数据包")

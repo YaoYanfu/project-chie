@@ -15,7 +15,7 @@ logger = get_logger("local_console.server")
 
 
 def _parse_args(argv: Optional[List[str]] = None) -> Namespace:
-    parser = ArgumentParser(description="启动 MaiBot 本地控制台")
+    parser = ArgumentParser(description="启动 Project Chie 本地控制台")
     parser.add_argument("--host", default=None, help="监听地址，默认 127.0.0.1")
     parser.add_argument("--port", type=int, default=None, help="监听端口，默认 7860")
     parser.add_argument("--base-url", default=None, help="Ollama 服务地址，默认 http://127.0.0.1:11434")

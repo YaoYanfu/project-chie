@@ -3066,7 +3066,7 @@ export const ExpressionGroupsHook: FieldHookComponent = ({ fieldPath, onChange, 
   const supportsWildcardTargets = !isSharedMemoryGroup
   const groupScopeOptions = supportsWildcardTargets ? GROUP_SCOPE_OPTIONS : EXACT_GROUP_SCOPE_OPTIONS
   const helperText = isSharedMemoryGroup
-    ? '把几个群聊或私聊放进同一组后，麦麦在其中任意一个聊天里回忆长期记忆时，会一起参考同组聊天的记忆；新产生的内容仍记在原来的聊天里。'
+    ? '把几个群聊或私聊放进同一组后，千惠在其中任意一个聊天里回忆长期记忆时，会一起参考同组聊天的记忆；新产生的内容仍记在原来的聊天里。'
     : isFocusGroup
       ? '配置后只有同组聊天流共享 Focus，不同组可以分别进入 Focus。'
     : `每个共享组内的聊天流会共享已学习的${learnedContentLabel}。`

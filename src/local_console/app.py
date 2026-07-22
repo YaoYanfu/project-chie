@@ -138,7 +138,7 @@ def create_app(settings: Optional[LocalConsoleSettings] = None) -> FastAPI:
     engine = LocalChatEngine(effective_settings)
     index_path = Path(__file__).resolve().parent / "static" / "index.html"
 
-    app = FastAPI(title="MaiBot 本地控制台")
+    app = FastAPI(title="Project Chie 本地控制台")
     app.mount("/assets", StaticFiles(directory=index_path.parent), name="local_console_assets")
 
     async def require_auth(

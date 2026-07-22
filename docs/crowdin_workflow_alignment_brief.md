@@ -1,4 +1,4 @@
-# Coding Agent Alignment Brief: GitHub-Side Crowdin Workflow for MaiBot
+# Coding Agent Alignment Brief: GitHub-Side Crowdin Workflow for Project Chie
 
 ## Purpose
 

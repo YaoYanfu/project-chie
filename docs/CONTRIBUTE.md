@@ -1,3 +1,5 @@
+> **上游历史文档：** 本文档来自 MaiBot/MaiCore，保留用于记录上游项目的贡献方式与署名信息；Project Chie 的当前协作说明以本仓库 README 和 NOTICE 为准。
+
 # 如何给MaiCore做贡献v1.0
 
 修改时间2025/4/5

@@ -145,7 +145,7 @@ export function BackendSetupWizard({ open }: BackendSetupWizardProps) {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
             <Bot className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">欢迎使用 MaiBot</CardTitle>
+          <CardTitle className="text-2xl">欢迎使用 Project Chie</CardTitle>
           <CardDescription>
             配置您的第一个后端连接以开始使用
           </CardDescription>

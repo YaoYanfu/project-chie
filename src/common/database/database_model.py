@@ -146,7 +146,7 @@ class ToolRecord(SQLModel, table=True):
 
 
 class MaisakaMonitorEventRecord(SQLModel, table=True):
-    """麦麦观察事件账本。"""
+    """千惠观察事件账本。"""
 
     __tablename__ = "maisaka_monitor_events"  # type: ignore
     __table_args__ = (

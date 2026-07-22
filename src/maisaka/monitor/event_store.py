@@ -1,4 +1,4 @@
-"""麦麦观察事件账本。"""
+"""千惠观察事件账本。"""
 
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -30,7 +30,7 @@ _last_cleanup_at = 0.0
 
 
 def record_monitor_event(event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
-    """写入一条麦麦观察时间线事件，并返回带 ``event_id`` 的清洗后 payload。"""
+    """写入一条千惠观察时间线事件，并返回带 ``event_id`` 的清洗后 payload。"""
 
     now = time.time()
     with get_db_session() as session:
@@ -49,7 +49,7 @@ def record_monitor_event(event_type: str, payload: dict[str, Any]) -> dict[str, 
         session.flush()
 
         if record.event_id is None:
-            raise RuntimeError("麦麦观察事件写入后未获得 event_id")
+            raise RuntimeError("千惠观察事件写入后未获得 event_id")
 
         cleaned_payload["event_id"] = record.event_id
         cleaned_payload["schema_version"] = MONITOR_EVENT_SCHEMA_VERSION
@@ -63,7 +63,7 @@ def record_monitor_event(event_type: str, payload: dict[str, Any]) -> dict[str, 
 
 
 def replay_monitor_events(*, since_event_id: int = 0, limit: int = DEFAULT_REPLAY_LIMIT) -> list[dict[str, Any]]:
-    """按 ``event_id`` 返回可重放的麦麦观察事件。"""
+    """按 ``event_id`` 返回可重放的千惠观察事件。"""
 
     normalized_limit = max(1, min(limit, MAX_REPLAY_LIMIT))
     with get_db_session(auto_commit=False) as session:
@@ -87,7 +87,7 @@ def replay_monitor_events(*, since_event_id: int = 0, limit: int = DEFAULT_REPLA
 
 
 def cleanup_monitor_events(session: Optional[Session] = None) -> int:
-    """清理超出保留策略的麦麦观察事件记录。"""
+    """清理超出保留策略的千惠观察事件记录。"""
 
     if session is None:
         with get_db_session() as managed_session:
@@ -114,7 +114,7 @@ def cleanup_monitor_events(session: Optional[Session] = None) -> int:
     )
     removed_count = int(age_result.rowcount or 0) + int(count_result.rowcount or 0)
     if removed_count > 0:
-        logger.info(f"麦麦观察事件账本清理完成，删除记录数={removed_count}")
+        logger.info(f"千惠观察事件账本清理完成，删除记录数={removed_count}")
     return removed_count
 
 
@@ -123,14 +123,14 @@ def sanitize_monitor_payload(payload: dict[str, Any], *, session: Optional[Sessi
 
     cleaned = _sanitize_payload_value(payload, session=session)
     if not isinstance(cleaned, dict):
-        raise TypeError("麦麦观察事件 payload 必须是字典")
+        raise TypeError("千惠观察事件 payload 必须是字典")
     return cleaned
 
 
 def _record_to_replay_event(record: MaisakaMonitorEventRecord) -> dict[str, Any]:
     payload = json.loads(record.payload_json)
     if not isinstance(payload, dict):
-        raise TypeError(f"麦麦观察事件 payload 不是字典: event_id={record.event_id}")
+        raise TypeError(f"千惠观察事件 payload 不是字典: event_id={record.event_id}")
     payload.setdefault("event_id", record.event_id)
     payload.setdefault("schema_version", record.schema_version)
     return {

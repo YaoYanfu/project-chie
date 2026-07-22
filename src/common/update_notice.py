@@ -175,7 +175,7 @@ def build_update_notice(
 
     if selected_entries:
         blocks = "\n\n".join(entry.markdown for entry in selected_entries)
-        content = f"# 麦麦已从 v{from_version} 更新到 v{current_version}\n\n{blocks}"
+        content = f"# 千惠已从 v{from_version} 更新到 v{current_version}\n\n{blocks}"
         return UpdateNotice(
             current_version=current_version,
             from_version=from_version,
@@ -184,7 +184,7 @@ def build_update_notice(
         )
 
     content = (
-        f"# 麦麦已从 v{from_version} 更新到 v{current_version}\n\n"
+        f"# 千惠已从 v{from_version} 更新到 v{current_version}\n\n"
         "未在 `changelogs/changelog.md` 中找到对应版本的更新日志条目。"
     )
     return UpdateNotice(current_version=current_version, from_version=from_version, versions=[], content=content)
@@ -208,12 +208,12 @@ def build_debug_update_notice(
             current_version=current_version,
             from_version="0.0.0",
             versions=[],
-            content=f"# 当前 MaiBot 版本 v{current_version}\n\n未找到可展示的更新日志条目。",
+            content=f"# 当前 Project Chie 版本 v{current_version}\n\n未找到可展示的更新日志条目。",
         )
 
     latest_entry = entries[0]
     from_version = entries[1].version if len(entries) > 1 else "0.0.0"
-    content = f"# 当前 MaiBot 版本 v{current_version}\n\n{latest_entry.markdown}"
+    content = f"# 当前 Project Chie 版本 v{current_version}\n\n{latest_entry.markdown}"
     return UpdateNotice(
         current_version=current_version,
         from_version=from_version,

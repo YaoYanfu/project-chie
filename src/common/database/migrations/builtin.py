@@ -1842,7 +1842,7 @@ def build_default_migration_registry() -> MigrationRegistry:
                 version_from=V34_SCHEMA_VERSION,
                 version_to=V35_SCHEMA_VERSION,
                 name="v34_to_v35",
-                description="新增麦麦观察事件账本表。",
+                description="新增千惠观察事件账本表。",
                 handler=migrate_v34_to_v35,
             ),
             MigrationStep(

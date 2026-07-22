@@ -1,5 +1,5 @@
 <svg width="920" height="360" viewBox="0 0 920 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Mai-with-u/MaiBot 仓库动态</title>
+  <title id="title">YaoYanfu/project-chie 仓库动态</title>
   <desc id="desc">自动生成的仓库动态统计图，包含 PR、Issue、Commit、Star 和 Fork 数据。</desc>
   <defs>
     <linearGradient id="header" x1="0" x2="1" y1="0" y2="1">
@@ -15,7 +15,7 @@
   <rect x="16" y="16" width="888" height="328" rx="14" fill="#ffffff" filter="url(#shadow)"/>
   <rect x="16" y="16" width="888" height="86" rx="14" fill="url(#header)"/>
   <path d="M16 88 H904 V102 H16 Z" fill="#ffffff"/>
-  <text x="38" y="54" fill="#ffffff" font-size="26" font-weight="700">Mai-with-u/MaiBot</text>
+  <text x="38" y="54" fill="#ffffff" font-size="26" font-weight="700">YaoYanfu/project-chie</text>
   <text x="38" y="80" fill="#fff4d6" font-size="13">MaiSaka, an LLM-based intelligent agent, is a digital lifeform devoted to understanding you and interacti</text>
   <text x="760" y="47" fill="#ffffff" font-size="13" text-anchor="end">默认分支</text>
   <text x="882" y="47" fill="#ffffff" font-size="18" font-weight="700" text-anchor="end">main</text>

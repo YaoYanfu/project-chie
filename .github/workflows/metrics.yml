@@ -22,7 +22,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python .github/scripts/generate_repository_metrics.py \
-            --repo Mai-with-u/MaiBot \
+            --repo YaoYanfu/project-chie \
             --output depends-data/repository-metrics.svg
 
       - name: Commit repository metrics

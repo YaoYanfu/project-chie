@@ -123,12 +123,12 @@ def get_reply_necessity_opinion_reason(text: str, *, is_direct_context: bool) ->
     """返回征询意见类命中原因。"""
     if "不怎么看" in text:
         return ""
-    if not is_direct_context and "麦麦" not in text:
+    if not is_direct_context and "千惠" not in text:
         return ""
     hits = [term for term in OPINION_TERMS if term in text]
     if hits:
         return "/".join(hits)
-    if re.search(r"(?:你|麦麦).{0,6}怎么看|怎么看.{0,6}(?:你|麦麦)", text):
+    if re.search(r"(?:你|千惠).{0,6}怎么看|怎么看.{0,6}(?:你|千惠)", text):
         return "怎么看"
     return ""
 
@@ -195,7 +195,7 @@ def score_reply_necessity(score_input: ReplyNecessityInput) -> ReplyNecessitySco
 
 
 def _calculate_recent_presence_penalty(*, recent_self_replies: int, recent_window_messages: int) -> int:
-    """按最近窗口内麦麦发言占比计算存在感惩罚。"""
+    """按最近窗口内千惠发言占比计算存在感惩罚。"""
 
     if recent_self_replies <= 0 or recent_window_messages <= 0:
         return 0

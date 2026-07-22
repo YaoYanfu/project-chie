@@ -334,7 +334,7 @@ function IndexPageContent() {
         include_logs: exportIncludeLogs,
       })
       setExportJob(job)
-      toast({ title: '已开始导出 MaiBot 数据' })
+      toast({ title: '已开始导出 Project Chie 数据' })
     } catch (error) {
       toast({
         title: '创建导出任务失败',
@@ -398,7 +398,7 @@ function IndexPageContent() {
       )
       const job = await getDataTransferJob(response.job_id)
       setImportJob(job)
-      toast({ title: '已开始导入 MaiBot 数据' })
+      toast({ title: '已开始导入 Project Chie 数据' })
     } catch (error) {
       toast({
         title: '创建导入任务失败',
@@ -627,7 +627,7 @@ function IndexPageContent() {
               </div>
               <div className="space-y-1 border-t border-border/50 pt-2 text-xs text-muted-foreground/60">
                 <a
-                  href={maibotStableRelease?.url || 'https://github.com/Mai-with-u/MaiBot/releases'}
+                  href={maibotStableRelease?.url || 'https://github.com/YaoYanfu/project-chie/releases'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between gap-2 transition-colors hover:text-muted-foreground"
@@ -1104,7 +1104,7 @@ function IndexPageContent() {
               </div>
               <div className="space-y-1 border-t border-border/50 pt-2 text-xs text-muted-foreground/60">
                 <a
-                  href={maibotStableRelease?.url || 'https://github.com/Mai-with-u/MaiBot/releases'}
+                  href={maibotStableRelease?.url || 'https://github.com/YaoYanfu/project-chie/releases'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between gap-2 transition-colors hover:text-muted-foreground"
@@ -1895,7 +1895,7 @@ function IndexPageContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Archive className="h-5 w-5" />
-            MaiBot 数据导入导出
+            Project Chie 数据导入导出
           </CardTitle>
           <CardDescription>config 与 data 默认包含，插件和日志可按需选择</CardDescription>
         </CardHeader>
@@ -1987,7 +1987,7 @@ function IndexPageContent() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="font-medium">导入数据</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">支持由本功能导出的 MaiBot 数据包</p>
+                  <p className="mt-1 text-sm text-muted-foreground">支持由本功能导出的 Project Chie 数据包</p>
                 </div>
                 <Button
                   className="gap-2 sm:w-auto"

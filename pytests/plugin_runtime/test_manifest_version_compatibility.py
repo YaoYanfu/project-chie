@@ -12,7 +12,7 @@ def _build_manifest() -> Dict[str, Any]:
         "version": "1.0.0",
         "name": "版本兼容测试插件",
         "description": "测试 Host 版本兼容规则",
-        "author": {"name": "MaiBot", "url": "https://example.com"},
+        "author": {"name": "Project Chie", "url": "https://example.com"},
         "license": "GPL-v3.0-or-later",
         "urls": {"repository": "https://example.com/repository"},
         "host_application": {"min_version": "1.0.0", "max_version": "1.0.0"},

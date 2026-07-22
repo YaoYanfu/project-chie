@@ -7,7 +7,7 @@
   "config.api_provider_name_empty": "API 제공자 이름은 비워둘 수 없습니다. 설정에서 유효한 이름을 입력해 주세요.",
   "config.api_providers_empty": "API 제공자 목록은 비워둘 수 없습니다. 설정에서 유효한 API 제공자 목록을 입력해 주세요.",
   "config.change_summary_header": "-------- 설정 파일 변경 정보 --------",
-  "config.current_version": "MaiCore 현재 버전: {version}",
+  "config.current_version": "Project Chie 현재 버전: {version}",
   "config.file_change_detected": "설정 파일 변경이 감지되어 핫 리로드를 시작합니다",
   "config.file_updated": "{file_name} 설정 파일이 업데이트되었습니다. Old: {old_version} -> New: {new_version}. 중요한 정보가 누락되지 않도록 새 설정 파일의 내용을 확인하는 것을 권장합니다",
   "config.file_watcher_started": "설정 파일 감시자가 시작되었습니다",

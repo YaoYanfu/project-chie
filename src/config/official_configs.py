@@ -128,7 +128,7 @@ class BotConfig(ConfigBase):
             "x-row": "bot-platform-account",
         },
     )
-    """麦麦主账号所在的平台，例如 qq。"""
+    """千惠主账号所在的平台，例如 qq。"""
 
     qq_account: str = Field(
         default="",
@@ -145,7 +145,7 @@ class BotConfig(ConfigBase):
             "x-row": "bot-platform-account",
         },
     )
-    """麦麦主账号 ID，用来识别哪些消息是麦麦自己发的。"""
+    """千惠主账号 ID，用来识别哪些消息是千惠自己发的。"""
 
     platforms: list[str] = Field(
         default_factory=lambda: [],
@@ -173,7 +173,7 @@ class BotConfig(ConfigBase):
             "x-icon": "user-circle",
         },
     )
-    """麦麦显示和自称时使用的名字。"""
+    """千惠显示和自称时使用的名字。"""
 
     alias_names: list[str] = Field(
         default_factory=lambda: [],
@@ -188,7 +188,7 @@ class BotConfig(ConfigBase):
             "advanced": True,
         },
     )
-    """别人可能用来称呼麦麦的名字，用于辅助识别提及。"""
+    """别人可能用来称呼千惠的名字，用于辅助识别提及。"""
 
 
 class PersonalityConfig(ConfigBase):
@@ -212,7 +212,7 @@ class PersonalityConfig(ConfigBase):
             "x-description-display": "icon",
         },
     )
-    """麦麦的人格和身份设定，建议简短描述她是谁、是什么性格。"""
+    """千惠的人格和身份设定，建议简短描述她是谁、是什么性格。"""
 
     behavior_style: str = Field(
         default=(
@@ -572,7 +572,7 @@ class ChatReplyTimingConfig(ConfigBase):
             "step": 0.001,
         },
     )
-    """群聊里麦麦主动说话的频率；越小越安静。"""
+    """群聊里千惠主动说话的频率；越小越安静。"""
 
     private_talk_value: float = Field(
         default=1,
@@ -590,7 +590,7 @@ class ChatReplyTimingConfig(ConfigBase):
             "step": 0.001,
         },
     )
-    """私聊里麦麦主动说话的频率；越小越安静。"""
+    """私聊里千惠主动说话的频率；越小越安静。"""
 
     mentioned_bot_reply: bool = Field(
         default=False,
@@ -605,7 +605,7 @@ class ChatReplyTimingConfig(ConfigBase):
             "x-row": "reply-switches",
         },
     )
-    """开启后，只要消息提到麦麦名字就更容易回复。"""
+    """开启后，只要消息提到千惠名字就更容易回复。"""
 
     inevitable_at_reply: bool = Field(
         default=True,
@@ -771,7 +771,7 @@ class ChatReplyTimingConfig(ConfigBase):
         },
     )
     """
-    _wrap_动态发言频率规则；可让麦麦在某些群、私聊或时段更活跃或更安静。
+    _wrap_动态发言频率规则；可让千惠在某些群、私聊或时段更活跃或更安静。
     """
 
 
@@ -813,7 +813,7 @@ class ChatReplyStyleConfig(ConfigBase):
             "x-icon": "users",
         },
     )
-    """_wrap_群聊通用提示词，告诉麦麦群聊中该怎么说话。"""
+    """_wrap_群聊通用提示词，告诉千惠群聊中该怎么说话。"""
 
     private_chat_prompts: str = Field(
         default=(
@@ -831,7 +831,7 @@ class ChatReplyStyleConfig(ConfigBase):
             "x-icon": "user",
         },
     )
-    """_wrap_私聊通用提示词，告诉麦麦私聊中该怎么说话。"""
+    """_wrap_私聊通用提示词，告诉千惠私聊中该怎么说话。"""
 
     chat_prompts: list["ExtraPromptItem"] = Field(
         default_factory=lambda: [],
@@ -951,7 +951,7 @@ class ChatConfig(ConfigBase):
             "x-row": "self-message-mark",
         },
     )
-    """加强标记麦麦自己的消息，减少把自己当成别人的情况。"""
+    """加强标记千惠自己的消息，减少把自己当成别人的情况。"""
 
     reply_timing: ChatReplyTimingConfig = Field(default_factory=ChatReplyTimingConfig)
     """什么时候回复、回复频率与等待退避配置。"""
@@ -978,7 +978,7 @@ class AttentionDriftConfig(ConfigBase):
             "x-icon": "sparkles",
         },
     )
-    """开启后，麦麦会更容易被有趣的新话题、梗或反差点吸引，但仍需保持上下文可理解。"""
+    """开启后，千惠会更容易被有趣的新话题、梗或反差点吸引，但仍需保持上下文可理解。"""
 
     drift_level: Literal["subtle", "active", "scattered", "wild"] = Field(
         default="scattered",
@@ -1127,7 +1127,7 @@ class ExperimentalConfig(ConfigBase):
             "x-icon": "brain-circuit",
         },
     )
-    """让麦麦从聊天中学习什么时候该怎么回应的经验。"""
+    """让千惠从聊天中学习什么时候该怎么回应的经验。"""
 
     enable_rich_reply: bool = Field(
         default=False,
@@ -1165,7 +1165,7 @@ class ExperimentalConfig(ConfigBase):
     """动作票据式网页浏览实验能力。"""
 
     attention_drift: AttentionDriftConfig = Field(default_factory=AttentionDriftConfig)
-    """注意力漂移实验模式；让麦麦在群聊/私聊中表现出更活跃的联想和轻微话题漂移。"""
+    """注意力漂移实验模式；让千惠在群聊/私聊中表现出更活跃的联想和轻微话题漂移。"""
 
     behavior_learning_list: list["LearningItem"] = Field(
         default_factory=lambda: [
@@ -1215,7 +1215,7 @@ class ExperimentalConfig(ConfigBase):
             "x-icon": "target",
         },
     )
-    """让麦麦同一时间只专注一个聊天流，适合直播或高强度聊天场景。"""
+    """让千惠同一时间只专注一个聊天流，适合直播或高强度聊天场景。"""
 
     focus_on_private: bool = Field(
         default=False,
@@ -1304,7 +1304,7 @@ class MessageReceiveConfig(ConfigBase):
             "x-icon": "ban",
         },
     )
-    """包含这些词的消息会被过滤，不进入麦麦处理。"""
+    """包含这些词的消息会被过滤，不进入千惠处理。"""
 
     ban_msgs_regex: set[str] = Field(
         default_factory=lambda: set(),
@@ -1404,7 +1404,7 @@ class AMemorixIntegrationConfig(ConfigBase):
             "x-icon": "database",
         },
     )
-    """是否允许麦麦在聊天时查询长期记忆"""
+    """是否允许千惠在聊天时查询长期记忆"""
 
     memory_query_default_limit: int = Field(
         default=5,
@@ -1434,7 +1434,7 @@ class AMemorixIntegrationConfig(ConfigBase):
             "x-icon": "user-round-search",
         },
     )
-    """是否允许麦麦查询人物画像记忆"""
+    """是否允许千惠查询人物画像记忆"""
 
     enable_person_profile_injection: bool = Field(
         default=True,
@@ -4780,7 +4780,7 @@ class KeywordRuleConfig(ConfigBase):
             "x-icon": "message-circle",
         },
     )
-    """命中后给麦麦看的提示内容，不会直接当作消息发送。"""
+    """命中后给千惠看的提示内容，不会直接当作消息发送。"""
 
     def model_post_init(self, context: Optional[dict] = None) -> None:
         """验证配置"""
@@ -4815,7 +4815,7 @@ class KeywordReactionConfig(ConfigBase):
             "x-icon": "list",
         },
     )
-    """命中关键词后，给麦麦追加一段固定反应提示。"""
+    """命中关键词后，给千惠追加一段固定反应提示。"""
 
     regex_rules: list[KeywordRuleConfig] = Field(
         default_factory=lambda: [],
@@ -4829,7 +4829,7 @@ class KeywordReactionConfig(ConfigBase):
             "x-icon": "list",
         },
     )
-    """命中正则规则后，给麦麦追加一段固定反应提示。"""
+    """命中正则规则后，给千惠追加一段固定反应提示。"""
 
     def model_post_init(self, context: Optional[dict] = None) -> None:
         """验证配置"""
@@ -4898,7 +4898,7 @@ class ChineseTypoConfig(ConfigBase):
             "x-icon": "type",
         },
     )
-    """让麦麦偶尔打错字，更像真人聊天。"""
+    """让千惠偶尔打错字，更像真人聊天。"""
 
     error_rate: float = Field(
         default=0.01,
@@ -5333,7 +5333,7 @@ class DebugConfig(ConfigBase):
             "x-icon": "brain",
         },
     )
-    """在日志或界面中显示麦麦的思考过程。"""
+    """在日志或界面中显示千惠的思考过程。"""
 
     enable_clear_context_command: bool = Field(
         default=False,
@@ -5511,7 +5511,7 @@ class MaimMessageConfig(ConfigBase):
             "x-icon": "server",
         },
     )
-    """是否开启新版 API Server，供外部程序调用麦麦。"""
+    """是否开启新版 API Server，供外部程序调用千惠。"""
 
     api_server_host: str = Field(
         default="0.0.0.0",
@@ -5997,7 +5997,7 @@ class MCPClientConfig(ConfigBase):
     """MCP 客户端宿主能力配置。"""
 
     client_name: str = Field(
-        default="MaiBot",
+        default="Project Chie",
         json_schema_extra={
             "x-widget": "input",
             "x-icon": "bot",
@@ -6018,10 +6018,10 @@ class MCPClientConfig(ConfigBase):
     """是否向 MCP 服务器提供可访问的文件根目录。"""
 
     sampling: MCPSamplingConfig = Field(default_factory=MCPSamplingConfig)
-    """是否允许 MCP 服务器请求麦麦调用模型。"""
+    """是否允许 MCP 服务器请求千惠调用模型。"""
 
     elicitation: MCPElicitationConfig = Field(default_factory=MCPElicitationConfig)
-    """是否允许 MCP 服务器向麦麦请求补充信息。"""
+    """是否允许 MCP 服务器向千惠请求补充信息。"""
 
 
 class MCPServerItemConfig(ConfigBase):
@@ -6162,7 +6162,7 @@ class MCPConfig(ConfigBase):
     """是否启用 MCP 工具接入能力。"""
 
     client: MCPClientConfig = Field(default_factory=MCPClientConfig)
-    """麦麦作为 MCP 客户端时声明的能力。"""
+    """千惠作为 MCP 客户端时声明的能力。"""
 
     servers: list[MCPServerItemConfig] = Field(
         default_factory=lambda: [],

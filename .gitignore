@@ -72,7 +72,7 @@ dist/
 dist-ssr/
 *.local
 
-# Custom MaiBot config for Docker Deployments
+# Custom Project Chie config for Docker deployments
 docker-config/
 
 # Editor directories and files

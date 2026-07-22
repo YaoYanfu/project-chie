@@ -3,9 +3,9 @@ requires = ["setuptools>=80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "MaiBot"
+name = "project-chie"
 version = "1.1.0"
-description = "MaiCore 是一个基于大语言模型的可交互智能体"
+description = "Project Chie 是一个具有长期记忆与持续学习能力的 AI 伴侣系统"
 requires-python = ">=3.12"
 dependencies = [
     "Babel>=2.17.0",

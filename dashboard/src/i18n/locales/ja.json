@@ -8,8 +8,8 @@
     "viewAnnualSummary": "年間サマリーを表示",
     "annualSummary": "2025 年間サマリー",
     "searchPlaceholder": "検索...",
-    "viewDocs": "MaiBot ドキュメントを表示",
-    "docs": "MaiBot ドキュメント",
+    "viewDocs": "Chie ドキュメントを表示",
+    "docs": "Chie ドキュメント",
     "switchToLight": "ライトモードに切り替える",
     "switchToDark": "ダークモードに切り替える",
     "logout": "ログアウト",
@@ -150,7 +150,7 @@
       "videoUnsupported": "お使いのブラウザは動画再生に対応していません"
     },
     "toast": {
-      "backendUnavailable": "バックエンドサービスに接続できません。MaiBot が起動しているか確認してください",
+      "backendUnavailable": "バックエンドサービスに接続できません。Chie が起動しているか確認してください",
       "backendUnavailableShort": "バックエンドサービスに接続できません",
       "connectionFailed": "接続に失敗しました",
       "currentSessionUnavailable": "現在のチャットセッションは利用できません。しばらくしてから再試行してください",
@@ -174,7 +174,7 @@
   },
   "layout": {
     "verifyingLogin": "ログイン状態を確認中...",
-    "logoTitle": "MaiBot WebUI",
+    "logoTitle": "Chie WebUI",
     "logoTitleShort": "M"
   },
   "httpWarning": {
@@ -427,7 +427,7 @@
     },
     "about": {
       "openSource": "オープンソース",
-      "aboutApp": "MaiBot Dashboard について",
+      "aboutApp": "Chie Dashboard について",
       "version": "バージョン:",
       "author": "開発者",
       "techStack": "技術スタック",
@@ -439,8 +439,8 @@
       "openSourceLicense": "オープンソースライセンス",
       "openSourceDesc": "このプロジェクトは GitHub で公開されています。Star ⭐ でサポートしてください！",
       "visitGitHub": "GitHub へ進む",
-      "appDesc": "MaiBot のモダンな Web 管理インターフェース",
-      "maimaiCore": "MaiBot コア",
+      "appDesc": "Chie のモダンな Web 管理インターフェース",
+      "maimaiCore": "Chie コア",
       "uiFrameworkGroup": "UI フレームワーク & コンポーネント",
       "routingStateGroup": "ルーティング & 状態管理",
       "formGroup": "フォーム処理",
@@ -490,16 +490,16 @@
     "loginFailed": "ログイン失敗",
     "loginSuccess": "ログイン成功",
     "checkingAuth": "ログイン状態を確認中...",
-    "welcome": "MaiBot へようこそ",
+    "welcome": "Chie へようこそ",
     "accessDesc": "システムにアクセスするためにアクセストークンを入力してください",
     "tokenRequired": "アクセストークンを入力してください",
     "verifyingLabel": "検証中...",
     "verifyEnter": "検証して入る",
     "helpLink": "Token がありません。どこで取得できますか？",
     "helpTitle": "Access Token の取得方法",
-    "helpDesc": "Access Token は MaiBot WebUI にアクセスする唯一の証明情報です。次の方法で取得してください",
+    "helpDesc": "Access Token は Chie WebUI にアクセスする唯一の証明情報です。次の方法で取得してください",
     "method1Title": "方法１：起動ログを確認",
-    "method1Desc": "MaiBot 起動時にコンソールに WebUI Access Token が表示されます。",
+    "method1Desc": "Chie 起動時にコンソールに WebUI Access Token が表示されます。",
     "method1Example1": "🔑 WebUI Access Token: abc123...",
     "method1Example2": "💡 この Token で WebUI にログインしてください",
     "method2Title": "方法２：設定ファイルを確認",
@@ -669,7 +669,7 @@
         "multipleReplyStyle": {
           "label": "代替返信スタイル",
           "placeholder": "1行につき1つの代替返信スタイルを入力",
-          "description": "リストが空でない場合、MaiBot は下の確率で代替スタイルを一時的な返信ヒントとして注入します"
+          "description": "リストが空でない場合、Chie は下の確率で代替スタイルを一時的な返信ヒントとして注入します"
         },
         "multipleProbability": {
           "label": "一時スタイル注入確率",
@@ -771,9 +771,9 @@
   "restart": {
     "preparing": "再起動を準備中",
     "preparingDesc": "再起動リクエストを送信中...",
-    "preparingTip": "🔄 MaiBot の再起動を準備中...",
-    "restarting": "MaiBot を再起動中",
-    "restartingDesc": "しばらくお待ちください、MaiBot が再起動中です...",
+    "preparingTip": "🔄 Chie の再起動を準備中...",
+    "restarting": "Chie を再起動中",
+    "restartingDesc": "しばらくお待ちください、Chie が再起動中です...",
     "restartingTip": "🔄 設定を保存しました、メインプロセスを再起動中...",
     "checking": "サービス状態を確認中",
     "checkingDesc": "サービスの回復を待機中... ({{current}}/{{max}})",
@@ -817,7 +817,7 @@
     "items": {
       "home": "ホーム",
       "homeDesc": "ダッシュボード概要を表示",
-      "focusCompanionDesc": "MaiBot の没入型集中コンパニオンを開く",
+      "focusCompanionDesc": "Chie の没入型集中コンパニオンを開く",
       "botConfig": "ボットメイン設定",
       "botConfigDesc": "ボットのコア設定を構成",
       "model": "モデル設定",
@@ -996,7 +996,7 @@
   },
   "home": {
     "title": "リアルタイムモニター",
-    "subtitle": "MaiBotの稼働状況と統計データの一覧",
+    "subtitle": "Chieの稼働状況と統計データの一覧",
     "loading": "統計データを読み込み中...",
     "loadingHint": "読み込み中...",
     "timeRange": {
@@ -1025,7 +1025,7 @@
       }
     },
     "botStatus": {
-      "title": "MaiBot ステータス",
+      "title": "Chie ステータス",
       "loading": "読み取り中",
       "running": "稼働中",
       "stopped": "停止中",
@@ -1035,7 +1035,7 @@
       "memoryEnabled": "メモリ有効"
     },
     "versionCard": {
-      "title": "MaiBot バージョン",
+      "title": "Chie バージョン",
       "mainVersion": "本体バージョン",
       "webuiVersion": "WebUI バージョン",
       "stableLatest": "最新安定版",
@@ -1044,13 +1044,13 @@
     },
     "platformGuide": {
       "title": "プラットフォームアカウントを追加",
-      "description": "MaiBot をメッセージプラットフォームに接続するアカウントがまだ設定されていません。",
-      "detail": "プラットフォームとアカウントを設定すると、MaiBot が QQ などのメッセージアプリで送受信できます。",
+      "description": "Chie をメッセージプラットフォームに接続するアカウントがまだ設定されていません。",
+      "detail": "プラットフォームとアカウントを設定すると、Chie が QQ などのメッセージアプリで送受信できます。",
       "action": "アカウントを追加"
     },
     "quickActions": {
       "title": "クイック操作",
-      "restart": "MaiBotを再起動",
+      "restart": "Chieを再起動",
       "restarting": "再起動中...",
       "expressionReview": "表現レビュー",
       "viewLogs": "ログを見る",
@@ -1070,7 +1070,7 @@
       "empty": "クイックショートカットがまだ選択されていません",
       "add": "ショートカットを追加",
       "descriptions": {
-        "restart": "MaiBot 本体プロセスを再起動",
+        "restart": "Chie 本体プロセスを再起動",
         "expressionReview": "表現学習レビューのダイアログを開く",
         "viewLogs": "WebUI ログを表示",
         "pluginManage": "プラグインマーケットと管理ページを開く",
@@ -1081,10 +1081,10 @@
         "modelProviders": "モデル管理 / プロバイダー設定を開く",
         "modelList": "モデル管理 / モデル一覧を開く",
         "modelTasks": "モデル管理 / 機能割り当てを開く",
-        "botConfig": "MaiBot 本体設定を開く",
+        "botConfig": "Chie 本体設定を開く",
         "emojiManagement": "絵文字リソース管理を開く",
         "expressionManagement": "表現管理を開く",
-        "statistics": "maibot_statistics.html を開く"
+        "statistics": "統計レポートを開く"
       },
       "categories": {
         "system": "システム",
@@ -1117,7 +1117,7 @@
       "title": "フィードバック",
       "description": "製品体験の改善にご協力ください",
       "webui": "WebUI フィードバック",
-      "maibot": "MaiBot フィードバック"
+      "maibot": "Chie フィードバック"
     },
     "stats": {
       "overviewTitle": "統計概要",

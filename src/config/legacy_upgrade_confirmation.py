@@ -203,7 +203,7 @@ def require_legacy_upgrade_confirmation(project_root: Path) -> None:
 
     print()
     print("=" * 72)
-    print("MaiBot 升级提示")
+    print("Project Chie 升级提示")
     print("检测到当前实例可能是从 1.0.0 以前的 0.x.x 版本升级而来。")
     print("继续启动将会执行自动升级，可能包括数据库结构更新和配置文件更新。")
     print("建议在继续前备份 data/ 与 config/ 目录。")

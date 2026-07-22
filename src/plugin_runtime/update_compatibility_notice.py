@@ -284,7 +284,7 @@ def format_terminal_compatibility_notice(
     lines = [
         "插件兼容性提醒",
         "=" * 48,
-        f"以下插件因 MaiBot 从 v{from_version} 更新到 v{current_version} 后不再兼容：",
+        f"以下插件因 Project Chie 从 v{from_version} 更新到 v{current_version} 后不再兼容：",
     ]
     for plugin in plugins:
         if plugin.update_status == "available":
@@ -297,7 +297,7 @@ def format_terminal_compatibility_notice(
             update_text = "暂无兼容更新"
         lines.append(
             f"- {plugin.name} ({plugin.plugin_id}) v{plugin.installed_version}："
-            f"支持 MaiBot v{plugin.host_min_version} - v{plugin.host_max_version}；{update_text}"
+            f"支持 Project Chie v{plugin.host_min_version} - v{plugin.host_max_version}；{update_text}"
         )
     lines.append("=" * 48)
     return "\n".join(lines)

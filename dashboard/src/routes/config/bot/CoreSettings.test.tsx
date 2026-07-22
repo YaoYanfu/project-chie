@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { CoreSettings } from './CoreSettings'
 
 const botSection = {
-  nickname: '麦麦',
+  nickname: '千惠',
 }
 
 const personalitySection = {
@@ -24,7 +24,7 @@ describe('CoreSettings', () => {
       />
     )
 
-    expect(screen.getByRole('heading', { name: '麦麦' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '千惠' })).toBeInTheDocument()
     expect(screen.getByText('说话 · replyer')).toBeInTheDocument()
     expect(screen.getByText('行动 · planner')).toBeInTheDocument()
     expect(screen.getByLabelText('人格配置')).toHaveValue('你是一个温和的人。')

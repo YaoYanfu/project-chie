@@ -8,8 +8,8 @@
     "viewAnnualSummary": "View annual summary",
     "annualSummary": "2025 Annual Summary",
     "searchPlaceholder": "Search...",
-    "viewDocs": "View MaiBot docs",
-    "docs": "MaiBot Docs",
+    "viewDocs": "View Chie docs",
+    "docs": "Chie Docs",
     "switchToLight": "Switch to light mode",
     "switchToDark": "Switch to dark mode",
     "logout": "Log out",
@@ -54,7 +54,7 @@
     }
   },
   "workspace": {
-    "switcherLabel": "Switch MaiBot workspace",
+    "switcherLabel": "Switch Chie workspace",
     "settings": "Mai Settings",
     "chat": "Mai Chat",
     "logs": "Mai Logs"
@@ -121,9 +121,9 @@
     },
     "dialog": {
       "create": "Create chat",
-      "description": "Choose a user MaiBot already knows and chat as that user. MaiBot will respond using her memory and understanding of that user.",
+      "description": "Choose a user Chie already knows and chat as that user. Chie will respond using her memory and understanding of that user.",
       "groupName": "Virtual group name (optional)",
-      "groupNameHint": "MaiBot will treat this as a group chat with this name",
+      "groupNameHint": "Chie will treat this as a group chat with this name",
       "knownUserSuffix": " · Known",
       "loading": "Loading...",
       "noUsers": "No users found",
@@ -150,7 +150,7 @@
       "videoUnsupported": "Your browser does not support video playback"
     },
     "toast": {
-      "backendUnavailable": "Cannot connect to the backend. Make sure MaiBot is running.",
+      "backendUnavailable": "Cannot connect to the backend. Make sure Chie is running.",
       "backendUnavailableShort": "Cannot connect to the backend",
       "connectionFailed": "Connection failed",
       "currentSessionUnavailable": "The current chat session is unavailable. Please try again later.",
@@ -174,7 +174,7 @@
   },
   "layout": {
     "verifyingLogin": "Verifying login status...",
-    "logoTitle": "MaiBot WebUI",
+    "logoTitle": "Chie WebUI",
     "logoTitleShort": "M"
   },
   "httpWarning": {
@@ -427,7 +427,7 @@
     },
     "about": {
       "openSource": "Open Source",
-      "aboutApp": "About MaiBot Dashboard",
+      "aboutApp": "About Chie Dashboard",
       "version": "Version:",
       "author": "Author",
       "techStack": "Tech Stack",
@@ -439,8 +439,8 @@
       "openSourceLicense": "Open Source License",
       "openSourceDesc": "This project is open source on GitHub. Give us a Star ⭐!",
       "visitGitHub": "Visit GitHub",
-      "appDesc": "A modern Web management interface for MaiBot",
-      "maimaiCore": "MaiBot Core",
+      "appDesc": "A modern Web management interface for Chie",
+      "maimaiCore": "Chie Core",
       "uiFrameworkGroup": "UI Framework & Components",
       "routingStateGroup": "Routing & State Management",
       "formGroup": "Form Handling",
@@ -490,16 +490,16 @@
     "loginFailed": "Login failed",
     "loginSuccess": "Login successful",
     "checkingAuth": "Checking login status...",
-    "welcome": "Welcome to MaiBot",
+    "welcome": "Welcome to Chie",
     "accessDesc": "Enter your Access Token to continue accessing the system",
     "tokenRequired": "Please enter your Access Token",
     "verifyingLabel": "Verifying...",
     "verifyEnter": "Verify & Enter",
     "helpLink": "I don't have a Token. Where can I get one?",
     "helpTitle": "How to Get an Access Token",
-    "helpDesc": "Access Token is the only credential to access MaiBot WebUI. Get yours in one of the following ways",
+    "helpDesc": "Access Token is the only credential to access Chie WebUI. Get yours in one of the following ways",
     "method1Title": "Method 1: Check Startup Log",
-    "method1Desc": "When MaiBot starts, the console will display the WebUI Access Token.",
+    "method1Desc": "When Chie starts, the console will display the WebUI Access Token.",
     "method1Example1": "🔑 WebUI Access Token: abc123...",
     "method1Example2": "💡 Use this Token to log in to WebUI",
     "method2Title": "Method 2: Check Config File",
@@ -669,7 +669,7 @@
         "multipleReplyStyle": {
           "label": "Alternate Reply Styles",
           "placeholder": "Enter one alternate reply style per line",
-          "description": "When this list is not empty, MaiBot may randomly inject one of these styles as a one-time reply hint"
+          "description": "When this list is not empty, Chie may randomly inject one of these styles as a one-time reply hint"
         },
         "multipleProbability": {
           "label": "Temporary Style Injection Probability",
@@ -771,9 +771,9 @@
   "restart": {
     "preparing": "Preparing to restart",
     "preparingDesc": "Sending restart request...",
-    "preparingTip": "🔄 Preparing to restart MaiBot...",
-    "restarting": "Restarting MaiBot",
-    "restartingDesc": "Please wait, MaiBot is restarting...",
+    "preparingTip": "🔄 Preparing to restart Chie...",
+    "restarting": "Restarting Chie",
+    "restartingDesc": "Please wait, Chie is restarting...",
     "restartingTip": "🔄 Config saved, restarting main process...",
     "checking": "Checking service status",
     "checkingDesc": "Waiting for service to recover... ({{current}}/{{max}})",
@@ -817,7 +817,7 @@
     "items": {
       "home": "Home",
       "homeDesc": "View dashboard overview",
-      "focusCompanionDesc": "Open MaiBot immersive focus companion",
+      "focusCompanionDesc": "Open Chie immersive focus companion",
       "botConfig": "Bot Main Config",
       "botConfigDesc": "Configure bot core settings",
       "model": "Model Config",
@@ -996,7 +996,7 @@
   },
   "home": {
     "title": "Live Monitor",
-    "subtitle": "MaiBot runtime status and statistics overview",
+    "subtitle": "Chie runtime status and statistics overview",
     "loading": "Loading...",
     "loadingHint": "Loading...",
     "timeRange": {
@@ -1025,7 +1025,7 @@
       }
     },
     "botStatus": {
-      "title": "MaiBot Status",
+      "title": "Chie Status",
       "loading": "Reading",
       "running": "Running",
       "stopped": "Stopped",
@@ -1035,7 +1035,7 @@
       "memoryEnabled": "Memory enabled"
     },
     "versionCard": {
-      "title": "MaiBot Version",
+      "title": "Chie Version",
       "mainVersion": "Core version",
       "webuiVersion": "WebUI version",
       "stableLatest": "Latest stable",
@@ -1044,13 +1044,13 @@
     },
     "platformGuide": {
       "title": "Add a Platform Account",
-      "description": "No account has been configured for connecting MaiBot to a messaging platform.",
-      "detail": "Add a platform and account so MaiBot can receive and send messages through QQ or another messaging app.",
+      "description": "No account has been configured for connecting Chie to a messaging platform.",
+      "detail": "Add a platform and account so Chie can receive and send messages through QQ or another messaging app.",
       "action": "Add Platform Account"
     },
     "quickActions": {
       "title": "Quick Actions",
-      "restart": "Restart MaiBot",
+      "restart": "Restart Chie",
       "restarting": "Restarting...",
       "expressionReview": "Expression Review",
       "viewLogs": "View Logs",
@@ -1070,7 +1070,7 @@
       "empty": "No quick shortcuts selected yet",
       "add": "Add Shortcut",
       "descriptions": {
-        "restart": "Restart the MaiBot core process",
+        "restart": "Restart the Chie core process",
         "expressionReview": "Open the expression learning review dialog",
         "viewLogs": "View WebUI logs",
         "pluginManage": "Open the plugin marketplace and management page",
@@ -1081,10 +1081,10 @@
         "modelProviders": "Open Model Management / Providers",
         "modelList": "Open Model Management / Models",
         "modelTasks": "Open Model Management / Task assignments",
-        "botConfig": "Open MaiBot core configuration",
+        "botConfig": "Open Chie core configuration",
         "emojiManagement": "Open emoji resource management",
         "expressionManagement": "Open expression management",
-        "statistics": "Open maibot_statistics.html"
+        "statistics": "Open statistics report"
       },
       "categories": {
         "system": "System",
@@ -1117,7 +1117,7 @@
       "title": "Feedback Survey",
       "description": "Help us improve the experience",
       "webui": "WebUI Feedback",
-      "maibot": "MaiBot Feedback"
+      "maibot": "Chie Feedback"
     },
     "stats": {
       "overviewTitle": "Statistics Overview",

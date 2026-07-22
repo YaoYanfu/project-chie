@@ -1241,7 +1241,7 @@ class BehaviorLearner:
             .add_text_content(
                 f"{system_prompt}\n\n"
                 "注意：聊天记录会在后续多条 user message 中给出。每条消息内的 source_id "
-                "是本轮场景概括的来源编号；speaker=SELF 表示这条真实聊天消息由麦麦发出。"
+                "是本轮场景概括的来源编号；speaker=SELF 表示这条真实聊天消息由千惠发出。"
             )
             .build()
         ]

@@ -37,7 +37,7 @@ export function AboutTab() {
               {t('settings.about.openSourceDesc')}
             </p>
             <a
-              href="https://github.com/Mai-with-u/MaiBot-Dashboard"
+              href="https://github.com/YaoYanfu/project-chie"
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
@@ -92,11 +92,11 @@ export function AboutTab() {
         <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{t('settings.about.author')}</h3>
         <div className="space-y-3">
           <div className="space-y-1">
-            <p className="text-sm font-medium">{t('settings.about.maimaiCore')}</p>
-            <p className="text-xs sm:text-sm text-muted-foreground">Mai-with-u</p>
+            <p className="text-sm font-medium">Project Chie</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">YaoYanfu</p>
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-medium">WebUI</p>
+            <p className="text-sm font-medium">MaiBot / MaiBot Dashboard（上游）</p>
             <p className="text-xs sm:text-sm text-muted-foreground">Mai-with-u <a href="https://github.com/DrSmoothl" target="_blank" rel="noopener noreferrer" className="text-primary underline">@MotricSeven</a></p>
           </div>
         </div>
@@ -241,7 +241,7 @@ export function AboutTab() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm sm:text-base font-semibold text-foreground mb-1">
-                  MaiBot WebUI
+                  Project Chie
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   {t('settings.about.licenseDesc')}

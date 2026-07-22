@@ -1883,7 +1883,7 @@ class StatisticOutputTask(AsyncTask):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MaiBot运行统计报告</title>
+    <title>Project Chie运行统计报告</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -2140,7 +2140,7 @@ class StatisticOutputTask(AsyncTask):
             + f"""
     <div class="container">
         <div class="toolbar">
-            <h1 style="margin: 0;">MaiBot运行统计报告</h1>
+            <h1 style="margin: 0;">Project Chie运行统计报告</h1>
             <div class="right">
                 <span class="info-item" style="margin: 0;"><strong>统计截止时间:</strong> {now.strftime("%Y-%m-%d %H:%M:%S")}</span>
             </div>
@@ -2151,7 +2151,7 @@ class StatisticOutputTask(AsyncTask):
         </div>
 
         {joined_tab_content}
-        <div class="footer">Made with ❤️ by MaiBot • 本页会定期自动覆盖生成</div>
+        <div class="footer">Made with ❤️ by Project Chie • 本页会定期自动覆盖生成</div>
     </div>
 """
             + """

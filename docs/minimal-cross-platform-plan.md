@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make MaiBot runtime identity handling platform-aware with the smallest safe change set.
+Make Project Chie runtime identity handling platform-aware with the smallest safe change set.
 
 Success means:
 

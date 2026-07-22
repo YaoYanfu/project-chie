@@ -8,8 +8,8 @@
     "viewAnnualSummary": "연간 요약 보기",
     "annualSummary": "2025 연간 요약",
     "searchPlaceholder": "검색...",
-    "viewDocs": "MaiBot 문서 보기",
-    "docs": "MaiBot 문서",
+    "viewDocs": "Chie 문서 보기",
+    "docs": "Chie 문서",
     "switchToLight": "라이트 모드로 전환",
     "switchToDark": "다크 모드로 전환",
     "logout": "로그아웃",
@@ -54,7 +54,7 @@
     }
   },
   "workspace": {
-    "switcherLabel": "MaiBot 작업 공간 전환",
+    "switcherLabel": "Chie 작업 공간 전환",
     "settings": "千惠 설정",
     "chat": "千惠 채팅",
     "logs": "千惠 로그"
@@ -150,7 +150,7 @@
       "videoUnsupported": "브라우저가 비디오 재생을 지원하지 않습니다"
     },
     "toast": {
-      "backendUnavailable": "백엔드 서비스에 연결할 수 없습니다. MaiBot이 실행 중인지 확인하세요.",
+      "backendUnavailable": "백엔드 서비스에 연결할 수 없습니다. Chie이 실행 중인지 확인하세요.",
       "backendUnavailableShort": "백엔드 서비스에 연결할 수 없습니다",
       "connectionFailed": "연결 실패",
       "currentSessionUnavailable": "현재 채팅 세션을 사용할 수 없습니다. 잠시 후 다시 시도하세요.",
@@ -174,7 +174,7 @@
   },
   "layout": {
     "verifyingLogin": "로그인 상태 확인 중...",
-    "logoTitle": "MaiBot WebUI",
+    "logoTitle": "Chie WebUI",
     "logoTitleShort": "M"
   },
   "httpWarning": {
@@ -427,7 +427,7 @@
     },
     "about": {
       "openSource": "오픈 소스",
-      "aboutApp": "MaiBot Dashboard 정보",
+      "aboutApp": "Chie Dashboard 정보",
       "version": "버전:",
       "author": "작성자",
       "techStack": "기술 스택",
@@ -439,8 +439,8 @@
       "openSourceLicense": "오픈 소스 라이선스",
       "openSourceDesc": "이 프로젝트는 GitHub에서 오픈 소스입니다. Star ⭐로 응원해 주세요!",
       "visitGitHub": "GitHub 방문",
-      "appDesc": "MaiBot의 현대적인 웹 관리 인터페이스",
-      "maimaiCore": "MaiBot 코어",
+      "appDesc": "Chie의 현대적인 웹 관리 인터페이스",
+      "maimaiCore": "Chie 코어",
       "uiFrameworkGroup": "UI 프레임워크 & 컴포넌트",
       "routingStateGroup": "라우팅 & 상태 관리",
       "formGroup": "폼 처리",
@@ -490,16 +490,16 @@
     "loginFailed": "로그인 실패",
     "loginSuccess": "로그인 성공",
     "checkingAuth": "로그인 상태 확인 중...",
-    "welcome": "MaiBot에 오신 것을 환영합니다",
+    "welcome": "Chie에 오신 것을 환영합니다",
     "accessDesc": "시스템에 액세스하려면 액세스 토큰을 입력하세요",
     "tokenRequired": "액세스 토큰을 입력해 주세요",
     "verifyingLabel": "확인 중...",
     "verifyEnter": "확인 후 입장",
     "helpLink": "Token이 없습니다. 어디서 얻을 수 있나요?",
     "helpTitle": "Access Token 얻는 방법",
-    "helpDesc": "Access Token은 MaiBot WebUI에 액세스하는 유일한 자격 증명입니다. 다음 방법으로 얻으세요",
+    "helpDesc": "Access Token은 Chie WebUI에 액세스하는 유일한 자격 증명입니다. 다음 방법으로 얻으세요",
     "method1Title": "방법 1: 시작 로그 확인",
-    "method1Desc": "MaiBot 시작 시 콘솔에 WebUI Access Token이 표시됩니다.",
+    "method1Desc": "Chie 시작 시 콘솔에 WebUI Access Token이 표시됩니다.",
     "method1Example1": "🔑 WebUI Access Token: abc123...",
     "method1Example2": "💡 이 Token으로 WebUI에 로그인하세요",
     "method2Title": "방법 2: 설정 파일 확인",
@@ -669,7 +669,7 @@
         "multipleReplyStyle": {
           "label": "대체 답변 스타일",
           "placeholder": "한 줄에 하나씩 대체 답변 스타일을 입력하세요",
-          "description": "목록이 비어 있지 않으면 MaiBot 이 아래 확률에 따라 대체 스타일을 일회성 답변 힌트로 주입합니다"
+          "description": "목록이 비어 있지 않으면 Chie 이 아래 확률에 따라 대체 스타일을 일회성 답변 힌트로 주입합니다"
         },
         "multipleProbability": {
           "label": "임시 스타일 주입 확률",
@@ -771,9 +771,9 @@
   "restart": {
     "preparing": "재시작 준비 중",
     "preparingDesc": "재시작 요청 전송 중...",
-    "preparingTip": "🔄 MaiBot 재시작을 준비 중...",
-    "restarting": "MaiBot 재시작 중",
-    "restartingDesc": "잠시 기다려주세요, MaiBot이 재시작 중입니다...",
+    "preparingTip": "🔄 Chie 재시작을 준비 중...",
+    "restarting": "Chie 재시작 중",
+    "restartingDesc": "잠시 기다려주세요, Chie이 재시작 중입니다...",
     "restartingTip": "🔄 설정을 저장했습니다, 메인 프로세스를 재시작 중...",
     "checking": "서비스 상태 확인 중",
     "checkingDesc": "서비스 복구 대기 중... ({{current}}/{{max}})",
@@ -817,7 +817,7 @@
     "items": {
       "home": "홈",
       "homeDesc": "대시보드 개요 보기",
-      "focusCompanionDesc": "MaiBot 몰입형 집중 동반 화면 열기",
+      "focusCompanionDesc": "Chie 몰입형 집중 동반 화면 열기",
       "botConfig": "속 메인 설정",
       "botConfigDesc": "속 핵심 설정 구성",
       "model": "모델 설정",
@@ -996,7 +996,7 @@
   },
   "home": {
     "title": "실시간 모니터",
-    "subtitle": "MaiBot 실행 상태 및 통계 데이터 개요",
+    "subtitle": "Chie 실행 상태 및 통계 데이터 개요",
     "loading": "통계 데이터를 불러오는 중...",
     "loadingHint": "불러오는 중...",
     "timeRange": {
@@ -1025,7 +1025,7 @@
       }
     },
     "botStatus": {
-      "title": "MaiBot 상태",
+      "title": "Chie 상태",
       "loading": "읽는 중",
       "running": "실행 중",
       "stopped": "중지됨",
@@ -1035,7 +1035,7 @@
       "memoryEnabled": "메모리 활성화"
     },
     "versionCard": {
-      "title": "MaiBot 버전",
+      "title": "Chie 버전",
       "mainVersion": "코어 버전",
       "webuiVersion": "WebUI 버전",
       "stableLatest": "최신 안정판",
@@ -1044,13 +1044,13 @@
     },
     "platformGuide": {
       "title": "플랫폼 계정 추가",
-      "description": "MaiBot을 메시지 플랫폼에 연결할 계정이 아직 설정되지 않았습니다.",
-      "detail": "플랫폼과 계정을 설정하면 MaiBot이 QQ 등 메시지 앱에서 메시지를 주고받을 수 있습니다.",
+      "description": "Chie을 메시지 플랫폼에 연결할 계정이 아직 설정되지 않았습니다.",
+      "detail": "플랫폼과 계정을 설정하면 Chie이 QQ 등 메시지 앱에서 메시지를 주고받을 수 있습니다.",
       "action": "플랫폼 계정 추가"
     },
     "quickActions": {
       "title": "빠른 작업",
-      "restart": "MaiBot 재시작",
+      "restart": "Chie 재시작",
       "restarting": "재시작 중...",
       "expressionReview": "표현 검토",
       "viewLogs": "로그 보기",
@@ -1070,7 +1070,7 @@
       "empty": "선택한 빠른 바로가기가 없습니다",
       "add": "바로가기 추가",
       "descriptions": {
-        "restart": "MaiBot 코어 프로세스 재시작",
+        "restart": "Chie 코어 프로세스 재시작",
         "expressionReview": "표현 학습 검토 대화상자 열기",
         "viewLogs": "WebUI 로그 보기",
         "pluginManage": "플러그인 마켓과 관리 페이지 열기",
@@ -1081,10 +1081,10 @@
         "modelProviders": "모델 관리 / 공급자 설정 열기",
         "modelList": "모델 관리 / 모델 목록 열기",
         "modelTasks": "모델 관리 / 기능 할당 열기",
-        "botConfig": "MaiBot 코어 설정 열기",
+        "botConfig": "Chie 코어 설정 열기",
         "emojiManagement": "이모지 리소스 관리 열기",
         "expressionManagement": "표현 관리 열기",
-        "statistics": "maibot_statistics.html 열기"
+        "statistics": "통계 보고서 열기"
       },
       "categories": {
         "system": "시스템",
@@ -1117,7 +1117,7 @@
       "title": "피드백 설문",
       "description": "제품 경험 개선에 도움을 주세요",
       "webui": "WebUI 피드백",
-      "maibot": "MaiBot 피드백"
+      "maibot": "Chie 피드백"
     },
     "stats": {
       "overviewTitle": "통계 개요",

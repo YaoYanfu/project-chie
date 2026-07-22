@@ -35,7 +35,7 @@ export function useMaibotVersion() {
 
     const loadLatestVersions = async () => {
       try {
-        const response = await fetch('https://api.github.com/repos/Mai-with-u/MaiBot/releases?per_page=20', {
+        const response = await fetch('https://api.github.com/repos/YaoYanfu/project-chie/releases?per_page=20', {
           headers: { Accept: 'application/vnd.github+json' },
         })
         if (!response.ok) {
@@ -53,12 +53,12 @@ export function useMaibotVersion() {
           if (stableRelease?.tag_name) {
             setMaibotStableRelease({
               version: String(stableRelease.tag_name).replace(/^v/i, '').trim(),
-              url: stableRelease.html_url || 'https://github.com/Mai-with-u/MaiBot/releases',
+              url: stableRelease.html_url || 'https://github.com/YaoYanfu/project-chie/releases',
             })
           }
         }
       } catch (error) {
-        console.debug('检查 MaiBot 最新版本失败:', error)
+        console.debug('检查 Project Chie 最新版本失败:', error)
       }
 
     }

@@ -24,7 +24,7 @@ export function MaiBotFeedbackSurveyPage() {
         const status = await getMaiBotStatus()
         setMaibotVersion(status.version || '未知版本')
       } catch (error) {
-        console.error('Failed to get MaiBot version:', error)
+        console.error('Failed to get Project Chie version:', error)
         setMaibotVersion('获取失败')
       }
 
@@ -50,7 +50,7 @@ export function MaiBotFeedbackSurveyPage() {
 
   // 提交错误回调
   const handleSubmitError = useCallback((error: string) => {
-    console.error('MaiBot Survey submission error:', error)
+    console.error('Project Chie survey submission error:', error)
   }, [])
 
   if (isLoading) {

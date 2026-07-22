@@ -95,7 +95,7 @@ function Test-PortInUse {
 # ---- main ----
 
 Write-Host "=" * 60
-Write-Host "MaiBot GPT-SoVITS TTS launcher"
+Write-Host "Project Chie GPT-SoVITS TTS launcher"
 Write-Host "=" * 60
 Write-Host "SoVITS install dir: $SoVitsDir"
 Write-Host "TTS API: http://$HostAddress`:$Port/tts"
@@ -114,7 +114,7 @@ $checkUrl = "http://$HostAddress`:$Port/tts"
 if (Test-TtsReady -Url $checkUrl) {
     Write-Host "[TTS] GPT-SoVITS is already running at $checkUrl"
     if (-not $NoBrowser) {
-        Write-Host "[TTS] Done. MaiBot voice config: gpt_sovits_api_url = `"$checkUrl`""
+        Write-Host "[TTS] Done. Project Chie voice config: gpt_sovits_api_url = `"$checkUrl`""
     }
     exit 0
 }
@@ -146,7 +146,7 @@ if ($Background) {
 
     if (Wait-TtsReady -Url $checkUrl -TimeoutSeconds $TimeoutSeconds) {
         Write-Host "`n[TTS] GPT-SoVITS is ready at $checkUrl"
-        Write-Host "[TTS] MaiBot voice config: gpt_sovits_api_url = `"$checkUrl`""
+        Write-Host "[TTS] Project Chie voice config: gpt_sovits_api_url = `"$checkUrl`""
         Write-Host "[TTS] Background process PID: $($proc.Id) (close with: Stop-Process -Id $($proc.Id))"
     }
     else {
@@ -156,7 +156,7 @@ if ($Background) {
 }
 else {
     Write-Host "[TTS] Starting in foreground (Ctrl+C to stop)..."
-    Write-Host "[TTS] MaiBot voice config: gpt_sovits_api_url = `"$checkUrl`""
+    Write-Host "[TTS] Project Chie voice config: gpt_sovits_api_url = `"$checkUrl`""
     Write-Host ""
 
     & $pythonPath "api_v2.py" --host $HostAddress --port $Port

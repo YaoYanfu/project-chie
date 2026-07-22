@@ -1,6 +1,6 @@
 """Hello World 示例插件 — 新 SDK 版本
 
-你的第一个 MaiCore 插件，包含问候功能、时间查询等基础示例。
+你的第一个 Project Chie 插件，包含问候功能、时间查询等基础示例。
 """
 
 from datetime import datetime

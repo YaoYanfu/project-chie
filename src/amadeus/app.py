@@ -133,7 +133,7 @@ def create_app(
         if not owner_person_id:
             raise HTTPException(status_code=422, detail="owner_person_id 不能为空")
         settings.update_remote(remote_base_url, request.remote_token, owner_person_id)
-        store.add_event("amadeus.config", "remote.updated", "云端 MaiBot 连接配置已更新")
+        store.add_event("amadeus.config", "remote.updated", "云端 Project Chie 连接配置已更新")
         return {
             "success": True,
             "remote_base_url": remote_base_url,

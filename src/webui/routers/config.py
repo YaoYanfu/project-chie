@@ -215,7 +215,7 @@ class PromptGeneratorChatPrompt(BaseModel):
 
 
 class PromptGeneratorParsedResult(BaseModel):
-    """LLM 生成的 MaiBot 人设配置结构。"""
+    """LLM 生成的 Project Chie 人设配置结构。"""
 
     personality: str = Field(default="", description="对应 [personality].personality")
     behavior_style: str = Field(default="", description="对应 [personality].behavior_style")
@@ -1054,20 +1054,20 @@ def _build_prompt_generator_instruction(request: PromptGeneratorRequest) -> str:
     }.get(request.target_scene.strip().lower(), "群聊")
     reference_config = _build_prompt_generator_reference_config()
 
-    return f"""你是 MaiBot/MaiM 的配置人设解析助手。请把用户提供的任意文段、角色卡、人设、说话风格或聊天要求，改写成可以直接放入 bot_config.toml 的麦麦人设配置。
+    return f"""你是 Project Chie 的配置人设解析助手。请把用户提供的任意文段、角色卡、人设、说话风格或聊天要求，改写成可以直接放入 bot_config.toml 的千惠人设配置。
 
 目标场景：{target_scene_label}
 主要输出语言：{request.language.strip() or "简体中文"}
 
 默认人设参考：
-下面是用于本功能的固定默认参考人设，只用于理解麦麦默认语气、字段职责和通用聊天边界；生成时必须以用户原文为主，不要逐字照抄。如果用户原文缺少场景规则，可以沿用这些设定的精神。
+下面是用于本功能的固定默认参考人设，只用于理解千惠默认语气、字段职责和通用聊天边界；生成时必须以用户原文为主，不要逐字照抄。如果用户原文缺少场景规则，可以沿用这些设定的精神。
 {reference_config}
 
 必须只输出一个 JSON 对象，不要 Markdown，不要代码块，不要额外解释。JSON 结构如下：
 {{
   "personality": "对应 [personality].personality。使用第二人称描述稳定人格、身份和长期特质，建议 80-220 字，不要写成小说设定。",
   "behavior_style": "对应 [personality].behavior_style。只描述何时参与、如何观察局面、如何选择动作以及何时保持安静，不要规定具体说法。",
-  "reply_style": "对应 [personality].reply_style。描述麦麦说话方式、回复长度、语气、互动习惯和禁用表达。",
+  "reply_style": "对应 [personality].reply_style。描述千惠说话方式、回复长度、语气、互动习惯和禁用表达。",
   "multiple_reply_style": ["可选备用表达风格，每项一段，最多 5 项"],
   "group_chat_prompt": "对应 [chat.reply_style].group_chat_prompt。只写群聊场景规则，不要重复人格设定。",
   "private_chat_prompts": "对应 [chat.reply_style].private_chat_prompts。只写私聊场景规则，不要重复人格设定。",
@@ -1752,7 +1752,7 @@ async def get_maisaka_prompt_preview(path: str = Query(..., description="logs/ma
 
 @router.post("/prompt-generator/generate", response_model=PromptGeneratorResponse)
 async def generate_prompt_persona(request: PromptGeneratorRequest):
-    """使用已定义模型把任意文段解析为 MaiBot 人设配置片段。"""
+    """使用已定义模型把任意文段解析为 Project Chie 人设配置片段。"""
 
     model_name = request.model_name.strip()
     _ensure_prompt_generator_model_exists(model_name)

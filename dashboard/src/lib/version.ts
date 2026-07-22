@@ -1,11 +1,11 @@
 /**
- * MaiBot Dashboard 版本管理
+ * Project Chie 版本管理
  */
 
 declare const __APP_VERSION__: string
 
 export const APP_VERSION = __APP_VERSION__
-export const APP_NAME = 'MaiBot Dashboard'
+export const APP_NAME = 'Project Chie'
 export const APP_FULL_NAME = `${APP_NAME} ${APP_VERSION}`
 
 /**

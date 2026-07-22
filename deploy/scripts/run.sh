@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MaiCore & NapCat Adapter一键安装脚本 by Cookie_987
+# Project Chie & NapCat Adapter一键安装脚本 by Cookie_987
 # 适用于macOS/Arch/Ubuntu 24.10/Debian 12/CentOS 9
 # 请小心使用任何一键脚本！
 
@@ -308,21 +308,21 @@ load_install_info() {
         source "$INSTALL_CONF"
     else
         INSTALL_DIR="$DEFAULT_INSTALL_DIR"
-        BRANCH="refactor"
+        BRANCH="main"
     fi
 }
 
 # 显示管理菜单
 show_menu() {
     while true; do
-        choice=$(whiptail --title "MaiCore管理菜单" --menu "请选择要执行的操作：" 15 60 7 \
-            "1" "启动MaiCore" \
-            "2" "停止MaiCore" \
-            "3" "重启MaiCore" \
+        choice=$(whiptail --title "Project Chie管理菜单" --menu "请选择要执行的操作：" 15 60 7 \
+            "1" "启动Project Chie" \
+            "2" "停止Project Chie" \
+            "3" "重启Project Chie" \
             "4" "启动NapCat Adapter" \
             "5" "停止NapCat Adapter" \
             "6" "重启NapCat Adapter" \
-            "7" "拉取最新MaiCore仓库" \
+            "7" "拉取最新Project Chie仓库" \
             "8" "切换分支" \
             "9" "退出" 3>&1 1>&2 2>&3)
 
@@ -331,15 +331,15 @@ show_menu() {
         case "$choice" in
             1)
                 start_service "${SERVICE_NAME}"
-                whiptail --msgbox "✅MaiCore已启动" 10 60
+                whiptail --msgbox "✅Project Chie已启动" 10 60
                 ;;
             2)
                 stop_service "${SERVICE_NAME}"
-                whiptail --msgbox "🛑MaiCore已停止" 10 60
+                whiptail --msgbox "🛑Project Chie已停止" 10 60
                 ;;
             3)
                 restart_service "${SERVICE_NAME}"
-                whiptail --msgbox "🔄MaiCore已重启" 10 60
+                whiptail --msgbox "🔄Project Chie已重启" 10 60
                 ;;
             4)
                 start_service "${SERVICE_NAME_NBADAPTER}"
@@ -459,7 +459,7 @@ check_eula() {
 
     # 如果EULA或隐私条款有更新，提示用户重新确认
     if [[ $current_md5 != $confirmed_md5 || $current_md5_privacy != $confirmed_md5_privacy ]]; then
-        whiptail --title "📜 使用协议更新" --yesno "检测到MaiCore EULA或隐私条款已更新。\nhttps://github.com/MaiM-with-u/MaiBot/blob/refactor/EULA.md\nhttps://github.com/MaiM-with-u/MaiBot/blob/refactor/PRIVACY.md\n\n您是否同意上述协议？ \n\n " 12 70
+        whiptail --title "📜 使用协议更新" --yesno "检测到Project Chie EULA或隐私条款已更新。\nhttps://github.com/YaoYanfu/project-chie/blob/main/EULA.md\nhttps://github.com/YaoYanfu/project-chie/blob/main/PRIVACY.md\n\n您是否同意上述协议？ \n\n " 12 70
         if [[ $? -eq 0 ]]; then
             echo -n "$current_md5" > "${INSTALL_DIR}/MaiBot/eula.confirmed"
             echo -n "$current_md5_privacy" > "${INSTALL_DIR}/MaiBot/privacy.confirmed"
@@ -594,12 +594,12 @@ run_installation() {
     whiptail --title "ℹ️ 提示" --msgbox "如果您没有特殊需求，请优先使用docker方式部署。" 10 60
 
     # 协议确认
-    if ! (whiptail --title "ℹ️ [1/6] 使用协议" --yes-button "我同意" --no-button "我拒绝" --yesno "使用MaiCore及此脚本前请先阅读EULA协议及隐私协议\nhttps://github.com/MaiM-with-u/MaiBot/blob/refactor/EULA.md\nhttps://github.com/MaiM-with-u/MaiBot/blob/refactor/PRIVACY.md\n\n您是否同意上述协议？" 12 70); then
+    if ! (whiptail --title "ℹ️ [1/6] 使用协议" --yes-button "我同意" --no-button "我拒绝" --yesno "使用Project Chie及此脚本前请先阅读EULA协议及隐私协议\nhttps://github.com/YaoYanfu/project-chie/blob/main/EULA.md\nhttps://github.com/YaoYanfu/project-chie/blob/main/PRIVACY.md\n\n您是否同意上述协议？" 12 70); then
         exit 1
     fi
 
     # 欢迎信息
-    whiptail --title "[2/6] 欢迎使用MaiCore一键安装脚本 by Cookie987" --msgbox "检测到您未安装MaiCore，将自动进入安装流程，安装完成后再次运行此脚本即可进入管理菜单。\n\n项目处于活跃开发阶段，代码可能随时更改\n文档未完善，有问题可以提交 Issue 或者 Discussion\nQQ机器人存在被限制风险，请自行了解，谨慎使用\n由于持续迭代，可能存在一些已知或未知的bug\n由于开发中，可能消耗较多token\n\n本脚本可能更新不及时，如遇到bug请优先尝试手动部署以确定是否为脚本问题" 17 60
+    whiptail --title "[2/6] 欢迎使用Project Chie一键安装脚本 by Cookie987" --msgbox "检测到您未安装Project Chie，将自动进入安装流程，安装完成后再次运行此脚本即可进入管理菜单。\n\n项目处于活跃开发阶段，代码可能随时更改\n文档未完善，有问题可以提交 Issue 或者 Discussion\nQQ机器人存在被限制风险，请自行了解，谨慎使用\n由于持续迭代，可能存在一些已知或未知的bug\n由于开发中，可能消耗较多token\n\n本脚本可能更新不及时，如遇到bug请优先尝试手动部署以确定是否为脚本问题" 17 60
 
     # 系统检查
     check_system() {
@@ -769,7 +769,7 @@ run_installation() {
 
     # 选择安装路径
     choose_install_dir() {
-        INSTALL_DIR=$(whiptail --title "📂 [6/6] 选择安装路径" --inputbox "请输入MaiCore的安装目录：" 10 60 "$DEFAULT_INSTALL_DIR" 3>&1 1>&2 2>&3)
+        INSTALL_DIR=$(whiptail --title "📂 [6/6] 选择安装路径" --inputbox "请输入Project Chie的安装目录：" 10 60 "$DEFAULT_INSTALL_DIR" 3>&1 1>&2 2>&3)
         [[ -z "$INSTALL_DIR" ]] && {
             whiptail --title "⚠️ 取消输入" --yesno "未输入安装路径，是否退出安装？" 10 60 && exit 1
             INSTALL_DIR="$DEFAULT_INSTALL_DIR"
@@ -780,7 +780,7 @@ run_installation() {
     # 确认安装
     confirm_install() {
         local confirm_msg="请确认以下更改：\n\n"
-        confirm_msg+="📂 安装MaiCore、NapCat Adapter到: $INSTALL_DIR\n"
+        confirm_msg+="📂 安装Project Chie、NapCat Adapter到: $INSTALL_DIR\n"
         confirm_msg+="🔀 分支: $BRANCH\n"
         [[ $IS_INSTALL_DEPENDENCIES == true ]] && confirm_msg+="📦 安装依赖：${missing_packages[@]}\n"
         [[ $IS_INSTALL_NAPCAT == true ]] && confirm_msg+="📦 安装额外组件：\n"
@@ -825,9 +825,9 @@ run_installation() {
     python3 -m venv venv
     source venv/bin/activate
 
-    echo -e "${GREEN}克隆MaiCore仓库...${RESET}"
-    git clone -b "$BRANCH" "$GITHUB_REPO/MaiM-with-u/MaiBot" MaiBot || {
-        echo -e "${RED}克隆MaiCore仓库失败！${RESET}"
+    echo -e "${GREEN}克隆Project Chie仓库...${RESET}"
+    git clone -b "$BRANCH" "$GITHUB_REPO/YaoYanfu/project-chie" MaiBot || {
+        echo -e "${RED}克隆Project Chie仓库失败！${RESET}"
         exit 1
     }
     echo -e "${GREEN}A_Memorix 已内置到源码，无需初始化子模块。${RESET}"
@@ -883,7 +883,7 @@ run_installation() {
         echo -e "${GREEN}创建系统服务...${RESET}"
         cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
-Description=MaiCore
+Description=Project Chie
 After=network.target ${SERVICE_NAME_NBADAPTER}.service
 
 [Service]
@@ -899,7 +899,7 @@ EOF
 
 #     cat > /etc/systemd/system/${SERVICE_NAME_WEB}.service <<EOF
 # [Unit]
-# Description=MaiCore WebUI
+# Description=Project Chie WebUI
 # After=network.target ${SERVICE_NAME}.service
 
 # [Service]
@@ -936,9 +936,9 @@ EOF
     save_install_info
 
     if [[ "$IS_MACOS" == true ]]; then
-        whiptail --title "🎉 安装完成" --msgbox "MaiCore安装完成！\n已创建 launchctl 服务：${LAUNCHD_LABEL_MAIN}、${LAUNCHD_LABEL_NBADAPTER}\n\n首次加载：launchctl bootstrap ${LAUNCHD_DOMAIN} ${LAUNCHD_PLIST_MAIN}\n重启服务：launchctl kickstart -k ${LAUNCHD_DOMAIN}/${LAUNCHD_LABEL_MAIN}\n查看状态：launchctl print ${LAUNCHD_DOMAIN}/${LAUNCHD_LABEL_MAIN}" 14 100
+        whiptail --title "🎉 安装完成" --msgbox "Project Chie安装完成！\n已创建 launchctl 服务：${LAUNCHD_LABEL_MAIN}、${LAUNCHD_LABEL_NBADAPTER}\n\n首次加载：launchctl bootstrap ${LAUNCHD_DOMAIN} ${LAUNCHD_PLIST_MAIN}\n重启服务：launchctl kickstart -k ${LAUNCHD_DOMAIN}/${LAUNCHD_LABEL_MAIN}\n查看状态：launchctl print ${LAUNCHD_DOMAIN}/${LAUNCHD_LABEL_MAIN}" 14 100
     else
-        whiptail --title "🎉 安装完成" --msgbox "MaiCore安装完成！\n已创建系统服务：${SERVICE_NAME}、${SERVICE_NAME_WEB}、${SERVICE_NAME_NBADAPTER}\n\n使用以下命令管理服务：\n启动服务：systemctl start ${SERVICE_NAME}\n查看状态：systemctl status ${SERVICE_NAME}" 14 60
+        whiptail --title "🎉 安装完成" --msgbox "Project Chie安装完成！\n已创建系统服务：${SERVICE_NAME}、${SERVICE_NAME_WEB}、${SERVICE_NAME_NBADAPTER}\n\n使用以下命令管理服务：\n启动服务：systemctl start ${SERVICE_NAME}\n查看状态：systemctl status ${SERVICE_NAME}" 14 60
     fi
 }
 
@@ -962,7 +962,7 @@ if check_installed; then
 else
     run_installation
     # 安装完成后询问是否启动
-    if whiptail --title "安装完成" --yesno "是否立即启动MaiCore服务？" 10 60; then
+    if whiptail --title "安装完成" --yesno "是否立即启动Project Chie服务？" 10 60; then
         start_service "${SERVICE_NAME}"
         if [[ "$IS_MACOS" == true ]]; then
             whiptail --msgbox "✅ 服务已启动！\n使用 launchctl print ${LAUNCHD_DOMAIN}/${LAUNCHD_LABEL_MAIN} 查看状态" 10 80

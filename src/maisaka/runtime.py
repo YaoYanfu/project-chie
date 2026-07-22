@@ -1,4 +1,4 @@
-﻿"""Maisaka 非 CLI 运行时。"""
+"""Maisaka 非 CLI 运行时。"""
 
 from collections import deque
 from datetime import datetime
@@ -439,7 +439,7 @@ class MaisakaHeartFlowChatting(MaisakaFocusRuntimeMixin, MaisakaRuntimeDisplayMi
 
     @staticmethod
     def _resolve_restored_message_source_kind(message: SessionMessage) -> str:
-        """根据发送者身份区分恢复消息来自用户还是麦麦自己。"""
+        """根据发送者身份区分恢复消息来自用户还是千惠自己。"""
 
         user_info = message.message_info.user_info
         bot_account = get_bot_account(message.platform)

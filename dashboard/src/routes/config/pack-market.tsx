@@ -164,7 +164,7 @@ export default function PackMarketPage() {
               配置模板市场
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              浏览和应用社区分享的模型配置模板，快速配置你的 MaiBot
+              浏览和应用社区分享的模型配置模板，快速配置你的 Project Chie
             </p>
           </div>
           <Button variant="outline" onClick={() => list.refetch()} disabled={list.isFetching} className="gap-2">

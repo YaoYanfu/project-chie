@@ -79,7 +79,7 @@ export interface ElectronAPI {
   launchPowershell(scriptPath: string, args: string[]): Promise<{ success: boolean; pid: number }>
   /** Open a URL in the system default browser */
   openExternalUrl(url: string): Promise<{ success: boolean }>
-  /** Get the MaiBot project root directory path */
+  /** Get the Project Chie project root directory path */
   getProjectRoot(): Promise<string>
   /** Check if a file exists at the given path */
   fileExists(filePath: string): Promise<boolean>

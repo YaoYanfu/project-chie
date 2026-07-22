@@ -37,7 +37,7 @@ git subtree pull --prefix=src/A_memorix https://github.com/A-Dawn/A_memorix.git 
 ## 本地修改边界
 
 - `src/A_memorix` 只保留上游源码和必须的宿主兼容补丁
-- 宿主接入、配置暴露、图谱页与控制台页优先放在 MaiBot 侧 host service / memory router / dashboard 页面中
+- 宿主接入、配置暴露、图谱页与控制台页优先放在 Project Chie 侧 host service / memory router / dashboard 页面中
 - 不再通过插件框架特判承载 A_Memorix
 
 ## 同步后检查

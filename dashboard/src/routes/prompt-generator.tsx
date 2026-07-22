@@ -488,7 +488,7 @@ export function PromptGeneratorPage() {
               <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">人设生成器（测试功能）</h1>
             </div>
             <p className="text-muted-foreground text-sm">
-              选择已配置模型，把任意文段、角色卡或人设解析成 MaiBot 配置格式。
+              选择已配置模型，把任意文段、角色卡或人设解析成 Project Chie 配置格式。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -715,7 +715,7 @@ export function PromptGeneratorPage() {
                       size="sm"
                       onClick={() =>
                         generated &&
-                        handleDownload('maibot-personality-prompt.toml', generated.toml_snippet)
+                        handleDownload('project-chie-personality-prompt.toml', generated.toml_snippet)
                       }
                       disabled={!generated}
                     >

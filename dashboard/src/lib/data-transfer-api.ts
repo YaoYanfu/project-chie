@@ -57,7 +57,7 @@ export async function downloadDataExport(job: DataTransferJob): Promise<void> {
   const objectUrl = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = objectUrl
-  link.download = job.filename || 'maibot-data.zip'
+  link.download = job.filename || 'project-chie-data.zip'
   document.body.appendChild(link)
   link.click()
   link.remove()

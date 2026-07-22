@@ -86,10 +86,10 @@ describe('createApiClient', () => {
       const fetchMock = mockFetch(jsonResponse({}))
       const client = makeClient()
 
-      await client.post('/api/create', { body: { name: '麦麦' } })
+      await client.post('/api/create', { body: { name: '千惠' } })
 
       const init = fetchMock.mock.calls[0][1] as RequestInit
-      expect(init.body).toBe(JSON.stringify({ name: '麦麦' }))
+      expect(init.body).toBe(JSON.stringify({ name: '千惠' }))
       expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' })
     })
 

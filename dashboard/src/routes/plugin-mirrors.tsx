@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { backendApi } from '@/lib/http'
@@ -263,7 +263,7 @@ export function PluginMirrorsPage({ embedded = false }: PluginMirrorsPageProps) 
                 仅显示当前版本
               </Label>
               <p className="text-sm text-muted-foreground">
-                在插件市场默认隐藏不兼容当前麦麦版本的插件
+                在插件市场默认隐藏不兼容当前千惠版本的插件
               </p>
             </div>
             <Switch

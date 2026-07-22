@@ -348,7 +348,7 @@ export async function checkGitStatus(): Promise<GitStatus> {
 export async function getMaimaiVersion(): Promise<MaimaiVersion> {
   try {
     return await backendApi.get<MaimaiVersion>('/api/webui/plugins/version', {
-      errorMessage: '获取麦麦版本信息失败',
+      errorMessage: '获取千惠版本信息失败',
     })
   } catch (error) {
     // 保持原有行为：HTTP 错误 / 响应解析失败时回退为 0.0.0；网络层失败与认证失效（401）仍向上抛出

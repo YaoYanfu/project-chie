@@ -188,7 +188,7 @@ function MessageAvatar({
         'text-xs font-semibold',
         isSent ? 'bg-emerald-500/15 text-emerald-500' : 'bg-blue-500/15 text-blue-500',
       )}
-      label={data.speaker_name || (isSent ? '麦麦' : '用户')}
+      label={data.speaker_name || (isSent ? '千惠' : '用户')}
       platform={data.platform}
       targetId={data.user_id}
       targetType="user"

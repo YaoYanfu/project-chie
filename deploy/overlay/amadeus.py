@@ -336,7 +336,7 @@ async def get_amadeus_status():
 
 @router.post("/bot/stop", response_model=AmadeusBotControlResponse, dependencies=[Depends(require_auth)])
 async def stop_bot():
-    """发送停止信号，触发 MaiBot 优雅关闭。"""
+    """发送停止信号，触发 Project Chie 优雅关闭。"""
     try:
         from src.core.event_bus import event_bus
         from src.core.types import EventType

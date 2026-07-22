@@ -102,7 +102,7 @@ $env:MAIBOT_LOCAL_CONSOLE_MAX_HISTORY = [string]$MaxHistory
 $env:MAIBOT_LOCAL_MODEL_DISABLE_THINKING = "1"
 $env:MAIBOT_LOCAL_MODEL_ENABLED = "1"
 
-Write-Host "MaiBot private console launcher"
+Write-Host "Project Chie private console launcher"
 Write-Host "Project root: $projectRoot"
 Write-Host "Ollama models dir: $OllamaModelsDir"
 Write-Host "Model: $Model"

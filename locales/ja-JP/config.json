@@ -7,7 +7,7 @@
   "config.api_provider_name_empty": "APIプロバイダー名は空にできません。設定に有効な名前を設定してください。",
   "config.api_providers_empty": "APIプロバイダーリストは空にできません。設定に有効なAPIプロバイダーリストを設定してください。",
   "config.change_summary_header": "-------- 設定ファイル変更情報 --------",
-  "config.current_version": "MaiCore 現在のバージョン: {version}",
+  "config.current_version": "Project Chie 現在のバージョン: {version}",
   "config.file_change_detected": "設定ファイルの変更を検出しました。ホットリロードをトリガーします",
   "config.file_updated": "{file_name} 設定ファイルが更新されました。Old: {old_version} -> New: {new_version}。重要な情報が失われないよう、新しい設定ファイルの内容を確認することをお勧めします",
   "config.file_watcher_started": "設定ファイルウォッチャーが起動しました",

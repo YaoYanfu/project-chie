@@ -19,7 +19,7 @@ MAX_AVATAR_BYTES = 5 * 1024 * 1024
 QQ_AVATAR_URL_TEMPLATE = "https://q1.qlogo.cn/g?b=qq&nk={user_id}&s=640"
 QQ_GROUP_AVATAR_URL_TEMPLATE = "https://p.qlogo.cn/gh/{group_id}/{group_id}/640"
 SUPPORTED_AVATAR_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
-AVATAR_USER_AGENT = "MaiBot-WebUI-Avatar/1.0"
+AVATAR_USER_AGENT = "Project Chie-WebUI-Avatar/1.0"
 QQ_COMPATIBLE_PLATFORMS = {"qq", "qqguild", "napcat"}
 AvatarTargetType = Literal["user", "group"]
 

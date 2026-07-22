@@ -583,7 +583,7 @@ export function ChatPage() {
       try {
         if (tabType === 'virtual' && config) {
           await chatWsClient.openSession(tabId, {
-            client: { type: 'webui', name: 'MaiBot WebUI' },
+            client: { type: 'webui', name: 'Chie WebUI' },
             user_id: config.userId,
             user_name: config.userName,
             platform: config.platform,
@@ -593,7 +593,7 @@ export function ChatPage() {
           })
         } else {
           await chatWsClient.openSession(tabId, {
-            client: { type: 'webui', name: 'MaiBot WebUI' },
+            client: { type: 'webui', name: 'Chie WebUI' },
             user_id: userIdRef.current,
             user_name: userName,
           })

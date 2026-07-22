@@ -60,7 +60,7 @@ const MODE_ITEMS: Array<{ mode: TimerMode; label: string }> = [
 ]
 
 const MOOD_LINES: Record<CompanionMood, string> = {
-  idle: '麦麦在这里。',
+  idle: '千惠在这里。',
   focus: '安静推进就好。',
   cheer: '完成一段啦。',
   listening: '我听见了。',
@@ -235,7 +235,7 @@ function emitImmersiveChange(immersive: boolean): void {
 function useFocusCompanionChat() {
   const [connected, setConnected] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
-  const [botName, setBotName] = useState('麦麦')
+  const [botName, setBotName] = useState('千惠')
   const [latestLine, setLatestLine] = useState('今天也一起慢慢来。')
 
   useEffect(() => {
@@ -291,11 +291,11 @@ function useFocusCompanionChat() {
 
     chatWsClient
       .openSession(FOCUS_SESSION_ID, {
-        client: { type: 'webui', name: 'MaiBot WebUI' },
+        client: { type: 'webui', name: 'Chie WebUI' },
         user_id: 'webui_focus_user',
         user_name: '专注中的你',
         platform: 'webui',
-        group_name: '麦麦的专注房间',
+        group_name: '千惠的专注房间',
         group_id: 'webui_focus_room',
       })
       .then(() => {
@@ -307,7 +307,7 @@ function useFocusCompanionChat() {
         console.error('专注陪伴会话打开失败:', error)
         if (mounted) {
           setConnected(false)
-          setLatestLine('麦麦会话暂时没有连上。')
+          setLatestLine('千惠会话暂时没有连上。')
         }
       })
 
@@ -1561,13 +1561,13 @@ function FocusCompanionExperience() {
   const duration = mode === 'focus' ? focusDuration : TIMER_MODE_SECONDS[mode]
   const progress = 1 - secondsLeft / duration
   const talkCount = chatStreamsQuery.data?.length ?? 0
-  const companionLine = companion.isTyping ? '麦麦正在想...' : companion.latestLine
+  const companionLine = companion.isTyping ? '千惠正在想...' : companion.latestLine
   const saplingCount = saplings.length
   const latestSapling = saplings.length > 0 ? SAPLING_KINDS[saplings[saplings.length - 1]] : null
   const todayFocusMinutes = Math.floor(todayFocusSeconds / 60)
 
   useEffect(() => {
-    document.title = '专注陪伴 - MaiBot Dashboard'
+    document.title = '专注陪伴 - Project Chie'
   }, [])
 
   useEffect(() => {
@@ -1889,7 +1889,7 @@ function FocusCompanionExperience() {
               onClick={handleCharacterTap}
               role="button"
               tabIndex={isFocusLocked ? -1 : 0}
-              aria-label="和麦麦互动"
+              aria-label="和千惠互动"
               aria-disabled={isFocusLocked}
               onKeyDown={(event) => {
                 if (isFocusLocked) {
@@ -1959,8 +1959,8 @@ function FocusCompanionExperience() {
               type="text"
               value={chatDraft}
               className="focus-local-glass-input h-11 w-44 rounded-none border-0 px-3 text-sm font-black outline-none placeholder:text-[#0a4550]/55 focus:bg-[#f3e3cc]"
-              placeholder="和麦麦说"
-              aria-label="和麦麦对话"
+              placeholder="和千惠说"
+              aria-label="和千惠对话"
               disabled={isFocusLocked}
               onChange={handleChatDraftChange}
             />

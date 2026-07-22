@@ -35,9 +35,9 @@ HISTORY_BACKFILL_MAX_INTERVAL_SECONDS = 600.0
 HISTORY_BACKFILL_INTERVAL_SPEED_RATIO = 1.0
 HISTORY_BACKFILL_EMPTY_SCAN_INTERVAL_SECONDS = 300.0
 EMBEDDING_PROFILE_PROBE_TEXTS = [
-    "MaiBot 表达检索 embedding profile probe v1：技术问题排查、报错截图、配置异常",
-    "MaiBot 表达检索 embedding profile probe v1：轻松吐槽、接梗、日常群聊",
-    "MaiBot 表达检索 embedding profile probe v1：情绪回应、安慰、拒绝、调侃",
+    "Project Chie 表达检索 embedding profile probe v1：技术问题排查、报错截图、配置异常",
+    "Project Chie 表达检索 embedding profile probe v1：轻松吐槽、接梗、日常群聊",
+    "Project Chie 表达检索 embedding profile probe v1：情绪回应、安慰、拒绝、调侃",
 ]
 
 

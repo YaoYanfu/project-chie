@@ -940,11 +940,11 @@ async def test_browser_step_invalidates_previous_page_version() -> None:
         owner_id="owner-1",
         page_version=1,
         scope_key="qq:real-session-id",
-        value="MaiBot",
+        value="Project Chie",
     )
 
     assert next_manifest["page_version"] == 2
-    assert runtime.page.created_handles[0].filled_value == "MaiBot"
+    assert runtime.page.created_handles[0].filled_value == "Project Chie"
     assert runtime.page.created_handles[0].disposed is True
     assert runtime.page.created_handles[1].disposed is True
     assert next_manifest["images"][0]["image_id"] != image_id

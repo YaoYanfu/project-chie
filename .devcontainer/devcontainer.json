@@ -1,5 +1,5 @@
 {
-	"name": "MaiBot-DevContainer",
+	"name": "Project Chie Dev Container",
 	"build": {
 		"dockerfile": "Dockerfile"
 	},

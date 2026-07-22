@@ -595,7 +595,7 @@ def _resolve_participant_name(message: LLMContextMessage) -> str:
             return str(user_name).strip()
 
     if message.role == "assistant":
-        return "麦麦"
+        return "千惠"
     if isinstance(message, ComplexSessionMessage) and message.source_kind == "optimized_tool_history":
         return "历史工具调用"
     return str(message.source or "").strip()

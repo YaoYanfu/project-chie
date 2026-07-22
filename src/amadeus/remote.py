@@ -1,4 +1,4 @@
-"""云端 MaiBot 桥接客户端。"""
+"""云端 Project Chie 桥接客户端。"""
 
 from typing import Any, Dict, Optional
 

@@ -96,7 +96,7 @@ function PromptGeneratorEntryCard() {
           人设生成器（测试版）
         </span>
         <span className="block text-xs leading-5 text-muted-foreground">
-          根据人格设定生成或调整麦麦的人设描述。
+          根据人格设定生成或调整千惠的人设描述。
         </span>
       </span>
     </Link>

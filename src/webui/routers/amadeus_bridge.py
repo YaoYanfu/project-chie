@@ -42,7 +42,7 @@ async def rotate_bridge_token() -> Dict[str, str]:
 
 @router.get("/status", dependencies=[Depends(require_amadeus_bridge_token)])
 async def get_bridge_status() -> Dict[str, Any]:
-    """只要本端点可响应，就表示 MaiBot Worker 与 WebUI 均在线。"""
+    """只要本端点可响应，就表示 Project Chie Worker 与 WebUI 均在线。"""
     return {
         "online": True,
         "service": "maibot",

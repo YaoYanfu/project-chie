@@ -11,7 +11,7 @@
 
 ---
 
-> **声明：** 本项目的核心实现参考了开源项目 [MaiBot](https://github.com/Mai-with-u/MaiBot)，在此对其开发者及社区表示诚挚感谢。
+> **上游声明：** Project Chie 基于开源项目 [MaiBot](https://github.com/Mai-with-u/MaiBot) 修改开发，并保留原项目作者与贡献者的版权及署名。详细信息见 [NOTICE.md](NOTICE.md)。
 
 ---
 

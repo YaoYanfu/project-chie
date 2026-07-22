@@ -410,7 +410,7 @@ async def _test_embedding_model(model_name: str) -> ModelTestResponse:
     start_time = time.time()
     try:
         orchestrator = _SingleModelTestOrchestrator(model_name=model_name)
-        result = await orchestrator.get_embedding("MaiBot 模型可用性测试")
+        result = await orchestrator.get_embedding("Project Chie 模型可用性测试")
         latency_ms = round((time.time() - start_time) * 1000, 2)
         return ModelTestResponse(
             success=True,
@@ -443,7 +443,7 @@ def _build_model_test_prompt(visual_enabled: bool) -> str:
         else "本次消息没有附带图片，请在工具参数 saw_image 中填 false。"
     )
     return (
-        "你正在执行 MaiBot WebUI 的单模型能力测试。\n"
+        "你正在执行 Project Chie WebUI 的单模型能力测试。\n"
         "测试目标：确认模型可以读取普通文本，并可以按工具定义发起 tool call。\n"
         f"{image_instruction}\n"
         f"请必须调用工具 {MODEL_TEST_TOOL_NAME}，不要只用普通文本回答。\n"
@@ -456,7 +456,7 @@ def _build_model_test_tools() -> List[Dict[str, Any]]:
     return [
         {
             "name": MODEL_TEST_TOOL_NAME,
-            "description": "回报 MaiBot WebUI 模型测试结果。",
+            "description": "回报 Project Chie WebUI 模型测试结果。",
             "parameters_schema": {
                 "type": "object",
                 "properties": {

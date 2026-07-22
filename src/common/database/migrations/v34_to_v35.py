@@ -1,4 +1,4 @@
-"""v34 schema 升级到 v35：新增麦麦观察事件账本。"""
+"""v34 schema 升级到 v35：新增千惠观察事件账本。"""
 
 from src.common.logger import get_logger
 
@@ -8,7 +8,7 @@ logger = get_logger("database_migration")
 
 
 def migrate_v34_to_v35(context: MigrationExecutionContext) -> None:
-    """创建 ``maisaka_monitor_events`` 表，用于支持麦麦观察离线补漏。"""
+    """创建 ``maisaka_monitor_events`` 表，用于支持千惠观察离线补漏。"""
 
     context.start_progress(
         total_tables=1,
@@ -21,11 +21,11 @@ def migrate_v34_to_v35(context: MigrationExecutionContext) -> None:
     create_maisaka_monitor_events_table(context)
     context.advance_progress(records=1, completed_tables=1, item_name="maisaka_monitor_events")
 
-    logger.info("v34 -> v35 数据库迁移完成：麦麦观察事件账本已就绪")
+    logger.info("v34 -> v35 数据库迁移完成：千惠观察事件账本已就绪")
 
 
 def create_maisaka_monitor_events_table(context: MigrationExecutionContext) -> None:
-    """创建麦麦观察事件账本表及查询索引。"""
+    """创建千惠观察事件账本表及查询索引。"""
 
     connection = context.connection
     connection.exec_driver_sql(

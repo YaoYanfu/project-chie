@@ -108,7 +108,7 @@ export function CoreSettings({
 
   return (
     <section
-      aria-label="麦麦核心设置"
+      aria-label="千惠核心设置"
       data-config-bot-core-settings="true"
       className="from-primary/[0.055] via-background to-muted/25 relative overflow-hidden rounded-[1.75rem] border bg-gradient-to-br px-4 py-5 sm:px-6 sm:py-6"
     >

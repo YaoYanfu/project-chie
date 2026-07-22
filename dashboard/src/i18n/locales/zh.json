@@ -150,7 +150,7 @@
       "videoUnsupported": "您的浏览器不支持视频播放"
     },
     "toast": {
-      "backendUnavailable": "无法连接到后端服务，请确保 MaiBot 已启动",
+      "backendUnavailable": "无法连接到后端服务，请确保 Chie 已启动",
       "backendUnavailableShort": "无法连接到后端服务",
       "connectionFailed": "连接失败",
       "currentSessionUnavailable": "当前聊天会话不可用，请稍后重试",
@@ -174,7 +174,7 @@
   },
   "layout": {
     "verifyingLogin": "千惠正在啃食服务器...",
-    "logoTitle": "MaiBot WebUI",
+    "logoTitle": "Chie WebUI",
     "logoTitleShort": "M"
   },
   "httpWarning": {
@@ -427,7 +427,7 @@
     },
     "about": {
       "openSource": "开源项目",
-      "aboutApp": "关于 MaiBot Dashboard",
+      "aboutApp": "关于 Chie Dashboard",
       "version": "版本:",
       "author": "作者",
       "techStack": "技术栈",
@@ -439,8 +439,8 @@
       "openSourceLicense": "开源许可",
       "openSourceDesc": "本项目在 GitHub 开源，欢迎 Star ⭐ 支持！",
       "visitGitHub": "前往 GitHub",
-      "appDesc": "千惠（MaiBot）的现代化 Web 管理界面",
-      "maimaiCore": "MaiBot 核心",
+      "appDesc": "千惠（Chie）的现代化 Web 管理界面",
+      "maimaiCore": "Chie 核心",
       "uiFrameworkGroup": "UI 框架与组件",
       "routingStateGroup": "路由与状态管理",
       "formGroup": "表单处理",
@@ -490,16 +490,16 @@
     "loginFailed": "登录失败",
     "loginSuccess": "登录成功",
     "checkingAuth": "正在检查登录状态...",
-    "welcome": "欢迎使用 MaiBot",
+    "welcome": "欢迎使用 Chie",
     "accessDesc": "请输入您的 Access Token 以继续访问系统",
     "tokenRequired": "请输入 Access Token",
     "verifyingLabel": "验证中...",
     "verifyEnter": "验证并进入",
     "helpLink": "我没有 Token，我该去哪里获得 Token？",
     "helpTitle": "如何获取 Access Token",
-    "helpDesc": "Access Token 是访问 MaiBot WebUI 的唯一凭证，请按以下方式获取",
+    "helpDesc": "Access Token 是访问 Chie WebUI 的唯一凭证，请按以下方式获取",
     "method1Title": "方式一：查看启动日志",
-    "method1Desc": "在 MaiBot 启动时，控制台会显示 WebUI Access Token。",
+    "method1Desc": "在 Chie 启动时，控制台会显示 WebUI Access Token。",
     "method1Example1": "🔑 WebUI Access Token: abc123...",
     "method1Example2": "💡 请使用此 Token 登录 WebUI",
     "method2Title": "方式二：查看配置文件",
@@ -1084,7 +1084,7 @@
         "botConfig": "打开千惠主程序配置",
         "emojiManagement": "打开表情包资源管理",
         "expressionManagement": "打开表达方式管理",
-        "statistics": "打开 maibot_statistics.html"
+        "statistics": "打开统计报告"
       },
       "categories": {
         "system": "系统",

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 .mmipkg 表情包打包工具
-用于导入/导出 MaiBot 已注册表情包
+用于导入/导出 Project Chie 已注册表情包
 
 版本：1.0
 日期：2025-11-13
@@ -253,7 +253,7 @@ class MMIPKGPacker:
                         "w": width,  # width
                         "ht": height,  # height
                         "opt": {
-                            # 存储 MaiBot 特有的元数据 - 完整的数据库信息
+                            # 存储 Project Chie 特有的元数据 - 完整的数据库信息
                             "desc": emoji.description or "",
                             "emotion": emoji.emotion or "",
                             "usage_count": emoji.usage_count or 0,
@@ -281,7 +281,7 @@ class MMIPKGPacker:
             # 准备打包
             pack_id = str(uuid.uuid4())
             if pack_name is None:
-                pack_name = f"MaiBot_Emojis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                pack_name = f"Project Chie_Emojis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
             manifest = {
                 "p": pack_id,  # pack_id
@@ -719,7 +719,7 @@ class MMIPKGUnpacker:
 def print_header():
     """打印欢迎信息"""
     console.print("\n[bold cyan]" + "=" * 70 + "[/bold cyan]")
-    console.print("[bold cyan]" + " " * 20 + "MaiBot 表情包打包工具" + "[/bold cyan]")
+    console.print("[bold cyan]" + " " * 20 + "Project Chie 表情包打包工具" + "[/bold cyan]")
     console.print("[bold cyan]" + " " * 25 + ".mmipkg 格式" + "[/bold cyan]")
     console.print("[bold cyan]" + "=" * 70 + "[/bold cyan]")
 
@@ -860,7 +860,7 @@ def interactive_export():
         output_path += ".mmipkg"
 
     # 获取包名称
-    default_pack_name = f"MaiBot表情包_{datetime.now().strftime('%Y%m%d')}"
+    default_pack_name = f"Project Chie表情包_{datetime.now().strftime('%Y%m%d')}"
     pack_name = get_input("  包名称", default_pack_name)
 
     # 自定义 manifest

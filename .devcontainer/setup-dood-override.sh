@@ -2,7 +2,7 @@
 # ============================================================================
 # Docker-outside-of-Docker (DooD) bind mount 路径修正脚本
 # ============================================================================
-# 问题：VS Code devcontainer 将宿主机项目路径（如 /home/user/MaiBot）挂载到
+# 问题：VS Code devcontainer 将宿主机项目路径（如 /home/user/project-chie）挂载到
 #       容器内的 ${containerWorkspaceFolder}。当 docker compose 在容器内执行时，
 #       Docker Compose 将相对路径 ./ 解析为容器内路径，发送给宿主机 Docker 守护进程。
 #       守护进程在宿主机上找不到同名路径，自动创建空目录，导致数据"消失"。
@@ -17,7 +17,7 @@
 
 set -eu
 
-WORKSPACE_FOLDER="${1:-/workspaces/MaiBot}"
+WORKSPACE_FOLDER="${1:-/workspaces/project-chie}"
 OVERRIDE_FILE="${WORKSPACE_FOLDER}/docker-compose.devcontainer.yml"
 
 # 从 /proc/1/mountinfo 提取宿主机上对应 workspace 的真实路径

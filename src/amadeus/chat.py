@@ -1,4 +1,4 @@
-"""Amadeus 本机到云端 MaiBot 的受限聊天代理。"""
+"""Amadeus 本机到云端 Project Chie 的受限聊天代理。"""
 
 from typing import Any, Dict
 from urllib.parse import urlsplit, urlunsplit

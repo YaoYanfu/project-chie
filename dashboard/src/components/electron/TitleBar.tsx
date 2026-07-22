@@ -12,7 +12,7 @@ interface TitleBarProps {
   variant?: 'default' | 'amadeus'
 }
 
-export function TitleBar({ title = 'MaiBot', variant = 'default' }: TitleBarProps) {
+export function TitleBar({ title = 'Project Chie', variant = 'default' }: TitleBarProps) {
   const { close, isMaximized, minimize, toggleMaximize } = useWindowControls()
   const isMac = useMemo(() => getPlatform() === 'darwin', [])
 

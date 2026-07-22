@@ -403,7 +403,7 @@ function SetupPageContent() {
         }),
       })
 
-      // 3. 配置文件会被 MaiBot 热加载；完成后直接回到首页。
+      // 3. 配置文件会被 Project Chie 热加载；完成后直接回到首页。
       navigate({ to: '/' })
     } catch (error) {
       toast({

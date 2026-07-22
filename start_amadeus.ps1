@@ -1,8 +1,8 @@
-﻿# Amadeus 一键启动脚本
+# Amadeus 一键启动脚本
 #
 # 这个脚本按以下顺序完成整个启动流程：
 # 1. 检查本机配置和必要命令。
-# 2. 建立 SSH 隧道，把本机 18001 端口安全转发到云端 MaiBot 的 8001 端口。
+# 2. 建立 SSH 隧道，把本机 18001 端口安全转发到云端 Project Chie 的 8001 端口。
 # 3. 启动本机 Amadeus 后端，并等待 127.0.0.1:8765 可以访问。
 # 4. 通过 Amadeus 后端确认云端千惠在线、人物身份映射正常。
 # 5. 启动 Electron 前端。
@@ -115,7 +115,7 @@ try {
 
     Write-Host '环境检查完成。' -ForegroundColor Green
 
-    Write-Step '建立本机到云端 MaiBot 的 SSH 安全隧道'
+    Write-Step '建立本机到云端 Project Chie 的 SSH 安全隧道'
 
     if (Test-TcpPort -HostName '127.0.0.1' -Port $TunnelPort) {
         # 端口已经可用，说明隧道可能由你或另一个 Amadeus 实例启动，直接复用。
@@ -152,7 +152,7 @@ try {
         Write-Host "127.0.0.1:$AmadeusPort 上的 Amadeus 已在线，复用现有后端。" -ForegroundColor Yellow
     }
     else {
-        # 优先使用项目虚拟环境，确保 Python 依赖版本与 MaiBot 项目一致。
+        # 优先使用项目虚拟环境，确保 Python 依赖版本与 Project Chie 项目一致。
         $VenvPython = Join-Path $ProjectRoot '.venv\Scripts\python.exe'
         if (Test-Path -LiteralPath $VenvPython) {
             $PythonExecutable = $VenvPython
@@ -186,10 +186,10 @@ try {
 
     Write-Step '验证 Amadeus 与云端千惠的连接'
 
-    # /api/status 会同时检查云端 MaiBot 状态和本机人物身份映射。
+    # /api/status 会同时检查云端 Project Chie 状态和本机人物身份映射。
     $Status = Invoke-RestMethod -Uri "http://127.0.0.1:$AmadeusPort/api/status" -TimeoutSec 10
     if (-not $Status.remote.online) {
-        throw "云端 MaiBot 未连接：$($Status.remote.reason)"
+        throw "云端 Project Chie 未连接：$($Status.remote.reason)"
     }
     if (-not $Status.identity.online -or -not $Status.identity.mapped) {
         throw "人物身份映射无效：$($Status.identity.reason)"

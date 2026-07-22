@@ -254,7 +254,7 @@ class BehaviorPatternSelector:
                 self_reflection_items.append(
                     f"{len(self_reflection_items) + 1}.\n"
                     f"behavior_id：{behavior_id}\n"
-                    f"麦麦过去采用的做法：{action}\n"
+                    f"千惠过去采用的做法：{action}\n"
                     f"当时观察到的结果：{outcome}"
                 )
                 continue
@@ -279,14 +279,14 @@ class BehaviorPatternSelector:
         ]
         if self_reflection_items:
             reference_sections.append(
-                "麦麦的过往经验：\n"
-                "这些做法由麦麦在相似场景中采用过，可结合当前情况调整或组合。\n"
+                "千惠的过往经验：\n"
+                "这些做法由千惠在相似场景中采用过，可结合当前情况调整或组合。\n"
                 f"{chr(10).join(self_reflection_items)}"
             )
         if observed_behavior_items:
             reference_sections.append(
                 "其他人的互动经验：\n"
-                "这些做法来自他人或群体，可以在适合麦麦当前身份、关系和情境时灵活借鉴。\n"
+                "这些做法来自他人或群体，可以在适合千惠当前身份、关系和情境时灵活借鉴。\n"
                 f"{chr(10).join(observed_behavior_items)}"
             )
         return "\n\n".join(reference_sections)

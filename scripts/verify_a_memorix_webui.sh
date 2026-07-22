@@ -63,7 +63,7 @@ if [[ "$REUSE_SERVICES" != "1" ]]; then
       WEBUI_HOST="$BACKEND_HOST" WEBUI_PORT="$BACKEND_PORT" "$PYTHON_BIN" "$BACKEND_SCRIPT"
     ) >"$OUTPUT_DIR/backend.log" 2>&1 &
     BACKEND_PID="$!"
-    wait_for_url "${BACKEND_URL}/api/webui/health" "MaiBot WebUI backend" 120
+    wait_for_url "${BACKEND_URL}/api/webui/health" "Project Chie WebUI backend" 120
   fi
 
   if ! env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY NO_PROXY=127.0.0.1,localhost \
