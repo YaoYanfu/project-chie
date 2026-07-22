@@ -1,9 +1,15 @@
+from pathlib import Path
+from types import SimpleNamespace
+
+import asyncio
 import json
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.webui.services import git_mirror_service as mirror_service_module
+from src.webui.routers.plugin import icon_routes as icon_routes_module
 from src.webui.routers.plugin import management as management_module
 from src.webui.routers.plugin import support as support_module
 
@@ -29,10 +35,12 @@ def client(tmp_path, monkeypatch) -> TestClient:
     )
 
     monkeypatch.setattr(management_module, "require_plugin_token", lambda _: "ok")
+    monkeypatch.setattr(icon_routes_module, "require_plugin_token", lambda _: "ok")
     monkeypatch.setattr(support_module, "get_plugins_dir", lambda: plugins_dir)
 
     app = FastAPI()
     app.include_router(management_module.router, prefix="/api/webui/plugins")
+    app.include_router(icon_routes_module.router, prefix="/api/webui/plugins")
     return TestClient(app)
 
 
@@ -61,6 +69,48 @@ def test_resolve_installed_plugin_path_accepts_manifest_id_case_mismatch(client:
 
     assert plugin_path is not None
     assert plugin_path.name == "demo_plugin"
+
+
+def test_get_plugin_icon_serves_manifest_declared_local_icon(client: TestClient):
+    plugin_path = support_module.resolve_installed_plugin_path("test.demo")
+    assert plugin_path is not None
+    assets_dir = plugin_path / "assets"
+    assets_dir.mkdir()
+    (assets_dir / "icon.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"></svg>',
+        encoding="utf-8",
+    )
+    manifest = json.loads((plugin_path / "_manifest.json").read_text(encoding="utf-8"))
+    manifest["display"] = {
+        "icon": {
+            "type": "local",
+            "value": "assets/icon.svg",
+        }
+    }
+    (plugin_path / "_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    response = client.get("/api/webui/plugins/icon/test.demo")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg")
+    assert b"<svg" in response.content
+
+
+def test_get_plugin_icon_rejects_manifest_declared_parent_path(client: TestClient):
+    plugin_path = support_module.resolve_installed_plugin_path("test.demo")
+    assert plugin_path is not None
+    manifest = json.loads((plugin_path / "_manifest.json").read_text(encoding="utf-8"))
+    manifest["display"] = {
+        "icon": {
+            "type": "local",
+            "value": "../icon.svg",
+        }
+    }
+    (plugin_path / "_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    response = client.get("/api/webui/plugins/icon/test.demo")
+
+    assert response.status_code == 400
 
 
 def test_install_plugin_preserves_manifest_declared_id(client: TestClient, monkeypatch):
@@ -177,6 +227,79 @@ def test_install_plugin_cleans_config_only_residue(client: TestClient, monkeypat
     assert not (residue_path / "config.toml").exists()
 
 
+def test_clone_repository_reports_plugin_and_mirror_progress(tmp_path, monkeypatch):
+    events = []
+
+    class FakeMirrorConfig:
+        def get_enabled_mirrors(self):
+            return [
+                {
+                    "id": "test-mirror",
+                    "name": "测试镜像源",
+                    "clone_prefix": "https://example.com/https://github.com",
+                    "raw_prefix": "https://example.com/https://raw.githubusercontent.com",
+                    "enabled": True,
+                    "priority": 1,
+                }
+            ]
+
+    async def collect_progress(**kwargs):
+        events.append(kwargs)
+
+    def fake_run(cmd, capture_output, text, timeout):
+        assert cmd[:2] == ["git", "clone"]
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    service = mirror_service_module.GitMirrorService(max_retries=1, timeout=1, config=FakeMirrorConfig())
+    monkeypatch.setattr(mirror_service_module.subprocess, "run", fake_run)
+    mirror_service_module.set_update_progress_callback(collect_progress)
+
+    try:
+        result = asyncio.run(
+            service.clone_repository(
+                owner="owner",
+                repo="repo",
+                target_path=tmp_path / "repo",
+                depth=1,
+                plugin_id="market.plugin",
+            )
+        )
+    finally:
+        mirror_service_module.set_update_progress_callback(None)
+
+    assert result["success"] is True
+    assert any(event.get("plugin_id") == "market.plugin" for event in events)
+    assert any(event.get("mirror_name") == "测试镜像源" for event in events)
+    assert any(event.get("attempt") == 1 and event.get("max_attempts") == 1 for event in events)
+
+
+def test_clone_repository_cleans_partial_directory_on_git_failure(tmp_path, monkeypatch):
+    target_path = tmp_path / "bad_plugin"
+
+    def fake_run(cmd, capture_output, text, timeout):
+        assert cmd[:2] == ["git", "clone"]
+        target_path.mkdir(parents=True, exist_ok=True)
+        (target_path / ".git").mkdir()
+        return SimpleNamespace(returncode=128, stdout="", stderr="network failed")
+
+    service = mirror_service_module.GitMirrorService(max_retries=1, timeout=1)
+    monkeypatch.setattr(mirror_service_module.subprocess, "run", fake_run)
+
+    result = asyncio.run(
+        service._clone_with_url(
+            url="https://github.com/test/bad.git",
+            target_path=target_path,
+            branch=None,
+            depth=1,
+            mirror_type="test",
+        )
+    )
+
+    assert result["success"] is False
+    assert "network failed" in result["error"]
+    assert not target_path.exists()
+
+
 def test_uninstall_plugin_releases_runtime_before_delete(client: TestClient, monkeypatch):
     from src.plugin_runtime import integration as integration_module
 
@@ -198,3 +321,141 @@ def test_uninstall_plugin_releases_runtime_before_delete(client: TestClient, mon
     assert response.status_code == 200
     assert reload_calls == [(["test.demo"], "uninstall")]
     assert not plugin_path.exists()
+
+
+def test_update_non_git_plugin_reinstalls_and_preserves_known_user_files(client: TestClient, monkeypatch):
+    plugin_path = support_module.resolve_installed_plugin_path("test.demo")
+    assert plugin_path is not None
+    (plugin_path / "plugin.py").write_text("old source", encoding="utf-8")
+    (plugin_path / "config.toml").write_text("[plugin]\nenabled = false\n", encoding="utf-8")
+    (plugin_path / "custom.json").write_text('{"user": true}', encoding="utf-8")
+    config_backup_dir = plugin_path / "config_back"
+    config_backup_dir.mkdir()
+    (config_backup_dir / "config.toml.backup").write_text("[plugin]\nenabled = true\n", encoding="utf-8")
+
+    class FakeGitMirrorService:
+        async def clone_repository(self, **kwargs):
+            assert kwargs["operation"] == "update"
+            target_path = kwargs["target_path"]
+            target_path.mkdir(parents=True, exist_ok=True)
+            (target_path / ".git").mkdir()
+            (target_path / "plugin.py").write_text("new source", encoding="utf-8")
+            (target_path / "config.toml").write_text("[plugin]\nenabled = true\n", encoding="utf-8")
+            (target_path / "_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "manifest_version": 2,
+                        "id": "test.demo",
+                        "name": "Demo Plugin",
+                        "version": "1.1.0",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return {"success": True}
+
+    monkeypatch.setattr(management_module, "get_git_mirror_service", lambda: FakeGitMirrorService())
+
+    response = client.post(
+        "/api/webui/plugins/update",
+        json={
+            "plugin_id": "test.demo",
+            "repository_url": "https://github.com/test/demo",
+            "branch": "main",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["update_mode"] == "reinstall_from_backup"
+    backup_path = Path(payload["backup_path"])
+    assert backup_path.exists()
+    assert (backup_path / "custom.json").read_text(encoding="utf-8") == '{"user": true}'
+    assert (plugin_path / ".git").is_dir()
+    assert (plugin_path / "plugin.py").read_text(encoding="utf-8") == "new source"
+    assert (plugin_path / "config.toml").read_text(encoding="utf-8") == "[plugin]\nenabled = false\n"
+    assert (plugin_path / "config_back" / "config.toml.backup").exists()
+    assert not (plugin_path / "custom.json").exists()
+    manifest = json.loads((plugin_path / "_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == "1.1.0"
+
+
+def test_update_non_git_plugin_rolls_back_when_manifest_id_mismatches(client: TestClient, monkeypatch):
+    plugin_path = support_module.resolve_installed_plugin_path("test.demo")
+    assert plugin_path is not None
+    (plugin_path / "plugin.py").write_text("old source", encoding="utf-8")
+    (plugin_path / "custom.json").write_text('{"user": true}', encoding="utf-8")
+
+    class FakeGitMirrorService:
+        async def clone_repository(self, **kwargs):
+            target_path = kwargs["target_path"]
+            target_path.mkdir(parents=True, exist_ok=True)
+            (target_path / ".git").mkdir()
+            (target_path / "plugin.py").write_text("wrong source", encoding="utf-8")
+            (target_path / "_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "manifest_version": 2,
+                        "id": "other.demo",
+                        "name": "Other Plugin",
+                        "version": "1.1.0",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return {"success": True}
+
+    monkeypatch.setattr(management_module, "get_git_mirror_service", lambda: FakeGitMirrorService())
+
+    response = client.post(
+        "/api/webui/plugins/update",
+        json={
+            "plugin_id": "test.demo",
+            "repository_url": "https://github.com/test/demo",
+            "branch": "main",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "新版本插件 ID 不匹配" in response.json()["detail"]
+    assert (plugin_path / "plugin.py").read_text(encoding="utf-8") == "old source"
+    assert (plugin_path / "custom.json").read_text(encoding="utf-8") == '{"user": true}'
+    assert not (plugin_path / ".git").exists()
+
+
+@pytest.mark.parametrize(
+    ("active_operation", "active_label"),
+    [("install", "安装"), ("uninstall", "卸载"), ("update", "更新")],
+)
+def test_update_rejects_conflicting_operation_for_same_plugin(
+    client: TestClient,
+    active_operation: str,
+    active_label: str,
+):
+    with management_module._reserve_plugin_operation("test.demo", active_operation):
+        response = client.post(
+            "/api/webui/plugins/update",
+            json={
+                "plugin_id": "test.demo",
+                "repository_url": "https://github.com/test/demo",
+                "branch": "main",
+            },
+        )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == f"插件 test.demo 正在执行{active_label}操作，请等待完成后重试"
+
+
+def test_plugin_operation_reservation_allows_different_plugins(client: TestClient):
+    with management_module._reserve_plugin_operation("test.demo", "update"):
+        with management_module._reserve_plugin_operation("other.demo", "update"):
+            pass
+
+
+def test_plugin_operation_reservation_releases_after_failure(client: TestClient):
+    with pytest.raises(RuntimeError, match="模拟操作失败"):
+        with management_module._reserve_plugin_operation("test.demo", "update"):
+            raise RuntimeError("模拟操作失败")
+
+    with management_module._reserve_plugin_operation("test.demo", "update"):
+        pass

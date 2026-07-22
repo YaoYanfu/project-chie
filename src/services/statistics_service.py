@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
+import asyncio
+
 from sqlalchemy import desc, func, or_
 from sqlmodel import col, select
 
@@ -14,8 +16,8 @@ from src.webui.schemas.statistics import DashboardData, ModelStatistics, Statist
 logger = get_logger("statistics_service")
 
 DASHBOARD_STATISTICS_CACHE_KEY = "webui_dashboard_statistics_cache"
-DASHBOARD_STATISTICS_CACHE_VERSION = 1
-DEFAULT_DASHBOARD_CACHE_MAX_AGE_SECONDS = 600
+DASHBOARD_STATISTICS_CACHE_VERSION = 2
+DEFAULT_DASHBOARD_CACHE_MAX_AGE_SECONDS = 20 * 60
 DEFAULT_DASHBOARD_CACHE_HOURS = (24, 168, 720)
 _SPARSE_TIME_SERIES_FIELDS = ("hourly_data", "daily_data")
 
@@ -27,7 +29,10 @@ async def get_dashboard_statistics(hours: int = 24, *, use_cache: bool = True) -
         if cached_data is not None:
             return cached_data
 
-    return build_empty_dashboard_statistics()
+    data = await compute_dashboard_statistics(hours=hours)
+    if use_cache:
+        update_dashboard_statistics_cache_entry(hours, data)
+    return data
 
 
 def build_empty_dashboard_statistics() -> DashboardData:
@@ -47,10 +52,10 @@ async def compute_dashboard_statistics(hours: int = 24) -> DashboardData:
     start_time = now - timedelta(hours=hours)
 
     summary = await get_summary_statistics(start_time, now)
-    model_stats = await get_model_statistics(start_time)
+    model_stats = await get_model_statistics(start_time, now)
     hourly_data = await get_hourly_statistics(start_time, now)
-    daily_data = await get_daily_statistics(now - timedelta(days=7), now)
-    recent_activity = await get_recent_activity(limit=10)
+    daily_data = await get_daily_statistics(start_time, now)
+    recent_activity = await get_recent_activity(start_time=start_time, end_time=now, limit=10)
 
     return DashboardData(
         summary=summary,
@@ -161,7 +166,7 @@ def _expand_dashboard_cache_entry(entry: dict[str, Any], *, hours: int, generate
     )
     expanded["daily_data"] = _expand_time_series(
         sparse_series=entry.get("daily_data"),
-        start_time=generated_datetime - timedelta(days=7),
+        start_time=generated_datetime - timedelta(hours=hours),
         end_time=generated_datetime,
         step=timedelta(days=1),
         timestamp_format="%Y-%m-%dT00:00:00",
@@ -216,6 +221,11 @@ def _is_empty_time_series_item(item: Any) -> bool:
 
 async def get_summary_statistics(start_time: datetime, end_time: datetime) -> StatisticsSummary:
     """获取指定时间范围内的摘要统计数据。"""
+    return await asyncio.to_thread(_get_summary_statistics_sync, start_time, end_time)
+
+
+def _get_summary_statistics_sync(start_time: datetime, end_time: datetime) -> StatisticsSummary:
+    """在线程中同步查询指定时间范围内的摘要统计数据。"""
     summary = StatisticsSummary(
         total_requests=0,
         total_cost=0.0,
@@ -274,61 +284,52 @@ async def get_summary_statistics(start_time: datetime, end_time: datetime) -> St
     return summary
 
 
-async def get_model_statistics(start_time: datetime) -> List[ModelStatistics]:
-    """获取指定时间之后的模型统计数据。"""
+async def get_model_statistics(start_time: datetime, end_time: datetime | None = None) -> List[ModelStatistics]:
+    """获取指定时间范围内的模型统计数据。"""
+    return await asyncio.to_thread(_get_model_statistics_sync, start_time, end_time)
+
+
+def _get_model_statistics_sync(start_time: datetime, end_time: datetime | None = None) -> List[ModelStatistics]:
+    """在线程中同步查询指定时间范围内的模型统计数据。"""
+    model_name_expr = func.coalesce(col(ModelUsage.model_assign_name), col(ModelUsage.model_name), "unknown")
     statement = (
-        select(ModelUsage)
+        select(
+            model_name_expr.label("model_name"),
+            func.count().label("request_count"),
+            func.sum(col(ModelUsage.cost)).label("total_cost"),
+            func.sum(col(ModelUsage.total_tokens)).label("total_tokens"),
+            func.avg(col(ModelUsage.time_cost)).label("avg_response_time"),
+        )
         .where(col(ModelUsage.timestamp) >= start_time)
-        .order_by(desc(col(ModelUsage.timestamp)))
-        .limit(200)
+        .group_by(model_name_expr)
+        .order_by(desc(func.count()))
+        .limit(10)
     )
+    if end_time is not None:
+        statement = statement.where(col(ModelUsage.timestamp) <= end_time)
 
     with get_db_session(auto_commit=False) as session:
-        records = session.exec(statement).all()
+        rows = session.exec(statement).all()
 
-    aggregates: Dict[str, Dict[str, float | int]] = {}
-    for record in records:
-        model_name = record.model_assign_name or record.model_name or "unknown"
-        if model_name not in aggregates:
-            aggregates[model_name] = {
-                "request_count": 0,
-                "total_cost": 0.0,
-                "total_tokens": 0,
-                "total_time_cost": 0.0,
-                "time_cost_count": 0,
-            }
-
-        bucket = aggregates[model_name]
-        bucket["request_count"] = int(bucket["request_count"]) + 1
-        bucket["total_cost"] = float(bucket["total_cost"]) + float(record.cost or 0.0)
-        bucket["total_tokens"] = int(bucket["total_tokens"]) + int(record.total_tokens or 0)
-        if record.time_cost:
-            bucket["total_time_cost"] = float(bucket["total_time_cost"]) + float(record.time_cost)
-            bucket["time_cost_count"] = int(bucket["time_cost_count"]) + 1
-
-    result: List[ModelStatistics] = []
-    for model_name, bucket in sorted(
-        aggregates.items(),
-        key=lambda item: float(item[1]["request_count"]),
-        reverse=True,
-    )[:10]:
-        time_cost_count = int(bucket["time_cost_count"])
-        avg_time_cost = float(bucket["total_time_cost"]) / time_cost_count if time_cost_count > 0 else 0.0
-        result.append(
-            ModelStatistics(
-                model_name=model_name,
-                request_count=int(bucket["request_count"]),
-                total_cost=float(bucket["total_cost"]),
-                total_tokens=int(bucket["total_tokens"]),
-                avg_response_time=avg_time_cost,
-            )
+    return [
+        ModelStatistics(
+            model_name=row[0] or "unknown",
+            request_count=int(row[1] or 0),
+            total_cost=float(row[2] or 0.0),
+            total_tokens=int(row[3] or 0),
+            avg_response_time=float(row[4] or 0.0),
         )
-
-    return result
+        for row in rows
+    ]
 
 
 async def get_hourly_statistics(start_time: datetime, end_time: datetime) -> List[TimeSeriesData]:
     """按小时聚合 LLM 请求、费用和 token。"""
+    return await asyncio.to_thread(_get_hourly_statistics_sync, start_time, end_time)
+
+
+def _get_hourly_statistics_sync(start_time: datetime, end_time: datetime) -> List[TimeSeriesData]:
+    """在线程中同步执行按小时聚合。"""
     hour_expr = func.strftime("%Y-%m-%dT%H:00:00", col(ModelUsage.timestamp))
     statement = (
         select(
@@ -368,6 +369,11 @@ async def get_hourly_statistics(start_time: datetime, end_time: datetime) -> Lis
 
 async def get_daily_statistics(start_time: datetime, end_time: datetime) -> List[TimeSeriesData]:
     """按天聚合 LLM 请求、费用和 token。"""
+    return await asyncio.to_thread(_get_daily_statistics_sync, start_time, end_time)
+
+
+def _get_daily_statistics_sync(start_time: datetime, end_time: datetime) -> List[TimeSeriesData]:
+    """在线程中同步执行按天聚合。"""
     day_expr = func.strftime("%Y-%m-%dT00:00:00", col(ModelUsage.timestamp))
     statement = (
         select(
@@ -405,10 +411,28 @@ async def get_daily_statistics(start_time: datetime, end_time: datetime) -> List
     return result
 
 
-async def get_recent_activity(limit: int = 10) -> List[Dict[str, Any]]:
-    """获取最近的 LLM 调用记录。"""
+async def get_recent_activity(
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+    limit: int = 10,
+) -> List[Dict[str, Any]]:
+    """获取指定时间范围内最近的 LLM 调用记录。"""
+    return await asyncio.to_thread(_get_recent_activity_sync, start_time, end_time, limit)
+
+
+def _get_recent_activity_sync(
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+    limit: int = 10,
+) -> List[Dict[str, Any]]:
+    """在线程中同步查询指定时间范围内最近的 LLM 调用记录。"""
     with get_db_session(auto_commit=False) as session:
-        statement = select(ModelUsage).order_by(desc(col(ModelUsage.timestamp))).limit(limit)
+        statement = select(ModelUsage)
+        if start_time is not None:
+            statement = statement.where(col(ModelUsage.timestamp) >= start_time)
+        if end_time is not None:
+            statement = statement.where(col(ModelUsage.timestamp) <= end_time)
+        statement = statement.order_by(desc(col(ModelUsage.timestamp))).limit(limit)
         records = session.exec(statement).all()
 
     activities = []
@@ -448,8 +472,12 @@ def fetch_model_usage_since(query_start_time: datetime) -> list[dict[str, object
                 "model_api_provider_name": record.model_api_provider_name,
                 "model_assign_name": record.model_assign_name,
                 "model_name": record.model_name,
+                "session_id": record.session_id,
                 "prompt_tokens": record.prompt_tokens,
                 "completion_tokens": record.completion_tokens,
+                "prompt_cache_enabled": bool(getattr(record, "prompt_cache_enabled", False)),
+                "prompt_cache_hit_tokens": getattr(record, "prompt_cache_hit_tokens", 0) or 0,
+                "prompt_cache_miss_tokens": getattr(record, "prompt_cache_miss_tokens", 0) or 0,
                 "cost": record.cost,
                 "time_cost": record.time_cost,
             }

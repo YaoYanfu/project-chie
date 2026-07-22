@@ -14,6 +14,16 @@ export interface CodeEditorProps {
   placeholder?: string
   theme?: 'light' | 'dark'
   className?: string
+  lineClassNames?: Record<number, string>
+  rangeClassNames?: CodeEditorRangeClassName[]
+}
+
+export interface CodeEditorRangeClassName {
+  fromLine: number
+  fromCh: number
+  toLine: number
+  toCh: number
+  className: string
 }
 
 const CodeEditorImpl = lazy(() => import('./CodeEditorImpl'))
@@ -26,6 +36,7 @@ function CodeEditorFallback({
 }: Pick<CodeEditorProps, 'height' | 'minHeight' | 'maxHeight' | 'className'>) {
   return (
     <div
+      data-dashboard-code-editor="true"
       className={`bg-muted animate-pulse rounded-md border ${className}`}
       style={{ height, minHeight, maxHeight }}
     />

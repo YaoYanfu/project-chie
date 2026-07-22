@@ -27,27 +27,11 @@ export interface ProviderTemplate {
 export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
   // 国内提供商
   {
-    id: 'siliconflow',
-    name: 'SiliconFlow',
-    base_url: 'https://api.siliconflow.cn/v1',
-    client_type: 'openai',
-    display_name: '硅基流动 (SiliconFlow)',
-    modelFetcher: { endpoint: '/models', parser: 'openai' },
-  },
-  {
     id: 'deepseek',
     name: 'DeepSeek',
     base_url: 'https://api.deepseek.com',
     client_type: 'openai',
     display_name: 'DeepSeek',
-    modelFetcher: { endpoint: '/models', parser: 'openai' },
-  },
-  {
-    id: 'rinkoai',
-    name: 'RinkoAI',
-    base_url: 'https://rinkoai.com/v1',
-    client_type: 'openai',
-    display_name: 'RinkoAI',
     modelFetcher: { endpoint: '/models', parser: 'openai' },
   },
   {
@@ -107,11 +91,11 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
     modelFetcher: { endpoint: '/models', parser: 'openai' },
   },
   {
-    id: 'lingyi',
-    name: 'Lingyi',
-    base_url: 'https://api.lingyiwanwu.com/v1',
+    id: 'siliconflow',
+    name: 'SiliconFlow',
+    base_url: 'https://api.siliconflow.cn/v1',
     client_type: 'openai',
-    display_name: '零一万物 (Lingyi / Yi)',
+    display_name: '硅基流动 (SiliconFlow)',
     modelFetcher: { endpoint: '/models', parser: 'openai' },
   },
 
@@ -162,22 +146,6 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
     base_url: 'https://api.groq.com/openai/v1',
     client_type: 'openai',
     display_name: 'Groq',
-    modelFetcher: { endpoint: '/models', parser: 'openai' },
-  },
-  {
-    id: 'together',
-    name: 'Together AI',
-    base_url: 'https://api.together.xyz/v1',
-    client_type: 'openai',
-    display_name: 'Together AI',
-    modelFetcher: { endpoint: '/models', parser: 'openai' },
-  },
-  {
-    id: 'fireworks',
-    name: 'Fireworks',
-    base_url: 'https://api.fireworks.ai/inference/v1',
-    client_type: 'openai',
-    display_name: 'Fireworks AI',
     modelFetcher: { endpoint: '/models', parser: 'openai' },
   },
   {
@@ -232,4 +200,29 @@ export function findTemplateByBaseUrl(baseUrl: string): ProviderTemplate | null 
     template.id !== 'custom' && 
     normalizeUrl(template.base_url) === normalizedUrl
   ) || null
+}
+
+/**
+ * 根据提供商配置查找可用于获取模型列表的模板。
+ *
+ * 未命中内置模板时，自定义端点默认按 OpenAI 兼容格式尝试 /models；
+ * Gemini 自定义端点继续使用 Gemini 的响应解析方式。
+ */
+export function resolveModelFetcherTemplate(baseUrl: string, clientType = 'openai'): ProviderTemplate | null {
+  const matchedTemplate = findTemplateByBaseUrl(baseUrl)
+  if (matchedTemplate) return matchedTemplate
+  if (!baseUrl) return null
+
+  const isGemini = clientType === 'gemini'
+  return {
+    id: isGemini ? 'custom-gemini' : 'custom-openai-compatible',
+    name: '',
+    base_url: baseUrl,
+    client_type: isGemini ? 'gemini' : 'openai',
+    display_name: isGemini ? '自定义 Gemini 端点' : '自定义 OpenAI 兼容端点',
+    modelFetcher: {
+      endpoint: '/models',
+      parser: isGemini ? 'gemini' : 'openai',
+    },
+  }
 }

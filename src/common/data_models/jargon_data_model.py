@@ -1,8 +1,9 @@
-from typing import Optional, Dict
+from datetime import datetime
+from typing import Dict, Optional
 
 import json
 
-from src.common.database.database_model import Jargon
+from src.common.database.database_model import Jargon, JargonCreatedBy
 from src.common.logger import get_logger
 
 from . import BaseDatabaseDataModel
@@ -18,22 +19,23 @@ class MaiJargon(BaseDatabaseDataModel[Jargon]):
         content: str,
         meaning: str,
         item_id: Optional[int] = None,
-        raw_content: Optional[str] = None,
+        evidence_messages: Optional[str] = None,
         session_id_list: Optional[Dict[str, int]] = None,
         count: int = 0,
-        is_jargon: Optional[bool] = True,
+        is_jargon: Optional[bool] = False,
         is_complete: bool = False,
         is_global: bool = False,
         last_inference_count: int = 0,
-        inference_with_context: Optional[str] = None,
-        inference_with_content_only: Optional[str] = None,
+        created_by: JargonCreatedBy = JargonCreatedBy.AI,
+        created_timestamp: Optional[datetime] = None,
+        updated_timestamp: Optional[datetime] = None,
     ):
         self.item_id = item_id
         """自增主键ID"""
         self.content = content
         """黑话内容"""
-        self.raw_content = raw_content
-        """原始内容，未处理的黑话内容"""
+        self.evidence_messages = evidence_messages
+        """黑话证据消息引用，格式为二维列表的 JSON 字符串"""
         self.meaning = meaning
         """黑话含义"""
         self.session_id_list = session_id_list or {}
@@ -48,10 +50,12 @@ class MaiJargon(BaseDatabaseDataModel[Jargon]):
         """是否为全局黑话（独立于session_id_dict）"""
         self.last_inference_count = last_inference_count
         """上一次进行推断时的count值，用于判断是否需要重新推断"""
-        self.inference_with_context = inference_with_context
-        """带上下文的推断结果，JSON格式"""
-        self.inference_with_content_only = inference_with_content_only
-        """只基于词条的推断结果，JSON格式"""
+        self.created_by = created_by
+        """创建来源，AI 表示自动学习，MANUAL 表示手动创建"""
+        self.created_timestamp = created_timestamp or datetime.now()
+        """创建时间"""
+        self.updated_timestamp = updated_timestamp or self.created_timestamp
+        """更新时间"""
 
     @classmethod
     def from_db_instance(cls, db_record: Jargon) -> "MaiJargon":
@@ -66,15 +70,16 @@ class MaiJargon(BaseDatabaseDataModel[Jargon]):
             item_id=db_record.id,
             content=db_record.content,
             meaning=db_record.meaning,
-            raw_content=db_record.raw_content,
+            evidence_messages=db_record.evidence_messages,
             session_id_list=json_list,
             count=db_record.count,
             is_jargon=db_record.is_jargon,
             is_complete=db_record.is_complete,
             is_global=db_record.is_global,
             last_inference_count=db_record.last_inference_count,
-            inference_with_context=db_record.inference_with_context,
-            inference_with_content_only=db_record.inference_with_content_only,
+            created_by=db_record.created_by,
+            created_timestamp=db_record.created_timestamp,
+            updated_timestamp=db_record.updated_timestamp,
         )
 
     def to_db_instance(self) -> Jargon:
@@ -82,7 +87,7 @@ class MaiJargon(BaseDatabaseDataModel[Jargon]):
         dumped_session_id_list = json.dumps(self.session_id_list)
         return Jargon(
             content=self.content,
-            raw_content=self.raw_content,
+            evidence_messages=self.evidence_messages,
             meaning=self.meaning,
             session_id_dict=dumped_session_id_list,
             count=self.count,
@@ -90,6 +95,7 @@ class MaiJargon(BaseDatabaseDataModel[Jargon]):
             is_complete=self.is_complete,
             is_global=self.is_global,
             last_inference_count=self.last_inference_count,
-            inference_with_context=self.inference_with_context,
-            inference_with_content_only=self.inference_with_content_only,
+            created_by=self.created_by,
+            created_timestamp=self.created_timestamp,
+            updated_timestamp=self.updated_timestamp,
         )

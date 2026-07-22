@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { fetchModelClientTypes, type ModelClientType } from '@/lib/config-api'
 
 import { PROVIDER_TEMPLATES } from '../providerTemplates'
 import type { APIProvider, FormErrors } from './types'
@@ -22,7 +23,7 @@ interface ProviderFormProps {
   editingProvider: APIProvider | null
   editingIndex: number | null
   providers: APIProvider[]
-  onSave: (provider: APIProvider, index: number | null) => void
+  onSave: (provider: APIProvider, index: number | null) => Promise<void> | void
   tourState: { isRunning: boolean }
 }
 
@@ -40,7 +41,30 @@ export function ProviderForm({
   const [templateComboboxOpen, setTemplateComboboxOpen] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
   const [localProvider, setLocalProvider] = useState<APIProvider | null>(editingProvider)
+  const [clientTypes, setClientTypes] = useState<ModelClientType[]>([])
+  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (!open) return
+
+    let cancelled = false
+    fetchModelClientTypes()
+      .then((result) => {
+        if (!cancelled) {
+          setClientTypes(result || [])
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setClientTypes([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   // 当弹窗打开时，根据当前编辑对象同步一次本地编辑状态
   useEffect(() => {
@@ -49,6 +73,7 @@ export function ProviderForm({
       setFormErrors({})
       setShowApiKey(false)
       setSelectedTemplate('custom')
+      setSaving(false)
       return
     }
 
@@ -68,6 +93,25 @@ export function ProviderForm({
   }, [open, editingProvider, editingIndex])
 
   const isUsingTemplate = useMemo(() => selectedTemplate !== 'custom', [selectedTemplate])
+  const clientTypeOptions = useMemo(() => {
+    const options = [...clientTypes]
+    const knownTypes = new Set(options.map((item) => item.client_type))
+
+    for (const clientType of ['openai', 'gemini', localProvider?.client_type].filter(Boolean) as string[]) {
+      if (!knownTypes.has(clientType)) {
+        options.push({
+          client_type: clientType,
+          owner_plugin_id: null,
+          version: '',
+          description: '',
+          builtin: clientType === 'openai' || clientType === 'gemini',
+        })
+        knownTypes.add(clientType)
+      }
+    }
+
+    return options
+  }, [clientTypes, localProvider?.client_type])
 
   const handleTemplateChange = useCallback((templateId: string) => {
     setSelectedTemplate(templateId)
@@ -107,7 +151,7 @@ export function ProviderForm({
     }
   }, [localProvider?.api_key, toast])
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!localProvider) return
 
     const { isValid, errors } = validateProvider(localProvider, providers, editingIndex)
@@ -118,7 +162,12 @@ export function ProviderForm({
     }
 
     setFormErrors({})
-    onSave(localProvider, editingIndex)
+    setSaving(true)
+    try {
+      await onSave(localProvider, editingIndex)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -139,7 +188,7 @@ export function ProviderForm({
         </DialogHeader>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }}
+          onSubmit={(e) => { e.preventDefault(); void handleSaveEdit(); }}
           autoComplete="off"
           className="contents"
         >
@@ -356,7 +405,7 @@ export function ProviderForm({
                       <ul className="list-disc list-inside space-y-1 text-xs">
                         <li><strong>OpenAI：</strong>兼容 OpenAI API 格式的提供商</li>
                         <li><strong>Gemini：</strong>Google Gemini 专用格式</li>
-                        <li>大部分第三方提供商都兼容 OpenAI 格式</li>
+                        <li>已加载的插件可以在这里提供新的客户端类型</li>
                       </ul>
                     </div>
                   }
@@ -377,8 +426,12 @@ export function ProviderForm({
                   <SelectValue placeholder="选择客户端类型" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="gemini">Gemini</SelectItem>
+                  {clientTypeOptions.map((item) => (
+                    <SelectItem key={item.client_type} value={item.client_type}>
+                      {item.client_type}
+                      {item.owner_plugin_id ? ` (${item.owner_plugin_id})` : ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {isUsingTemplate && (
@@ -470,7 +523,14 @@ export function ProviderForm({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-tour="provider-cancel-button">
               取消
             </Button>
-            <Button type="submit" data-dialog-action="confirm" data-tour="provider-save-button">保存</Button>
+            <Button
+              type="submit"
+              data-dialog-action="confirm"
+              data-tour="provider-save-button"
+              disabled={saving}
+            >
+              {saving ? '保存中...' : '保存'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -30,9 +30,13 @@ def _build_adapter(
     client_type: str,
     configured_dimension: int = 1024,
     effective_dimension: int | None = None,
+    dimension_request_mode: str = "explicit",
     model_extra_params: dict | None = None,
 ):
-    adapter = EmbeddingAPIAdapter(default_dimension=configured_dimension)
+    adapter = EmbeddingAPIAdapter(
+        default_dimension=configured_dimension,
+        dimension_request_mode=dimension_request_mode,
+    )
     if effective_dimension is not None:
         adapter._dimension = int(effective_dimension)
         adapter._dimension_detected = True
@@ -57,13 +61,59 @@ def _build_adapter(
     return adapter, fake_client
 
 
+def test_auto_embedding_fingerprint_uses_resolved_candidate_model(monkeypatch):
+    adapter = EmbeddingAPIAdapter(default_dimension=8, model_name="auto")
+    adapter._dimension = 8
+    adapter._dimension_detected = True
+    model_info_by_name = {
+        "embedding-model": SimpleNamespace(name="embedding-model", api_provider="provider-1"),
+        "fallback-model": SimpleNamespace(name="fallback-model", api_provider="provider-2"),
+    }
+
+    monkeypatch.setattr(adapter, "_resolve_candidate_model_names", lambda: ["embedding-model", "fallback-model"])
+    monkeypatch.setattr(adapter, "_find_model_info", lambda model_name: model_info_by_name[model_name])
+
+    cold_fingerprint = adapter.get_embedding_fingerprint(dimension=8)
+    adapter._last_success_model_name = "embedding-model"
+    adapter._last_success_provider_name = "provider-1"
+    observed_fingerprint = adapter.get_embedding_fingerprint(dimension=8)
+
+    assert cold_fingerprint["model"] == "embedding-model"
+    assert cold_fingerprint["provider"] == "provider-1"
+    assert cold_fingerprint["source"] == "configured"
+    assert observed_fingerprint["source"] == "observed"
+    assert observed_fingerprint["model"] == "embedding-model"
+    assert observed_fingerprint["provider"] == "provider-1"
+    assert cold_fingerprint["hash"] == observed_fingerprint["hash"]
+
+
 @pytest.mark.asyncio
-async def test_encode_uses_canonical_dimension_for_openai_provider(monkeypatch):
+async def test_encode_does_not_send_dimension_by_default_for_openai_provider(monkeypatch):
     adapter, fake_client = _build_adapter(
         monkeypatch,
         client_type="openai",
         configured_dimension=1024,
         effective_dimension=1024,
+        model_extra_params={"task_type": "SEMANTIC_SIMILARITY"},
+    )
+
+    embedding = await adapter.encode("北塔木梯")
+
+    request = fake_client.requests[-1]
+    assert "dimensions" not in request.extra_params
+    assert "output_dimensionality" not in request.extra_params
+    assert request.extra_params["task_type"] == "SEMANTIC_SIMILARITY"
+    assert embedding.shape == (fake_client.natural_dimension,)
+
+
+@pytest.mark.asyncio
+async def test_encode_uses_canonical_dimension_when_request_mode_is_always(monkeypatch):
+    adapter, fake_client = _build_adapter(
+        monkeypatch,
+        client_type="openai",
+        configured_dimension=1024,
+        effective_dimension=1024,
+        dimension_request_mode="always",
         model_extra_params={"task_type": "SEMANTIC_SIMILARITY"},
     )
 
@@ -100,6 +150,7 @@ async def test_encode_maps_dimension_to_gemini_output_dimensionality(monkeypatch
         client_type="gemini",
         configured_dimension=1024,
         effective_dimension=768,
+        dimension_request_mode="always",
     )
 
     embedding = await adapter.encode("广播站")
@@ -108,6 +159,41 @@ async def test_encode_maps_dimension_to_gemini_output_dimensionality(monkeypatch
     assert request.extra_params["output_dimensionality"] == 768
     assert "dimensions" not in request.extra_params
     assert embedding.shape == (768,)
+
+
+@pytest.mark.asyncio
+async def test_encode_explicit_mode_maps_explicit_dimension_to_gemini(monkeypatch):
+    adapter, fake_client = _build_adapter(
+        monkeypatch,
+        client_type="gemini",
+        configured_dimension=1024,
+        effective_dimension=768,
+    )
+
+    embedding = await adapter.encode("广播站", dimensions=512)
+
+    request = fake_client.requests[-1]
+    assert request.extra_params["output_dimensionality"] == 512
+    assert "dimensions" not in request.extra_params
+    assert embedding.shape == (512,)
+
+
+@pytest.mark.asyncio
+async def test_encode_never_mode_ignores_explicit_dimension(monkeypatch):
+    adapter, fake_client = _build_adapter(
+        monkeypatch,
+        client_type="openai",
+        configured_dimension=1024,
+        effective_dimension=1024,
+        dimension_request_mode="never",
+    )
+
+    embedding = await adapter.encode("不改维度", dimensions=256)
+
+    request = fake_client.requests[-1]
+    assert "dimensions" not in request.extra_params
+    assert "output_dimensionality" not in request.extra_params
+    assert embedding.shape == (fake_client.natural_dimension,)
 
 
 @pytest.mark.asyncio

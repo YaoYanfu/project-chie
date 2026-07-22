@@ -2,6 +2,8 @@
   "header": {
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
+    "collapseTopbar": "Collapse topbar",
+    "expandTopbar": "Expand topbar",
     "toggleConnection": "Toggle backend connection",
     "viewAnnualSummary": "View annual summary",
     "annualSummary": "2025 Annual Summary",
@@ -12,6 +14,8 @@
     "switchToDark": "Switch to dark mode",
     "logout": "Log out",
     "logoutLabel": "Logout",
+    "switchLanguage": "Switch language",
+    "moreActions": "More actions",
     "notConnected": "Not connected"
   },
   "sidebar": {
@@ -24,14 +28,16 @@
     },
     "menu": {
       "home": "Home",
+      "focusCompanion": "Focus Companion",
       "botMainConfig": "Bot Main Config",
       "aiModelProvider": "AI Model Providers",
       "modelManagement": "Model Management",
       "promptManagement": "Prompt Management",
-      "adapterConfig": "Adapter Config",
+      "promptGenerator": "Persona Generator (Experimental)",
       "emojiManagement": "Emoji Management",
       "expressionManagement": "Expression Management",
       "slangManagement": "Slang Management",
+      "behaviorLearning": "Behavior Learning",
       "personInfo": "Person Info",
       "knowledgeGraph": "Long-Term Memory Graph",
       "knowledgeBase": "Long-Term Memory",
@@ -42,6 +48,7 @@
       "logViewer": "Log Viewer",
       "reasoningProcess": "Reasoning Process",
       "maisakaMonitor": "MaiSaka Chat Monitor",
+      "chatManagement": "Chat Management",
       "localChat": "Local Chat",
       "settings": "Settings"
     }
@@ -49,10 +56,10 @@
   "workspace": {
     "switcherLabel": "Switch MaiBot workspace",
     "settings": "Mai Settings",
-    "chat": "Mai Chat"
+    "chat": "Mai Chat",
+    "logs": "Mai Logs"
   },
   "chat": {
-    "defaultTab": "WebUI",
     "botNameFallback": "Mai",
     "userFallback": "User",
     "userNameFallback": "WebUI User",
@@ -85,7 +92,14 @@
       "empty": "Start chatting with {{bot}}!",
       "emptyHint": "Type a message below and press Enter to send",
       "errorFallback": "An error occurred",
-      "thinking": "Thinking..."
+      "thinking": "Loading..."
+    },
+    "activity": {
+      "acting": "{{bot}} is taking action{{retry}}",
+      "error": "{{bot}} ran into an error{{retry}}",
+      "retrySuffix": " {{attempt}}/{{max}}",
+      "thinking": "{{bot}} is thinking{{retry}}",
+      "typing": "{{bot}} is typing{{retry}}"
     },
     "composer": {
       "hint": "Enter to send · Shift + Enter for newline"
@@ -100,7 +114,6 @@
       "offline": "Offline",
       "subtitle": "{{count}} conversations",
       "title": "Chats",
-      "webuiBadge": "WebUI",
       "virtualBadge": "Virtual",
       "profileTitle": "My identity",
       "editName": "Edit nickname",
@@ -112,7 +125,7 @@
       "groupName": "Virtual group name (optional)",
       "groupNameHint": "MaiBot will treat this as a group chat with this name",
       "knownUserSuffix": " · Known",
-      "loading": "Thinking...",
+      "loading": "Loading...",
       "noUsers": "No users found",
       "personCount": "({{count}} people)",
       "platform": "Select platform",
@@ -229,8 +242,6 @@
       "resetSuccessDesc": "Theme has been reset to default",
       "enableAnimations": "Enable Animations",
       "enableAnimationsDesc": "Disabling this will turn off all transition animations and effects, improving performance",
-      "loginWavesBackground": "Login Page Wave Background",
-      "loginWavesBackgroundDesc": "Disabling this will use a solid color background on the login page, suitable for low-performance devices",
       "inheritParentBg": "Inherit Parent Background",
       "inheritParentBgDesc": "When enabled, uses the background config from the parent layer",
       "fontFamilyLabel": "Font Family",
@@ -255,8 +266,6 @@
       "shadowXl": "Extra Large",
       "blurLabel": "Blur Effect",
       "sidebarWidthLabel": "Sidebar Width",
-      "maxContentWidth": "Max Content Width",
-      "spacingUnit": "Spacing Unit",
       "animationSpeedLabel": "Animation Speed",
       "animationSpeedPlaceholder": "Select animation speed",
       "animationFast": "Fast (100ms)",
@@ -337,6 +346,9 @@
       "securityTip6": "System-generated Tokens are recommended for maximum security"
     },
     "other": {
+      "display": "Display",
+      "enableAvatarFetch": "Fetch and show user avatars",
+      "enableAvatarFetchDesc": "When disabled, chat and reasoning views stop requesting avatar images and use default avatars.",
       "performance": "Performance & Storage",
       "localStorage": "Local Storage Usage",
       "logCache": "Log Cache Size",
@@ -392,6 +404,8 @@
       "confirmRerunSetup": "Confirm Re-run Setup",
       "confirmRerunSetupDesc": "This will take you back to the initial setup wizard. You can reconfigure the system basics. Are you sure?",
       "devToolsDesc": "The following features are for development and debugging only. They may cause crashes or abnormal behavior.",
+      "alwaysShowUpdateNotice": "Always Show Update Notice",
+      "alwaysShowUpdateNoticeDesc": "When enabled, the update details and plugin compatibility notice appear every time you enter the WebUI. Takes effect after a refresh.",
       "triggerError": "Trigger Test Error",
       "confirmTriggerError": "Confirm Trigger Error",
       "confirmTriggerErrorDesc": "This will manually trigger a React error to test the error boundary component. The page will display an error view; you can recover by refreshing the page or clicking Go Home.",
@@ -443,6 +457,9 @@
         "radix": "Unstyled accessible component primitives",
         "tailwind": "Utility-first CSS framework",
         "lucide": "Beautiful icon library",
+        "iconifyReact": "Unified icon rendering component",
+        "streamlineSharp": "Sharp icon set designed by Streamline, provided via Iconify, licensed under CC BY 4.0 with attribution retained",
+        "streamlineBlock": "Block icon set designed by Streamline, provided via Iconify, licensed under CC BY 4.0 with attribution retained",
         "tanstackRouter": "Type-safe routing library",
         "zustand": "Lightweight state management",
         "reactHookForm": "High-performance form library",
@@ -491,11 +508,6 @@
     "securityTipTitle": "Security Notice",
     "securityTip1": "Keep your Token safe and never share it with others",
     "securityTip2": "To reset the Token, go to System Settings after logging in",
-    "slowLink": "The interface feels laggy. What can I do?",
-    "disableAnimTitle": "Disable Background Animation",
-    "disableAnimDesc": "Background animation may cause lag on low-performance devices. Disabling it can significantly improve smoothness.",
-    "disableAnimDetail": "After disabling, the background will be a solid color, but all features remain fully functional. You can re-enable it anytime in System Settings.",
-    "disableAnimBtn": "Disable Animation",
     "verifyFailed": "Token verification failed. Please check and try again.",
     "connFailed": "Failed to connect to the server. Please check your network connection.",
     "switchToLight": "Switch to light mode",
@@ -503,6 +515,14 @@
   },
   "setupPage": {
     "steps": {
+      "botProfile": {
+        "title": "Basics & Personality",
+        "description": "Configure nickname, personality, and reply style"
+      },
+      "customToken": {
+        "title": "Set Login Token",
+        "description": "Replace this startup's random token with a fixed custom token"
+      },
       "botBasic": {
         "title": "Bot Basics",
         "description": "Configure the bot's basic information"
@@ -521,7 +541,7 @@
       }
     },
     "loading": {
-      "title": "Thinking...",
+      "title": "Loading...",
       "description": "Reading existing configuration"
     },
     "header": {
@@ -540,7 +560,8 @@
       "enterBaseUrl": "Please enter the API base URL",
       "enterApiKey": "Please enter the API key",
       "enterPlannerModelIdentifier": "Please enter the planner model identifier",
-      "enterReplyerModelIdentifier": "Please enter the replyer model identifier"
+      "enterReplyerModelIdentifier": "Please enter the replyer model identifier",
+      "customTokenInvalid": "Token does not meet the requirements: {{failedRules}}"
     },
     "toast": {
       "loadFailedTitle": "Failed to load configuration",
@@ -550,9 +571,11 @@
       "saveFailedTitle": "Save failed",
       "validationFailedTitle": "Validation failed",
       "completeSuccessTitle": "Setup complete",
-      "completeSuccessDescription": "{{appName}} is restarting to apply the new configuration...",
+      "completeSuccessDescription": "{{appName}} configuration has been saved and applied.",
       "completeFailedTitle": "Setup failed",
       "skipFailedTitle": "Failed to skip the setup wizard",
+      "customTokenSuccessTitle": "Token updated",
+      "customTokenSuccessDescription": "Please sign in again with the new custom token, then continue setup.",
       "unknownError": "Unknown error"
     },
     "actions": {
@@ -560,6 +583,7 @@
       "next": "Next",
       "skip": "Skip Wizard",
       "complete": "Complete Setup",
+      "saveToken": "Save Token",
       "saving": "Saving...",
       "completing": "Completing..."
     },
@@ -585,6 +609,16 @@
       }
     },
     "forms": {
+      "customToken": {
+        "noticeTitle": "You are still using the random startup token",
+        "noticeDescription": "The random token changes on the next startup. Set a fixed custom token and use it for future WebUI sign-ins.",
+        "label": "Custom Token *",
+        "placeholder": "Enter a secure token you can store safely",
+        "description": "After saving, your current session will expire and you will need to sign in with the new token.",
+        "requirements": "Token requirements",
+        "show": "Show token",
+        "hide": "Hide token"
+      },
       "botBasic": {
         "platform": {
           "label": "Platform *",
@@ -635,11 +669,11 @@
         "multipleReplyStyle": {
           "label": "Alternate Reply Styles",
           "placeholder": "Enter one alternate reply style per line",
-          "description": "When this list is not empty, MaiBot may randomly replace the default reply style using the probability below"
+          "description": "When this list is not empty, MaiBot may randomly inject one of these styles as a one-time reply hint"
         },
         "multipleProbability": {
-          "label": "Alternate Style Probability",
-          "description": "The chance of randomly replacing the default reply style each time a reply is built"
+          "label": "Temporary Style Injection Probability",
+          "description": "The chance of injecting a one-time alternate style hint each time a reply is built"
         }
       },
       "emoji": {
@@ -720,7 +754,7 @@
     }
   },
   "common": {
-    "loading": "Thinking...",
+    "loading": "Loading...",
     "error": "Error",
     "retry": "Retry",
     "save": "Save",
@@ -768,6 +802,7 @@
     "title": "Search",
     "noResults": "No matching pages found",
     "startSearch": "Type a keyword to start searching",
+    "recent": "Recent",
     "navigate": "Navigate",
     "select": "Select",
     "close": "Close",
@@ -782,12 +817,12 @@
     "items": {
       "home": "Home",
       "homeDesc": "View dashboard overview",
+      "focusCompanionDesc": "Open MaiBot immersive focus companion",
       "botConfig": "Bot Main Config",
       "botConfigDesc": "Configure bot core settings",
-      "modelProvider": "Model Provider Config",
-      "modelProviderDesc": "Configure model providers",
       "model": "Model Config",
       "modelDesc": "Configure model parameters",
+      "promptGeneratorDesc": "Generate injectable persona config blocks from text",
       "emoji": "Emoji Management",
       "emojiDesc": "Manage bot emoji",
       "expression": "Expression Management",
@@ -796,6 +831,7 @@
       "personDesc": "Manage person info",
       "jargon": "Slang Management",
       "jargonDesc": "Manage bot learned slang and jargon",
+      "behaviorLearningDesc": "Browse behavior experience paths and retrieval hits",
       "statistics": "Statistics",
       "statisticsDesc": "View usage statistics",
       "plugins": "Plugin Market",
@@ -813,22 +849,206 @@
     "closeMenu": "Close menu",
     "navigatedTo": "Navigated to {{page}}"
   },
+  "memory": {
+    "tuning": {
+      "task": {
+        "title": "Tuning Task",
+        "description": "Retrieval parameter evaluation"
+      },
+      "form": {
+        "strategy": "Tuning Strategy",
+        "objective": "Objective",
+        "intensity": "Evaluation Depth",
+        "evalScope": "Evaluation Scope",
+        "sampleSize": "Sample Size",
+        "topKEval": "Evaluation Top-K",
+        "persist": "Also write to config file"
+      },
+      "objectives": {
+        "precision": "Prefer precision",
+        "balanced": "Balance precision and recall",
+        "recall": "Prefer recall"
+      },
+      "intensity": {
+        "quick": "Quick",
+        "standard": "Standard",
+        "deep": "Deep"
+      },
+      "actions": {
+        "createTask": "Create tuning task",
+        "applyBest": "Apply best",
+        "showToml": "View config snippet",
+        "showSummary": "Back to summary"
+      },
+      "tasks": {
+        "title": "Recent Tuning Tasks",
+        "description": "Task results",
+        "recommended": "Recommended",
+        "notRecommended": "Not recommended",
+        "empty": "No tuning tasks yet"
+      },
+      "status": {
+        "completed": "Completed",
+        "running": "Running",
+        "queued": "Queued",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "result": {
+        "noTask": "No tuning result yet. After a task completes, its evaluation result will appear here.",
+        "statusTitle": "Task Status",
+        "progressTitle": "Progress",
+        "roundsTitle": "Evaluation Rounds",
+        "recommendationTitle": "Recommendation",
+        "recommended": "Validation passed. Recommended to apply.",
+        "notRecommended": "Validation failed. Not recommended.",
+        "scoreTitle": "Overall Score",
+        "validationTitle": "Holdout Validation",
+        "validationPassed": "Passed",
+        "validationFailed": "Failed",
+        "holdoutWithCount": "{{result}}, {{count}} samples",
+        "metricsTitle": "Key Metrics",
+        "metricsDescription": "Shows the change from baseline to best result.",
+        "reason": "Reason: {{reason}}",
+        "errorReason": "Failure reason: {{reason}}",
+        "reasons": {
+          "holdoutEmpty": "Not enough holdout samples to validate the tuning result.",
+          "holdoutOnlineLikeValidationFailed": "Holdout and online-like validation did not pass.",
+          "unknown": "{{reason}}"
+        },
+        "metrics": {
+          "precisionAt1": "P@1",
+          "recallAtK": "Recall@K",
+          "emptyRate": "Empty result rate",
+          "avgElapsedMs": "Average latency"
+        }
+      },
+      "snapshot": {
+        "title": "Current Tuning Result",
+        "summaryDescription": "Shows the latest completed task result first. Parameters stay in details.",
+        "tomlDescription": "Config snippet for manual copy or troubleshooting.",
+        "runtimeTitle": "Active Runtime",
+        "runtimeDescription": "Parameters hot-applied to the current retrieval runtime.",
+        "runtimeResultApplied": "The tuning result is active in the current retrieval runtime.",
+        "runtimeResultEmpty": "No runtime result is available yet.",
+        "persistableTitle": "Persistable Config",
+        "persistableDescription": "Parameters that can be written to the config file.",
+        "persistableResultReady": "This result can be written to the config file when needed.",
+        "persistableResultEmpty": "No persistable result is available yet.",
+        "diffTitle": "Differences",
+        "diffDescription": "Fields that differ between runtime and persistable config.",
+        "diffResultClean": "Runtime and persistable config currently match.",
+        "diffResultChanged": "Runtime and persistable config differ. Expand details to inspect them.",
+        "detailsTitle": "Parameters and Config Details",
+        "detailsHint": "For troubleshooting and comparison",
+        "parameterDetailsTitle": "Parameter Details",
+        "runtimeShort": "Runtime",
+        "persistableShort": "Persistable",
+        "empty": "No data",
+        "noDiff": "The two configs currently match.",
+        "technicalCount": "{{count}} technical fields are hidden from the summary. Switch to the config snippet to inspect them.",
+        "technicalDiffCount": "{{count}} technical differences are hidden from the summary. Switch to the config snippet to inspect them."
+      },
+      "values": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "auto": "Auto",
+        "always": "Always on",
+        "off": "Off",
+        "weightedRrf": "Weighted fusion",
+        "rrf": "Rank fusion",
+        "alphaLegacy": "Legacy weighted fusion",
+        "singlePool": "Single vector pool",
+        "dualPool": "Dual vector pools"
+      },
+      "parameters": {
+        "retrieval_top_k": "Total candidate count",
+        "retrieval_top_k_paragraphs": "Paragraph candidates",
+        "retrieval_top_k_relations": "Relation candidates",
+        "retrieval_top_k_final": "Final returned results",
+        "retrieval_alpha": "Paragraph and relation weight",
+        "retrieval_enable_ppr": "Graph ranking",
+        "retrieval_ppr_alpha": "Graph jump factor",
+        "retrieval_ppr_timeout_seconds": "Graph ranking timeout",
+        "retrieval_search_smart_fallback_enabled": "Smart fallback",
+        "retrieval_sparse_enabled": "Keyword retrieval",
+        "retrieval_sparse_mode": "Keyword retrieval mode",
+        "retrieval_sparse_candidate_k": "Keyword paragraph candidates",
+        "retrieval_sparse_relation_candidate_k": "Keyword relation candidates",
+        "retrieval_fusion_method": "Result fusion method",
+        "retrieval_fusion_rrf_k": "Fusion smoothing factor",
+        "retrieval_fusion_vector_weight": "Vector retrieval weight",
+        "retrieval_fusion_bm25_weight": "Keyword retrieval weight",
+        "retrieval_vector_pools_mode": "Vector pool mode",
+        "retrieval_vector_pools_paragraph_top_k": "Paragraph vector candidates",
+        "retrieval_vector_pools_graph_top_k": "Graph vector candidates",
+        "retrieval_vector_pools_graph_expand_paragraph_k": "Graph-expanded paragraphs",
+        "retrieval_vector_pools_relation_expand_per_hit": "Relations expanded per hit",
+        "retrieval_vector_pools_entity_expand_per_hit": "Entities expanded per hit",
+        "retrieval_vector_pools_relation_evidence_weight": "Relation evidence weight",
+        "retrieval_vector_pools_entity_evidence_weight": "Entity evidence weight",
+        "threshold_percentile": "Dynamic threshold percentile",
+        "threshold_min_results": "Minimum returned results",
+        "threshold_min_threshold": "Minimum threshold",
+        "threshold_max_threshold": "Maximum threshold"
+      }
+    }
+  },
   "home": {
     "title": "Live Monitor",
     "subtitle": "MaiBot runtime status and statistics overview",
-    "loading": "Thinking...",
-    "loadingHint": "Thinking...",
+    "loading": "Loading...",
+    "loadingHint": "Loading...",
     "timeRange": {
       "24h": "24 Hours",
       "7d": "7 Days",
       "30d": "30 Days"
     },
     "autoRefresh": "Auto Refresh",
+    "cards": {
+      "add": "Add card",
+      "edit": "Edit cards",
+      "done": "Done",
+      "reset": "Restore default layout",
+      "row": {
+        "low": "Low row",
+        "high": "High row"
+      },
+      "dialog": {
+        "title": "Manage Home Cards",
+        "description": "Add plugin or built-in cards, or restore the default layout.",
+        "hiddenCards": "Available cards",
+        "noHiddenCards": "No cards available",
+        "restore": "Add",
+        "reset": "Restore default layout",
+        "cancel": "Close"
+      }
+    },
     "botStatus": {
       "title": "MaiBot Status",
+      "loading": "Reading",
       "running": "Running",
       "stopped": "Stopped",
-      "uptime": "Up {{time}}"
+      "unknown": "Unknown",
+      "uptime": "Up {{time}}",
+      "visualEnabled": "Vision enabled",
+      "memoryEnabled": "Memory enabled"
+    },
+    "versionCard": {
+      "title": "MaiBot Version",
+      "mainVersion": "Core version",
+      "webuiVersion": "WebUI version",
+      "latestVersion": "Latest version",
+      "stableLatest": "Latest stable",
+      "testLatest": "Latest test",
+      "githubReleases": "GitHub Releases",
+      "unknown": "Unknown"
+    },
+    "platformGuide": {
+      "title": "Add a Platform Account",
+      "description": "No account has been configured for connecting MaiBot to a messaging platform.",
+      "detail": "Add a platform and account so MaiBot can receive and send messages through QQ or another messaging app.",
+      "action": "Add Platform Account"
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -837,7 +1057,63 @@
       "expressionReview": "Expression Review",
       "viewLogs": "View Logs",
       "pluginManage": "Plugins",
-      "systemSettings": "Settings"
+      "systemSettings": "Settings",
+      "pluginConfig": "Plugin Config",
+      "appearanceSettings": "Appearance",
+      "localCache": "Local Cache",
+      "modelProviders": "Model Providers",
+      "modelList": "Model List",
+      "modelTasks": "Model Tasks",
+      "botConfig": "Core Config",
+      "emojiManagement": "Emoji Management",
+      "expressionManagement": "Expression Management",
+      "statistics": "Detailed Statistics",
+      "customize": "Customize",
+      "empty": "No quick shortcuts selected yet",
+      "add": "Add Shortcut",
+      "descriptions": {
+        "restart": "Restart the MaiBot core process",
+        "expressionReview": "Open the expression learning review dialog",
+        "viewLogs": "View WebUI logs",
+        "pluginManage": "Open the plugin marketplace and management page",
+        "systemSettings": "Open system settings",
+        "pluginConfig": "Open installed plugin configuration",
+        "appearanceSettings": "Open Settings / Appearance",
+        "localCache": "Open Settings / Local Cache",
+        "modelProviders": "Open Model Management / Providers",
+        "modelList": "Open Model Management / Models",
+        "modelTasks": "Open Model Management / Task assignments",
+        "botConfig": "Open MaiBot core configuration",
+        "emojiManagement": "Open emoji resource management",
+        "expressionManagement": "Open expression management",
+        "statistics": "Open maibot_statistics.html"
+      },
+      "categories": {
+        "system": "System",
+        "config": "Config",
+        "resource": "Resource",
+        "plugin": "Plugin",
+        "monitor": "Monitor",
+        "external": "External"
+      },
+      "dialog": {
+        "title": "Customize Quick Shortcuts",
+        "description": "Choose the shortcuts shown on the home quick actions card, including page tabs and plugin configuration pages.",
+        "searchPlaceholder": "Search shortcuts, plugins, or tabs...",
+        "loadingPluginEntries": "Loading plugin shortcuts...",
+        "noMatches": "No matching shortcuts found",
+        "restoreDefault": "Restore Defaults",
+        "done": "Done"
+      }
+    },
+    "pluginShortcuts": {
+      "baseLabel": "{{plugin}} Config",
+      "baseDescription": "Open the configuration page for {{plugin}}",
+      "tabDescription": "Open the {{tab}} tab for {{plugin}}",
+      "fallbackLabel": "Plugin config: {{plugin}}",
+      "fallbackTabLabel": "Plugin config: {{plugin}} / {{tab}}",
+      "fallbackDescription": "Open the specified plugin configuration page",
+      "fallbackTabDescription": "Open the specified plugin configuration tab"
     },
     "survey": {
       "title": "Feedback Survey",
@@ -846,6 +1122,7 @@
       "maibot": "MaiBot Feedback"
     },
     "stats": {
+      "overviewTitle": "Statistics Overview",
       "totalRequests": "Total Requests",
       "totalCost": "Total Cost",
       "tokenUsage": "Token Usage",
@@ -863,6 +1140,21 @@
       "hours": "hours",
       "days": "days"
     },
+    "storage": {
+      "title": "Storage Usage",
+      "reading": "Reading",
+      "summary": "Images {{image}} · Emoji {{emoji}} · Logs {{logs}} · Database {{database}}",
+      "images": "Images",
+      "emoji": "Emoji",
+      "logs": "Logs",
+      "database": "Database",
+      "files": "{{count}} files",
+      "filesAndRecords": "{{files}} files · {{records}} records",
+      "databaseDetail": "{{files}} files · {{tables}} tables",
+      "readingDescription": "Reading local storage usage...",
+      "unavailable": "Local storage usage is unavailable",
+      "manage": "Manage Storage"
+    },
     "charts": {
       "tabs": {
         "trends": "Trends",
@@ -876,8 +1168,8 @@
       "costTrendDesc": "API call cost over time",
       "tokenUsage": "Token Usage",
       "tokenUsageDesc": "Token consumption over time",
-      "modelDistribution": "Model Request Distribution",
-      "modelDistributionDesc": "Usage share per model ({{count}} models)",
+      "modelDistribution": "Model Cost Distribution",
+      "modelDistributionDesc": "Cost share per model ({{count}} models)",
       "modelDetails": "Model Details",
       "modelDetailsDesc": "Requests, cost and performance",
       "recentActivity": "Recent Activity",

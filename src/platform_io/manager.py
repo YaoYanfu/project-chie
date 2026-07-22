@@ -1,8 +1,11 @@
 """提供 Platform IO 层的中心 Broker 管理器。"""
 
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Set
+
+import asyncio
 
 from src.common.logger import get_logger
+from src.core.local_operator import LOCAL_PLATFORM_BOT_IDS
 from src.platform_io.drivers.base import PlatformIODriver
 
 from .dedupe import MessageDeduplicator
@@ -40,6 +43,7 @@ class PlatformIOManager:
         self._deduplicator = MessageDeduplicator()
         self._outbound_tracker = OutboundTracker()
         self._inbound_dispatcher: Optional[InboundDispatcher] = None
+        self._inbound_dispatch_tasks: Set[asyncio.Task[None]] = set()
         self._started = False
 
     @property
@@ -107,6 +111,11 @@ class PlatformIOManager:
                 logger.exception(f"驱动停止失败: driver_id={driver.driver_id}")
 
         self._started = False
+        if self._inbound_dispatch_tasks:
+            for task in list(self._inbound_dispatch_tasks):
+                task.cancel()
+            await asyncio.gather(*self._inbound_dispatch_tasks, return_exceptions=True)
+            self._inbound_dispatch_tasks.clear()
         self._deduplicator.clear()
         self._outbound_tracker.clear()
         if stop_errors:
@@ -289,7 +298,11 @@ class PlatformIOManager:
         from src.chat.utils.utils import get_all_bot_accounts
         from src.platform_io.drivers.legacy_driver import LegacyPlatformDriver
 
-        desired_accounts = get_all_bot_accounts()
+        desired_accounts = {
+            platform: account_id
+            for platform, account_id in get_all_bot_accounts().items()
+            if platform not in LOCAL_PLATFORM_BOT_IDS
+        }
         desired_platforms = set(desired_accounts.keys())
         current_platforms = set(self._legacy_send_drivers.keys())
 
@@ -401,6 +414,10 @@ class PlatformIOManager:
                 drivers.append(driver)
                 seen_driver_ids.add(driver.driver_id)
 
+        # 精确路由绑定始终优先；legacy 只在没有任何显式驱动时作为平台级后备。
+        if drivers:
+            return drivers
+
         fallback_driver = self._legacy_send_drivers.get(route_key.platform)
         if fallback_driver is not None:
             descriptor = fallback_driver.descriptor
@@ -463,8 +480,35 @@ class PlatformIOManager:
                 logger.info(f"忽略重复入站消息: dedupe_key={dedupe_key}")
                 return False
 
-        await self._inbound_dispatcher(envelope)
+        self._schedule_inbound_dispatch(envelope)
         return True
+
+    def _schedule_inbound_dispatch(self, envelope: InboundMessageEnvelope) -> None:
+        """将已验收的入站消息投递到后台处理任务。
+
+        Args:
+            envelope: 已通过路由和去重检查的入站消息。
+        """
+        if self._inbound_dispatcher is None:
+            return
+
+        task = asyncio.create_task(self._inbound_dispatcher(envelope))
+        self._inbound_dispatch_tasks.add(task)
+        task.add_done_callback(self._handle_inbound_dispatch_done)
+
+    def _handle_inbound_dispatch_done(self, task: asyncio.Task[None]) -> None:
+        """回收入站后台任务，并记录业务处理异常。
+
+        Args:
+            task: 已结束的入站分发任务。
+        """
+        self._inbound_dispatch_tasks.discard(task)
+        if task.cancelled():
+            return
+        try:
+            task.result()
+        except Exception:
+            logger.exception("Platform IO 入站消息后台分发失败")
 
     async def send_message(
         self,

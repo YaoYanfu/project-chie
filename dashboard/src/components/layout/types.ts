@@ -1,18 +1,24 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { LucideProps } from 'lucide-react'
 
 export interface LayoutProps {
   children: ReactNode
 }
 
-export type WorkspaceMode = 'settings' | 'chat'
+export type WorkspaceMode = 'settings' | 'chat' | 'logs'
+
+export type MenuIcon = ComponentType<{
+  className?: string
+  color?: string
+  size?: number | string
+}>
 
 export interface MenuItem {
-  icon: ComponentType<LucideProps>
+  icon: MenuIcon
   label: string
   path: string
   searchDescription?: string
   tourId?: string
+  featureFlag?: 'behaviorLearning'
 }
 
 export interface MenuSection {

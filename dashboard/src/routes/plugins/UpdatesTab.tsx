@@ -1,18 +1,22 @@
 import type { GitStatus, MaimaiVersion, PluginInfo, PluginLoadProgress, PluginStatsData } from './types'
+import { getPluginType } from './types'
 import { PluginCard } from './PluginCard'
 
 interface UpdatesTabProps {
   plugins: PluginInfo[]
   searchQuery: string
-  categoryFilter: string
+  pluginTypeFilter: string
   showCompatibleOnly: boolean
   gitStatus: GitStatus | null
   maimaiVersion: MaimaiVersion | null
   pluginStats: Record<string, PluginStatsData>
   loadProgress: PluginLoadProgress | null
+  likingPluginIds: Set<string>
   onInstall: (plugin: PluginInfo) => void
+  onLike: (plugin: PluginInfo) => void
   onUpdate: (plugin: PluginInfo) => void
   onUninstall: (plugin: PluginInfo) => void
+  onDetail: (plugin: PluginInfo) => void
   checkPluginCompatibility: (plugin: PluginInfo) => boolean
   needsUpdate: (plugin: PluginInfo) => boolean
   getStatusBadge: (plugin: PluginInfo) => React.JSX.Element | null
@@ -22,15 +26,18 @@ interface UpdatesTabProps {
 export function UpdatesTab({
   plugins,
   searchQuery,
-  categoryFilter,
+  pluginTypeFilter,
   showCompatibleOnly,
   gitStatus,
   maimaiVersion,
   pluginStats,
   loadProgress,
+  likingPluginIds,
   onInstall,
+  onLike,
   onUpdate,
   onUninstall,
+  onDetail,
   checkPluginCompatibility,
   needsUpdate,
   getStatusBadge,
@@ -54,20 +61,19 @@ export function UpdatesTab({
       plugin.manifest.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (plugin.manifest.keywords && plugin.manifest.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
     
-    // 分类过滤
-    const matchesCategory = categoryFilter === 'all' ||
-      (plugin.manifest.categories && plugin.manifest.categories.includes(categoryFilter))
+    // 类型过滤
+    const matchesType = pluginTypeFilter === 'all' || getPluginType(plugin) === pluginTypeFilter
     
     // 兼容性过滤
     const matchesCompatibility = !showCompatibleOnly || 
       !maimaiVersion || 
       checkPluginCompatibility(plugin)
     
-    return matchesSearch && matchesCategory && matchesCompatibility
+    return matchesSearch && matchesType && matchesCompatibility
   })
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {filteredPlugins.map((plugin) => (
         <PluginCard
           key={plugin.id}
@@ -76,9 +82,12 @@ export function UpdatesTab({
           maimaiVersion={maimaiVersion}
           pluginStats={pluginStats}
           loadProgress={loadProgress}
+          likingPluginIds={likingPluginIds}
           onInstall={onInstall}
+          onLike={onLike}
           onUpdate={onUpdate}
           onUninstall={onUninstall}
+          onDetail={onDetail}
           checkPluginCompatibility={checkPluginCompatibility}
           needsUpdate={needsUpdate}
           getStatusBadge={getStatusBadge}

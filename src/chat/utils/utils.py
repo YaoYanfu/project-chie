@@ -10,8 +10,10 @@ import time
 
 from src.chat.message_receive.chat_manager import chat_manager as _chat_manager
 from src.chat.message_receive.message import SessionMessage
+from src.common.data_models.message_component_data_model import AtComponent
 from src.common.logger import get_logger
 from src.config.config import global_config
+from src.core.local_operator import LOCAL_PLATFORM_BOT_IDS
 from src.person_info.person_info import Person
 from src.services.embedding_service import EmbeddingServiceClient
 
@@ -22,6 +24,7 @@ if TYPE_CHECKING:
 
 logger = get_logger("chat_utils")
 _warned_unconfigured_platforms: set[str] = set()
+WEBUI_BOT_USER_ID = "self"
 
 
 def is_english_letter(char: str) -> bool:
@@ -62,8 +65,14 @@ def get_bot_account(platform: str) -> str:
     if not normalized_platform:
         return ""
 
+    # 本地平台使用保留 ID 表示机器人自身，不依赖任何外部平台账号。
+    if normalized_platform == "webui":
+        return WEBUI_BOT_USER_ID
+    if normalized_platform in LOCAL_PLATFORM_BOT_IDS:
+        return LOCAL_PLATFORM_BOT_IDS[normalized_platform]
+
     qq_account = _get_configured_qq_account()
-    if normalized_platform in {"qq", "webui"}:
+    if normalized_platform == "qq":
         return qq_account
 
     platforms_list = getattr(global_config.bot, "platforms", []) or []
@@ -76,11 +85,13 @@ def get_bot_account(platform: str) -> str:
 
 def get_all_bot_accounts() -> dict[str, str]:
     """获取所有已配置的机器人运行时身份。"""
-    bot_accounts: dict[str, str] = {}
+    bot_accounts: dict[str, str] = {
+        "webui": WEBUI_BOT_USER_ID,
+        **LOCAL_PLATFORM_BOT_IDS,
+    }
     qq_account = _get_configured_qq_account()
     if qq_account:
         bot_accounts["qq"] = qq_account
-        bot_accounts["webui"] = qq_account
 
     platforms_list = getattr(global_config.bot, "platforms", []) or []
     platform_accounts = parse_platform_accounts(platforms_list)
@@ -129,6 +140,16 @@ def is_bot_self(platform: str, user_id: str) -> bool:
     return False
 
 
+def _has_at_component_targeting_bot(message: SessionMessage, platform: str) -> bool:
+    """检查消息中的结构化 @ 组件是否直接指向当前 bot。"""
+
+    raw_message = getattr(message, "raw_message", None)
+    for component in getattr(raw_message, "components", []) or []:
+        if isinstance(component, AtComponent) and is_bot_self(platform, component.target_user_id):
+            return True
+    return False
+
+
 def is_mentioned_bot_in_message(message: SessionMessage) -> tuple[bool, bool, float]:
     """检查消息是否提到了机器人（统一多平台实现）"""
     text = message.processed_plain_text or ""
@@ -150,14 +171,17 @@ def is_mentioned_bot_in_message(message: SessionMessage) -> tuple[bool, bool, fl
     if isinstance(add_cfg, dict):
         if add_cfg.get("at_bot") or add_cfg.get("is_mentioned"):
             is_mentioned = True
-            # 当提供数值型 is_mentioned 时，当作概率提升
-            try:
-                if add_cfg.get("is_mentioned") not in (None, ""):
-                    reply_probability = float(add_cfg.get("is_mentioned"))  # type: ignore
-            except Exception:
-                pass
+            if add_cfg.get("at_bot"):
+                is_at = True
+            # 当提供数值型 is_mentioned 时，当作概率提升；布尔提及标记只负责标记命中。
+            raw_mention_boost = add_cfg.get("is_mentioned")
+            if raw_mention_boost not in (None, "") and not isinstance(raw_mention_boost, bool):
+                reply_probability = float(raw_mention_boost)
 
-    # 2) 已经在上游设置过的 message.is_mentioned
+    # 2) 已经在上游设置过的 message.is_at / message.is_mentioned
+    if getattr(message, "is_at", False):
+        is_at = True
+        is_mentioned = True
     if getattr(message, "is_mentioned", False):
         is_mentioned = True
 
@@ -180,7 +204,12 @@ def is_mentioned_bot_in_message(message: SessionMessage) -> tuple[bool, bool, fl
         is_at = True
         is_mentioned = True
 
-    # 4) 统一的 @ 检测逻辑
+    # 4) 结构化 @ 组件检测。处理后的文本可能只剩群名片，不能依赖文本里的显示名判断。
+    if not is_at and _has_at_component_targeting_bot(message, platform):
+        is_at = True
+        is_mentioned = True
+
+    # 5) 统一的 @ 检测逻辑
     if current_account and not is_at and not is_mentioned:
         if platform == "qq":
             # QQ 格式: @<name:qq_id>
@@ -193,7 +222,7 @@ def is_mentioned_bot_in_message(message: SessionMessage) -> tuple[bool, bool, fl
                 is_at = True
                 is_mentioned = True
 
-    # 5) 统一的回复检测逻辑
+    # 6) 统一的回复检测逻辑
     if not is_mentioned:
         # 通用回复格式：包含 "(你)" 或 "（你）"
         if re.search(r"\[回复 .*?\(你\)：", text) or re.search(r"\[回复 .*?（你）：", text):
@@ -207,7 +236,7 @@ def is_mentioned_bot_in_message(message: SessionMessage) -> tuple[bool, bool, fl
             ):
                 is_mentioned = True
 
-    # 6) 名称/别名 提及（去除 @/回复标记后再匹配）
+    # 7) 名称/别名 提及（去除 @/回复标记后再匹配）
     if not is_mentioned and keywords:
         msg_content = text
         # 去除各种 @ 与 回复标记，避免误判
@@ -220,11 +249,12 @@ def is_mentioned_bot_in_message(message: SessionMessage) -> tuple[bool, bool, fl
                 is_mentioned = True
                 break
 
-    # 7) 概率设置
-    if is_at and global_config.chat.inevitable_at_reply:
+    # 8) 概率设置
+    reply_timing_config = global_config.chat.reply_timing
+    if is_at and reply_timing_config.inevitable_at_reply:
         reply_probability = 1.0
         logger.debug("被@，回复概率设置为100%")
-    elif is_mentioned and getattr(global_config.chat, "mentioned_bot_reply", 1):
+    elif is_mentioned and reply_timing_config.mentioned_bot_reply:
         reply_probability = max(reply_probability, 1.0)
         logger.debug("被提及，回复概率设置为100%")
 
@@ -343,11 +373,15 @@ def split_into_sentences_w_remove_punctuation(text: str) -> list[str]:
                     if can_split and char == " " and i > 0 and i < len(text) - 1:
                         prev_char = text[i - 1]
                         next_char = text[i + 1]
-                        # 不分割数字和数字、数字和英文、英文和数字、英文和英文之间的空格
-                        prev_is_alnum = prev_char.isdigit() or is_english_letter(prev_char)
-                        next_is_alnum = next_char.isdigit() or is_english_letter(next_char)
-                        if prev_is_alnum and next_is_alnum:
+                        dash_chars = {"-", "—"}
+                        if prev_char in dash_chars or next_char in dash_chars:
                             can_split = False
+                        else:
+                            # 不分割数字和数字、数字和英文、英文和数字、英文和英文之间的空格
+                            prev_is_alnum = prev_char.isdigit() or is_english_letter(prev_char)
+                            next_is_alnum = next_char.isdigit() or is_english_letter(next_char)
+                            if prev_is_alnum and next_is_alnum:
+                                can_split = False
 
             if can_split:
                 # 只有当当前段不为空时才添加
@@ -430,6 +464,25 @@ def split_into_sentences_w_remove_punctuation(text: str) -> list[str]:
     return final_sentences
 
 
+def merge_sentences_to_max_count(sentences: list[str], max_count: int) -> list[str]:
+    """按顺序将分句合并到指定条数以内。"""
+
+    if len(sentences) <= max_count:
+        return sentences
+
+    merged_sentences: list[str] = []
+    sentence_count = len(sentences)
+    start_index = 0
+    for group_index in range(max_count):
+        remaining_sentences = sentence_count - start_index
+        remaining_groups = max_count - group_index
+        group_size = (remaining_sentences + remaining_groups - 1) // remaining_groups
+        merged_sentences.append("".join(sentences[start_index : start_index + group_size]))
+        start_index += group_size
+
+    return merged_sentences
+
+
 def random_remove_punctuation(text: str) -> str:
     """随机处理标点符号，模拟人类打字习惯
 
@@ -496,6 +549,7 @@ def process_llm_response(text: str, enable_splitter: bool = True, enable_chinese
     # 对清理后的文本进行进一步处理
     max_length = global_config.response_splitter.max_length * 2
     max_sentence_num = global_config.response_splitter.max_sentence_num
+    max_split_num = global_config.response_splitter.max_split_num
     # 如果基本上是中文，则进行长度过滤
     if get_western_ratio(cleaned_text) < 0.1 and len(cleaned_text) > max_length:
         logger.warning(f"回复过长 ({len(cleaned_text)} 字符)，返回默认回复")
@@ -537,6 +591,8 @@ def process_llm_response(text: str, enable_splitter: bool = True, enable_chinese
         else:
             logger.warning(f"分割后消息数量过多 ({len(sentences)} 条)，返回默认回复")
             return [_get_random_default_reply()]
+
+    sentences = merge_sentences_to_max_count(sentences, max_split_num)
 
     # if extracted_contents:
     #     for content in extracted_contents:
@@ -584,7 +640,7 @@ def calculate_typing_time(
     if is_emoji:
         total_time = 1
 
-    typing_speed = global_config.chat.typing_speed
+    typing_speed = global_config.response_post_process.typing_speed
     if typing_speed <= 0:
         return 0
     total_time *= typing_speed
@@ -630,8 +686,11 @@ def protect_kaomoji(sentence):
     kaomoji_matches = kaomoji_pattern.findall(sentence)
     placeholder_to_kaomoji = {}
 
-    for idx, match in enumerate(kaomoji_matches):
+    for match in kaomoji_matches:
         kaomoji = match[0] or match[1]
+        if kaomoji.startswith("[表情包") and kaomoji.endswith("]"):
+            continue
+        idx = len(placeholder_to_kaomoji)
         placeholder = f"__KAOMOJI_{idx}__"
         sentence = sentence.replace(kaomoji, placeholder, 1)
         placeholder_to_kaomoji[placeholder] = kaomoji

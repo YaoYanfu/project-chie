@@ -7,10 +7,13 @@ interface LogoAreaProps {
 
 export function LogoArea({ sidebarOpen }: LogoAreaProps) {
   return (
-    <div className="flex h-20 items-center border-b px-4">
+    <div
+      data-dashboard-logo-area="true"
+      className="flex h-[var(--layout-sidebar-logo-height)] items-center border-b px-[var(--layout-sidebar-logo-padding-x)]"
+    >
       <div
         className={cn(
-          'relative flex items-center justify-center flex-1 transition-all overflow-hidden',
+          'relative flex flex-1 items-center justify-center overflow-hidden',
           // 移动端始终完整显示,桌面端根据 sidebarOpen 切换
           'lg:flex-1',
           !sidebarOpen && 'lg:flex-none lg:w-8'
@@ -21,7 +24,10 @@ export function LogoArea({ sidebarOpen }: LogoAreaProps) {
           "flex min-w-0 flex-col items-start justify-center gap-1",
           !sidebarOpen && "lg:hidden"
         )}>
-          <span className="max-w-full truncate whitespace-nowrap text-xl font-bold text-primary-gradient">
+          <span
+            data-dashboard-logo-title="true"
+            className="max-w-full truncate whitespace-nowrap text-xl font-bold text-primary-gradient"
+          >
             MaiBot WebUI
           </span>
           <div className="flex max-w-full items-center gap-2 overflow-hidden">

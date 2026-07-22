@@ -11,6 +11,7 @@ import { NotFoundPage } from './routes/404'
 import { AmadeusAuthPage } from './routes/amadeus-auth'
 import { Layout } from './components/layout'
 import { RoutePendingFallback } from './components/route-pending-fallback'
+
 import { RouteErrorBoundary } from './components/error-boundary'
 
 // Root 路由
@@ -22,20 +23,20 @@ const rootRoute = createRootRoute({
     </>
   ),
   beforeLoad: () => {
+    // 如果访问根路径且未认证，重定向到认证页面
     if (window.location.pathname === '/') {
       throw redirect({ to: '/amadeus' })
     }
   },
 })
 
-// Amadeus 认证路由（无 Layout）
+// 认证路由（无 Layout）
 const amadeusAuthRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth',
   component: AmadeusAuthPage,
 })
 
-// 旧认证路由（保留兼容）
 const legacyAuthRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/legacy-auth',
@@ -77,13 +78,20 @@ const amadeusChatRoute = createRoute({
   },
 })
 
-// 首页路由 — 重定向到 Amadeus
+// 首页路由重定向到 Amadeus
 const indexRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/',
   beforeLoad: () => {
     throw redirect({ to: '/amadeus' })
   },
+})
+
+// 沉浸专注陪伴路由
+const focusCompanionRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/focus',
+  component: lazyRouteComponent(() => import('./routes/focus'), 'FocusCompanionPage'),
 })
 
 // 配置路由 - 千惠主程序配置
@@ -93,15 +101,6 @@ const botConfigRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/config/bot'), 'BotConfigPage'),
 })
 
-// 配置路由 - 旧模型厂商配置入口，已合并到模型配置页
-const modelProviderConfigRoute = createRoute({
-  getParentRoute: () => protectedRoute,
-  path: '/config/modelProvider',
-  beforeLoad: () => {
-    throw redirect({ to: '/config/model' })
-  },
-})
-
 // 配置路由 - 千惠模型配置
 const modelConfigRoute = createRoute({
   getParentRoute: () => protectedRoute,
@@ -109,17 +108,18 @@ const modelConfigRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/config/model'), 'ModelConfigPage'),
 })
 
-// 配置路由 - 千惠适配器配置（已停用，引导跳转到插件配置；旧实现保留在 ./routes/config/adapter）
+// 配置路由 - Prompt 管理
 const promptManagementRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/config/prompts',
   component: lazyRouteComponent(() => import('./routes/config/prompts'), 'PromptManagementPage'),
 })
 
-const adapterConfigRoute = createRoute({
+// 配置路由 - 人设生成器（测试功能）
+const promptGeneratorRoute = createRoute({
   getParentRoute: () => protectedRoute,
-  path: '/config/adapter',
-  component: lazyRouteComponent(() => import('./routes/config/adapter-disabled'), 'AdapterConfigPage'),
+  path: '/config/prompt-generator',
+  component: lazyRouteComponent(() => import('./routes/prompt-generator'), 'PromptGeneratorPage'),
 })
 
 // 资源管理路由 - 表情包管理
@@ -160,6 +160,15 @@ const jargonManagementRoute = createRoute({
 })
 
 // 资源管理路由 - 知识库图谱可视化
+const behaviorLearningRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/resource/behavior',
+  component: lazyRouteComponent(
+    () => import('./routes/resource/behavior/index.tsx'),
+    'BehaviorLearningPage'
+  ),
+})
+
 const knowledgeGraphRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/resource/knowledge-graph',
@@ -189,7 +198,7 @@ const logsRoute = createRoute({
 const reasoningProcessRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/reasoning-process',
-  component: lazyRouteComponent(() => import('./routes/reasoning-process'), 'ReasoningProcessPage'),
+  component: lazyRouteComponent(() => import('./routes/logs'), 'ReasoningLogViewerPage'),
 })
 
 // MaiSaka 聊天流监控路由
@@ -206,18 +215,45 @@ const chatRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/chat/index'), 'ChatPage'),
 })
 
+// 聊天管理路由
+const chatManagementRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/chat-management',
+  component: lazyRouteComponent(() => import('./routes/chat-management'), 'ChatManagementPage'),
+})
+
+// 外部程序嵌入用聊天室路由，不挂载 dashboard 顶栏
+const chatEmbedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/chat/embed',
+  component: lazyRouteComponent(() => import('./routes/chat/embed'), 'ChatEmbedPage'),
+})
+
+// 外部程序嵌入用专注陪伴路由，不挂载 dashboard 顶栏和侧边栏
+const focusCompanionEmbedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/focus/embed',
+  component: lazyRouteComponent(() => import('./routes/focus'), 'FocusCompanionPage'),
+})
+
+// 外部程序嵌入用插件市场路由，不挂载 dashboard 顶栏和侧边栏
+const pluginsEmbedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plugins/embed',
+  component: lazyRouteComponent(
+    () => import('./routes/plugins/embed'),
+    'PluginMarketplaceEmbedPage'
+  ),
+})
+
 // 插件市场路由
 const pluginsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/plugins',
-  component: lazyRouteComponent(() => import('./routes/plugins/index'), 'PluginsPage'),
-})
-
-// 插件详情路由
-const pluginDetailRoute = createRoute({
-  getParentRoute: () => protectedRoute,
-  path: '/plugin-detail',
-  component: lazyRouteComponent(() => import('./routes/plugin-detail'), 'PluginDetailPage'),
+  component: lazyRouteComponent(
+    () => import('./routes/plugins/PluginMarketplacePage'),
+    'PluginMarketplacePage'
+  ),
 })
 
 // 模型分配预设市场路由
@@ -232,6 +268,26 @@ const pluginConfigRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/plugin-config',
   component: lazyRouteComponent(() => import('./routes/plugin-config'), 'PluginConfigPage'),
+})
+
+// 外部程序嵌入用插件配置路由，不挂载 dashboard 顶栏和侧边栏
+const pluginConfigEmbedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plugin-config/embed',
+  component: lazyRouteComponent(
+    () => import('./routes/plugin-config-embed'),
+    'PluginConfigEmbedPage'
+  ),
+})
+
+// 外部程序嵌入用插件镜像源配置路由，不挂载 dashboard 顶栏和侧边栏
+const pluginMirrorsEmbedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plugin-mirrors/embed',
+  component: lazyRouteComponent(
+    () => import('./routes/plugin-mirrors-embed'),
+    'PluginMirrorsEmbedPage'
+  ),
 })
 
 // 插件镜像源配置路由
@@ -302,21 +358,26 @@ const routeTree = rootRoute.addChildren([
   amadeusRoute,
   amadeusChatRoute,
   setupRoute,
+  chatEmbedRoute,
+  focusCompanionEmbedRoute,
+  pluginsEmbedRoute,
+  pluginConfigEmbedRoute,
+  pluginMirrorsEmbedRoute,
   protectedRoute.addChildren([
     indexRoute,
+    focusCompanionRoute,
     botConfigRoute,
-    modelProviderConfigRoute,
     modelConfigRoute,
     promptManagementRoute,
-    adapterConfigRoute,
+    promptGeneratorRoute,
     emojiManagementRoute,
     expressionManagementRoute,
     jargonManagementRoute,
+    behaviorLearningRoute,
     personManagementRoute,
     knowledgeGraphRoute,
     knowledgeBaseRoute,
     pluginsRoute,
-    pluginDetailRoute,
     modelPresetsRoute,
     pluginConfigRoute,
     pluginMirrorsRoute,
@@ -324,6 +385,7 @@ const routeTree = rootRoute.addChildren([
     logsRoute,
     reasoningProcessRoute,
     plannerMonitorRoute,
+    chatManagementRoute,
     chatRoute,
     settingsRoute,
     packMarketRoute,

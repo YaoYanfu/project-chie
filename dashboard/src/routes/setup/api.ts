@@ -1,7 +1,6 @@
 // 设置向导API调用函数
 
-import { parseResponse, throwIfError } from '@/lib/api-helpers'
-import { fetchWithAuth, getAuthHeaders } from '@/lib/fetch-with-auth'
+import { authApi, backendApi } from '@/lib/http'
 import { PROVIDER_TEMPLATES } from '@/routes/config/providerTemplates'
 
 import type {
@@ -48,6 +47,18 @@ interface ModelConfig {
   model_task_config?: Record<string, TaskConfig>
 }
 
+export interface SetupStatus {
+  is_first_setup: boolean
+  token_source: string
+  requires_custom_token: boolean
+  message?: string
+}
+
+export interface TokenUpdateResult {
+  success: boolean
+  message: string
+}
+
 const DEFAULT_API_PROVIDER_TEMPLATE = PROVIDER_TEMPLATES.find(
   (template) => template.id === 'deepseek'
 )
@@ -88,17 +99,18 @@ function buildThinkingExtraParams(
 
 // ===== 读取配置 =====
 
+export async function loadSetupStatus(): Promise<SetupStatus> {
+  return authApi.get<SetupStatus>('/api/webui/setup/status', {
+    errorMessage: '读取设置状态失败',
+  })
+}
+
 // 读取Bot基础配置
 export async function loadBotBasicConfig(): Promise<BotBasicConfig> {
-  const response = await fetchWithAuth('/api/webui/config/bot', {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  })
-
-  const result = await parseResponse<{ config: { bot?: BotBasicConfig } }>(
-    response
+  const data = await backendApi.get<{ config: { bot?: BotBasicConfig } }>(
+    '/api/webui/config/bot',
+    { errorMessage: '读取 Bot 配置失败' }
   )
-  const data = throwIfError(result)
   const botConfig = (data.config.bot || {}) as Partial<BotBasicConfig>
   const qqAccount = String(botConfig.qq_account ?? '').trim()
 
@@ -113,15 +125,10 @@ export async function loadBotBasicConfig(): Promise<BotBasicConfig> {
 
 // 读取人格配置
 export async function loadPersonalityConfig(): Promise<PersonalityConfig> {
-  const response = await fetchWithAuth('/api/webui/config/bot', {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  })
-
-  const result = await parseResponse<{
-    config: { personality?: PersonalityConfig }
-  }>(response)
-  const data = throwIfError(result)
+  const data = await backendApi.get<{ config: { personality?: PersonalityConfig } }>(
+    '/api/webui/config/bot',
+    { errorMessage: '读取人格配置失败' }
+  )
   const personalityConfig = (data.config.personality || {}) as Partial<PersonalityConfig>
 
   return {
@@ -133,13 +140,9 @@ export async function loadPersonalityConfig(): Promise<PersonalityConfig> {
 }
 
 async function loadModelConfig(): Promise<ModelConfig> {
-  const response = await fetchWithAuth('/api/webui/config/model', {
-    method: 'GET',
-    headers: getAuthHeaders(),
+  const data = await backendApi.get<{ config: ModelConfig }>('/api/webui/config/model', {
+    errorMessage: '读取模型配置失败',
   })
-
-  const result = await parseResponse<{ config: ModelConfig }>(response)
-  const data = throwIfError(result)
   return data.config || {}
 }
 
@@ -192,26 +195,18 @@ export async function loadModelSetupConfig(): Promise<ModelSetupConfig> {
 
 // 保存Bot基础配置
 export async function saveBotBasicConfig(config: BotBasicConfig) {
-  const response = await fetchWithAuth('/api/webui/config/bot/section/bot', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(config),
+  return backendApi.post('/api/webui/config/bot/section/bot', {
+    body: config,
+    errorMessage: '保存 Bot 配置失败',
   })
-
-  const result = await parseResponse(response)
-  return throwIfError(result)
 }
 
 // 保存人格配置
 export async function savePersonalityConfig(config: PersonalityConfig) {
-  const response = await fetchWithAuth('/api/webui/config/bot/section/personality', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(config),
+  return backendApi.post('/api/webui/config/bot/section/personality', {
+    body: config,
+    errorMessage: '保存人格配置失败',
   })
-
-  const result = await parseResponse(response)
-  return throwIfError(result)
 }
 
 function createBasicModel(
@@ -276,14 +271,10 @@ export async function saveApiProviderSetupConfig(config: ApiProviderSetupConfig)
     api_providers: apiProviders,
   }
 
-  const saveResponse = await fetchWithAuth('/api/webui/config/model', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updatedConfig),
+  return backendApi.post('/api/webui/config/model', {
+    body: updatedConfig,
+    errorMessage: '保存 API 提供商配置失败',
   })
-
-  const saveResult = await parseResponse(saveResponse)
-  return throwIfError(saveResult)
 }
 
 // 保存基础模型配置
@@ -349,22 +340,22 @@ export async function saveModelSetupConfig(
     model_task_config: updatedTaskConfig,
   }
 
-  const saveResponse = await fetchWithAuth('/api/webui/config/model', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updatedConfig),
+  return backendApi.post('/api/webui/config/model', {
+    body: updatedConfig,
+    errorMessage: '保存模型配置失败',
   })
-
-  const saveResult = await parseResponse(saveResponse)
-  return throwIfError(saveResult)
 }
 
 // 标记设置完成
 export async function completeSetup() {
-  const response = await fetchWithAuth('/api/webui/setup/complete', {
-    method: 'POST',
+  return backendApi.post('/api/webui/setup/complete', {
+    errorMessage: '标记设置完成失败',
   })
+}
 
-  const result = await parseResponse(response)
-  return throwIfError(result)
+export async function updateAccessToken(newToken: string): Promise<TokenUpdateResult> {
+  return authApi.post<TokenUpdateResult>('/api/webui/auth/update', {
+    body: { new_token: newToken },
+    errorMessage: '更新 Token 失败',
+  })
 }

@@ -51,6 +51,8 @@ interface MultiSelectProps {
   placeholder?: string
   emptyText?: string
   className?: string
+  compact?: boolean
+  disabled?: boolean
 }
 
 // 可排序的标签组件
@@ -58,10 +60,14 @@ function SortableBadge({
   value,
   label,
   onRemove,
+  compact = false,
+  disabled = false,
 }: {
   value: string
   label: string
   onRemove: (value: string) => void
+  compact?: boolean
+  disabled?: boolean
 }) {
   const {
     attributes,
@@ -70,7 +76,7 @@ function SortableBadge({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: value })
+  } = useSortable({ id: value, disabled })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -82,6 +88,7 @@ function SortableBadge({
   const handleRemoveClick = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (disabled) return
     onRemove(value)
   }
 
@@ -101,23 +108,36 @@ function SortableBadge({
     >
       <Badge
         variant="secondary"
-        className="cursor-move hover:bg-secondary/80 flex items-center gap-1"
+        className={cn(
+          'flex items-center gap-1 hover:bg-secondary/80',
+          !disabled && 'cursor-move',
+          disabled && 'opacity-60',
+          compact && 'min-h-6 max-w-[calc(100vw-5rem)] px-1.5 py-0 text-[11px] leading-none sm:max-w-full'
+        )}
       >
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing flex items-center"
+          className={cn(
+            'flex items-center',
+            !disabled && 'cursor-grab active:cursor-grabbing',
+            disabled && 'cursor-not-allowed'
+          )}
         >
           <GripVertical className="h-3 w-3 text-muted-foreground" />
         </div>
-        <span>{label}</span>
+        <span className={cn(compact && 'min-w-0 truncate')}>{label}</span>
         <span
           role="button"
           tabIndex={0}
-          className="ml-1 rounded-sm hover:bg-destructive/20 focus:outline-none focus:ring-1 focus:ring-destructive cursor-pointer"
+          className={cn(
+            'ml-1 inline-flex shrink-0 cursor-pointer items-center justify-center rounded-sm hover:bg-destructive/20 focus:outline-none focus:ring-1 focus:ring-destructive',
+            compact ? 'h-4 w-4' : 'h-5 w-5'
+          )}
           onClick={handleRemoveClick}
           onPointerDown={handleRemovePointerDown}
           onMouseDown={(e) => e.stopPropagation()}
+          aria-disabled={disabled}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
@@ -143,8 +163,16 @@ export function MultiSelect({
   placeholder = '选择选项...',
   emptyText = '未找到选项',
   className,
+  compact = false,
+  disabled = false,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    if (disabled && open) {
+      setOpen(false)
+    }
+  }, [disabled, open])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -158,6 +186,7 @@ export function MultiSelect({
   )
 
   const handleSelect = (value: string) => {
+    if (disabled) return
     if (selected.includes(value)) {
       // 取消选择
       onChange(selected.filter((item) => item !== value))
@@ -168,10 +197,12 @@ export function MultiSelect({
   }
 
   const handleRemove = (value: string) => {
+    if (disabled) return
     onChange(selected.filter((item) => item !== value))
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (disabled) return
     const { active, over } = event
 
     if (over && active.id !== over.id) {
@@ -183,13 +214,25 @@ export function MultiSelect({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={(nextOpen) => {
+        if (!disabled) {
+          setOpen(nextOpen)
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn('w-full justify-between min-h-10 h-auto', className)}
+          disabled={disabled}
+          className={cn(
+            'h-auto w-full justify-between',
+            compact ? 'min-h-9 px-2 py-1.5' : 'min-h-10',
+            className
+          )}
         >
           <DndContext
             sensors={sensors}
@@ -200,9 +243,9 @@ export function MultiSelect({
               items={selected}
               strategy={horizontalListSortingStrategy}
             >
-              <div className="flex gap-1 flex-wrap flex-1">
+              <div className="flex flex-1 flex-wrap gap-1">
                 {selected.length === 0 ? (
-                  <span className="text-muted-foreground">{placeholder}</span>
+                  <span className={cn('text-muted-foreground', compact && 'text-sm')}>{placeholder}</span>
                 ) : (
                   selected.map((value) => {
                     const option = options.find((opt) => opt.value === value)
@@ -212,6 +255,8 @@ export function MultiSelect({
                         value={value}
                         label={option?.label || value}
                         onRemove={handleRemove}
+                        compact={compact}
+                        disabled={disabled}
                       />
                     )
                   })
@@ -234,6 +279,7 @@ export function MultiSelect({
                   <CommandItem
                     key={option.value}
                     value={option.value}
+                    disabled={disabled}
                     onSelect={() => handleSelect(option.value)}
                   >
                     <div

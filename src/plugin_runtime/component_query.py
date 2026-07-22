@@ -10,6 +10,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Optional, Tuple, cast
 
 from src.common.logger import get_logger
+from src.core.local_operator import is_local_operator
 from src.core.tooling import (
     ToolContentItem,
     ToolAvailabilityContext,
@@ -20,6 +21,7 @@ from src.core.tooling import (
 )
 from src.core.types import ActionActivationType, ActionInfo, CommandInfo, ComponentInfo, ComponentType, ToolInfo
 from src.llm_models.payload_content.tool_option import normalize_tool_option
+from src.plugin_runtime.host.component_timeout import resolve_component_rpc_timeout_ms
 from src.plugin_runtime.host.message_utils import PluginMessageUtils
 
 if TYPE_CHECKING:
@@ -391,7 +393,12 @@ class ComponentQueryService:
         return str(kwargs.get("stream_id", "") or "")
 
     @staticmethod
-    def _build_action_executor(supervisor: "PluginSupervisor", plugin_id: str, component_name: str) -> ActionExecutor:
+    def _build_action_executor(
+        supervisor: "PluginSupervisor",
+        plugin_id: str,
+        component_name: str,
+        timeout_ms: int = 0,
+    ) -> ActionExecutor:
         """构造动作执行 RPC 闭包。
 
         Args:
@@ -402,6 +409,8 @@ class ComponentQueryService:
         Returns:
             ActionExecutor: 兼容旧 Planner 的异步执行器。
         """
+
+        rpc_timeout_ms = resolve_component_rpc_timeout_ms(timeout_ms)
 
         async def _executor(**kwargs: Any) -> tuple[bool, str]:
             """将核心动作调用桥接到插件运行时。
@@ -441,7 +450,7 @@ class ComponentQueryService:
                     plugin_id=plugin_id,
                     component_name=component_name,
                     args=invoke_args,
-                    timeout_ms=30000,
+                    timeout_ms=rpc_timeout_ms,
                 )
             except Exception as exc:
                 logger.error(f"运行时 Action {plugin_id}.{component_name} 执行失败: {exc}", exc_info=True)
@@ -467,6 +476,7 @@ class ComponentQueryService:
         plugin_id: str,
         component_name: str,
         metadata: Dict[str, Any],
+        timeout_ms: int = 0,
     ) -> CommandExecutor:
         """构造命令执行 RPC 闭包。
 
@@ -479,6 +489,8 @@ class ComponentQueryService:
         Returns:
             CommandExecutor: 兼容旧消息命令链的执行器。
         """
+
+        rpc_timeout_ms = resolve_component_rpc_timeout_ms(timeout_ms)
 
         async def _executor(**kwargs: Any) -> tuple[bool, Optional[str], bool]:
             """将核心命令调用桥接到插件运行时。
@@ -496,12 +508,19 @@ class ComponentQueryService:
             message_info = getattr(message, "message_info", None)
             group_info = getattr(message_info, "group_info", None)
             user_info = getattr(message_info, "user_info", None)
+            message_is_local_operator = False
+            if message is not None:
+                message_is_local_operator = is_local_operator(
+                    message.platform,
+                    message.message_info.additional_config,
+                )
             invoke_args: Dict[str, Any] = {
                 "text": str(getattr(message, "processed_plain_text", "") or ""),
                 "stream_id": str(getattr(message, "session_id", "") or ""),
                 "group_id": str(getattr(group_info, "group_id", "") or ""),
                 "platform": str(getattr(message, "platform", "") or ""),
                 "user_id": str(getattr(user_info, "user_id", "") or ""),
+                "is_local_operator": message_is_local_operator,
                 "matched_groups": matched_groups if isinstance(matched_groups, dict) else {},
             }
             if message is not None:
@@ -517,7 +536,7 @@ class ComponentQueryService:
                     plugin_id=plugin_id,
                     component_name=component_name,
                     args=invoke_args,
-                    timeout_ms=30000,
+                    timeout_ms=rpc_timeout_ms,
                 )
             except Exception as exc:
                 logger.error(f"运行时 Command {plugin_id}.{component_name} 执行失败: {exc}", exc_info=True)
@@ -545,6 +564,7 @@ class ComponentQueryService:
         plugin_id: str,
         component_name: str,
         invoke_method: str = "plugin.invoke_tool",
+        timeout_ms: int = 0,
     ) -> ToolExecutor:
         """构造工具执行 RPC 闭包。
 
@@ -556,6 +576,8 @@ class ComponentQueryService:
         Returns:
             ToolExecutor: 兼容旧 ToolExecutor 的异步执行器。
         """
+
+        rpc_timeout_ms = resolve_component_rpc_timeout_ms(timeout_ms)
 
         async def _executor(function_args: Dict[str, Any]) -> Any:
             """将核心工具调用桥接到插件运行时。
@@ -573,7 +595,7 @@ class ComponentQueryService:
                     plugin_id=plugin_id,
                     component_name=component_name,
                     args=function_args,
-                    timeout_ms=30000,
+                    timeout_ms=rpc_timeout_ms,
                 )
             except Exception as exc:
                 logger.error(f"运行时 Tool {plugin_id}.{component_name} 执行失败: {exc}", exc_info=True)
@@ -617,7 +639,7 @@ class ComponentQueryService:
         if matched_entry is None:
             return None
         supervisor, entry = matched_entry
-        return self._build_action_executor(supervisor, entry.plugin_id, entry.name)
+        return self._build_action_executor(supervisor, entry.plugin_id, entry.name, entry.timeout_ms)
 
     def get_default_actions(self) -> Dict[str, ActionInfo]:
         """获取当前默认启用的动作集合。
@@ -651,6 +673,7 @@ class ComponentQueryService:
                 entry.plugin_id,
                 entry.name,
                 dict(entry.metadata),
+                entry.timeout_ms,
             )
             return command_executor, matched_groups, command_info
         return None
@@ -686,7 +709,13 @@ class ComponentQueryService:
             return None
         supervisor, entry = matched_entry
         tool_entry = cast("ToolEntry", entry)
-        return self._build_tool_executor(supervisor, tool_entry.plugin_id, tool_entry.name, tool_entry.invoke_method)
+        return self._build_tool_executor(
+            supervisor,
+            tool_entry.plugin_id,
+            tool_entry.name,
+            tool_entry.invoke_method,
+            tool_entry.timeout_ms,
+        )
 
     def get_llm_available_tool_specs(
         self,
@@ -923,7 +952,7 @@ class ComponentQueryService:
                 plugin_id=tool_entry.plugin_id,
                 component_name=tool_entry.name,
                 args=invoke_payload,
-                timeout_ms=30000,
+                timeout_ms=resolve_component_rpc_timeout_ms(tool_entry.timeout_ms),
             )
         except Exception as exc:
             logger.error(f"运行时工具 {tool_entry.plugin_id}.{tool_entry.name} 执行失败: {exc}", exc_info=True)

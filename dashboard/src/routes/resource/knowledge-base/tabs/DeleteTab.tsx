@@ -1,5 +1,3 @@
-import type { Dispatch, SetStateAction } from 'react'
-
 import { CircleAlert, RotateCcw, Trash2 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -13,10 +11,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TabsContent } from '@/components/ui/tabs'
+import { ThinkingIllustration } from '@/components/ui/thinking-illustration'
 import { cn } from '@/lib/utils'
-import type { MemoryDeleteOperationPayload, MemorySourceItemPayload } from '@/lib/memory-api'
 
 import { DELETE_OPERATION_ITEM_PAGE_SIZE, DELETE_OPERATION_PAGE_SIZE } from '../constants'
+import type { UseMemoryDeleteResult } from '../hooks/useMemoryDelete'
 import {
   formatDeleteOperationMode,
   formatDeleteOperationStatus,
@@ -24,49 +23,13 @@ import {
   getDeleteOperationItemLabel,
   getDeleteOperationItemPreview,
   getDeleteOperationItemSource,
-  type DeleteOperationItem,
 } from '../utils'
 
 export interface DeleteTabProps {
-  sourceSearch: string
-  setSourceSearch: Dispatch<SetStateAction<string>>
-  selectedSources: string[]
-  setSelectedSources: Dispatch<SetStateAction<string[]>>
-  filteredSources: MemorySourceItemPayload[]
-  openSourceDeletePreview: () => Promise<void>
-  toggleSourceSelection: (source: string, checked: boolean) => void
-
-  operationSearch: string
-  setOperationSearch: Dispatch<SetStateAction<string>>
-  operationModeFilter: string
-  setOperationModeFilter: Dispatch<SetStateAction<string>>
-  operationStatusFilter: string
-  setOperationStatusFilter: Dispatch<SetStateAction<string>>
-  filteredDeleteOperations: MemoryDeleteOperationPayload[]
-  deleteOperations: MemoryDeleteOperationPayload[]
-  operationPage: number
-  setOperationPage: Dispatch<SetStateAction<number>>
-  deleteOperationPageCount: number
-  pagedDeleteOperations: MemoryDeleteOperationPayload[]
-  selectedDeleteOperation: MemoryDeleteOperationPayload | null
-  setSelectedOperationId: Dispatch<SetStateAction<string>>
-  restoreDeleteOperation: (operationId: string) => Promise<void>
-  deleteRestoring: boolean
-  selectedOperationCounts: Record<string, number>
-  selectedOperationDetailLoading: boolean
-  selectedOperationDetailError: string
-  selectedOperationSources: string[]
-  selectedOperationItems: DeleteOperationItem[]
-  filteredSelectedOperationItems: DeleteOperationItem[]
-  selectedOperationItemSearch: string
-  setSelectedOperationItemSearch: Dispatch<SetStateAction<string>>
-  selectedOperationItemPage: number
-  setSelectedOperationItemPage: Dispatch<SetStateAction<number>>
-  selectedOperationItemPageCount: number
-  pagedSelectedOperationItems: DeleteOperationItem[]
+  delete: UseMemoryDeleteResult
 }
 
-export function DeleteTab(props: DeleteTabProps) {
+export function DeleteTab({ delete: memoryDelete }: DeleteTabProps) {
   const {
     sourceSearch,
     setSourceSearch,
@@ -103,7 +66,7 @@ export function DeleteTab(props: DeleteTabProps) {
     setSelectedOperationItemPage,
     selectedOperationItemPageCount,
     pagedSelectedOperationItems,
-  } = props
+  } = memoryDelete
 
   return (
     <TabsContent value="delete" className="space-y-4">
@@ -368,8 +331,8 @@ export function DeleteTab(props: DeleteTabProps) {
                   </div>
 
                   {selectedOperationDetailLoading ? (
-                    <div className="rounded-lg border bg-background/60 p-4 text-sm text-muted-foreground">
-                      Thinking...
+                    <div className="rounded-lg border bg-background/60 p-4">
+                      <ThinkingIllustration size="sm" />
                     </div>
                   ) : null}
 

@@ -1,4 +1,13 @@
 data/
+# Local roleplay benchmark data
+tools/roleplay_benchmark/
+tools/roleplay_benchmark/data/agent_scores.json
+tools/roleplay_benchmark/data/benchmark_split.json
+tools/roleplay_benchmark/data/discarded_samples.json
+tools/roleplay_benchmark/data/human_scores.json
+tools/roleplay_benchmark/data/sample_cache.json
+tools/roleplay_benchmark/data/agent_prompts/
+tools/roleplay_benchmark/data/server.*.log
 !pytests/A_memorix_test/data/
 !pytests/A_memorix_test/data/benchmarks/
 !pytests/A_memorix_test/data/benchmarks/long_novel_memory_benchmark.json
@@ -35,6 +44,7 @@ NapCat.Shell.Windows.OneKey
 run_amds.bat
 run_none.bat
 docs-mai/
+plugin_repo/
 run.py
 queue_update.txt
 start_saka.bat
@@ -61,6 +71,9 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+
+# Custom MaiBot config for Docker Deployments
+docker-config/
 
 # Editor directories and files
 .vscode/*
@@ -98,6 +111,12 @@ parts/
 sdist/
 var/
 wheels/
+
+# Dev container config
+.devcontainer/devcontainer-lock.json
+# DooD 自动生成的 compose override，包含宿主机绝对路径，不可提交；仅在 devcontainer 内通过 COMPOSE_FILE 加载
+docker-compose.devcontainer.yml
+
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -206,7 +225,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.venv
+.venv/
 env/
 venv/
 ENV/
@@ -274,6 +293,8 @@ OtherRes.txt
 logs
 
 .ruff_cache
+.codex-runtime/
+unsloth_compiled_cache/
 
 .vscode
 
@@ -340,6 +361,7 @@ $RECYCLE.BIN/
 src/chat/focus_chat/working_memory/test/test1.txt
 src/chat/focus_chat/working_memory/test/test4.txt
 run_maiserver.bat
+start_maibot.cmd
 src/plugins/test_plugin_pic/actions/pic_action_config.toml
 run_pet.bat
 
@@ -364,3 +386,5 @@ packages/
 /.venv312
 /src/A_memorix/algorithm_redesign
 agentlite/
+/qwen_mai/
+/MaiMaiFocusPet-Godot/

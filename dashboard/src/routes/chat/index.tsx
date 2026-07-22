@@ -1,12 +1,19 @@
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useToast } from '@/hooks/use-toast'
 import { chatWsClient } from '@/lib/chat-ws-client'
-import { fetchWithAuth } from '@/lib/fetch-with-auth'
+import { ApiError, backendApi } from '@/lib/http'
+import {
+  maisakaMonitorClient,
+  type LlmErrorEvent,
+  type LlmRetryEvent,
+  type StageRemovedEvent,
+  type StageStatusEvent,
+} from '@/lib/maisaka-monitor-client'
 
 import { ChatComposer } from './ChatComposer'
-import { ChatHeaderBar } from './ChatHeaderBar'
 import { ChatTabBar } from './ChatTabBar'
 import { ChatWorkspaceSidebar } from './ChatWorkspaceSidebar'
 import { MessageList } from './MessageList'
@@ -15,6 +22,7 @@ import type {
   ChatIncomingImage,
   ChatTab,
   ChatMessage,
+  ChatRuntimeStatus,
   MessageSegment,
   PersonInfo,
   PlatformInfo,
@@ -87,17 +95,115 @@ function readImageFile(file: File, id: string): Promise<ChatImageAttachment> {
   })
 }
 
+function normalizeStatusText(value: string | null | undefined): string {
+  return (value || '').trim().toLowerCase()
+}
+
+function resolveStatusKind(stage: string, agentState: string): ChatRuntimeStatus['kind'] | null {
+  const normalizedStage = normalizeStatusText(stage)
+  const normalizedAgentState = normalizeStatusText(agentState)
+  if (
+    normalizedAgentState === 'wait' ||
+    normalizedStage === '空闲' ||
+    normalizedStage === '等待消息'
+  ) {
+    return null
+  }
+
+  if (
+    normalizedStage.includes('错误') ||
+    normalizedStage.includes('异常') ||
+    normalizedStage.includes('失败') ||
+    normalizedStage.includes('error')
+  ) {
+    return 'error'
+  }
+
+  if (
+    normalizedStage.includes('replyer') ||
+    normalizedStage.includes('replier') ||
+    normalizedStage.includes('回复生成') ||
+    (normalizedStage.includes('工具执行') && normalizedStage.includes('reply'))
+  ) {
+    return 'typing'
+  }
+
+  if (
+    normalizedStage.includes('planner') ||
+    normalizedStage.includes('思考') ||
+    normalizedStage === '消息整理' ||
+    normalizedStage === '启动循环'
+  ) {
+    return 'thinking'
+  }
+
+  return 'acting'
+}
+
+function resolveRetryStatusKind(data: LlmRetryEvent): ChatRuntimeStatus['kind'] {
+  const taskText = normalizeStatusText(`${data.task_name} ${data.request_type}`)
+  if (taskText.includes('replyer') || taskText.includes('replier')) {
+    return 'typing'
+  }
+  if (taskText.includes('planner')) {
+    return 'thinking'
+  }
+  return 'acting'
+}
+
+function matchesMonitorTarget(
+  tab: ChatTab,
+  data: StageStatusEvent | StageRemovedEvent | LlmRetryEvent | LlmErrorEvent
+): boolean {
+  if (data.session_id && data.session_id === tab.sessionInfo.session_id) {
+    return true
+  }
+
+  const eventGroupId = typeof data.group_id === 'string' ? data.group_id : ''
+  const tabGroupId = tab.sessionInfo.group_id || tab.virtualConfig?.groupId || ''
+  if (eventGroupId && tabGroupId) {
+    return eventGroupId === tabGroupId
+  }
+
+  const eventUserId = typeof data.user_id === 'string' ? data.user_id : ''
+  const tabUserId =
+    tab.type === 'virtual' ? tab.virtualConfig?.userId || '' : tab.sessionInfo.user_id || ''
+  if (!eventUserId || !tabUserId || eventUserId !== tabUserId) {
+    return false
+  }
+
+  const eventPlatform = typeof data.platform === 'string' ? data.platform : ''
+  const tabPlatform =
+    tab.type === 'virtual' ? tab.virtualConfig?.platform || '' : tab.sessionInfo.platform || 'webui'
+  return !eventPlatform || !tabPlatform || eventPlatform === tabPlatform
+}
+
+function buildRuntimeStatusFromStage(data: StageStatusEvent): ChatRuntimeStatus | null {
+  const kind = resolveStatusKind(data.stage, data.agent_state)
+  if (!kind) {
+    return null
+  }
+
+  return {
+    kind,
+    stage: data.stage,
+    detail: data.detail,
+    updatedAt: data.updated_at || data.timestamp || Date.now() / 1000,
+  }
+}
+
 export function ChatPage() {
   const { t, i18n } = useTranslation()
 
-  // 默认 WebUI 标签页
+  // 默认本地聊天标签页
   const defaultTab: ChatTab = {
     id: 'webui-default',
     type: 'webui',
-    label: t('chat.defaultTab'),
+    label: t('chat.botNameFallback'),
     messages: [],
     isConnected: false,
     isTyping: false,
+    runtimeStatus: null,
     sessionInfo: {},
   }
 
@@ -118,6 +224,7 @@ export function ChatPage() {
         messages: [],
         isConnected: false,
         isTyping: false,
+        runtimeStatus: null,
         sessionInfo: {},
       }
     })
@@ -134,7 +241,6 @@ export function ChatPage() {
   // 通用状态
   const [inputValue, setInputValue] = useState('')
   const [selectedImages, setSelectedImages] = useState<ChatImageAttachment[]>([])
-  const [isConnecting, setIsConnecting] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const [userName, setUserName] = useState(getStoredUserName())
 
@@ -158,6 +264,7 @@ export function ChatPage() {
   const userIdRef = useRef(getOrCreateUserId())
 
   const messageIdCounterRef = useRef(0)
+  const monitorStatusesRef = useRef<Map<string, StageStatusEvent>>(new Map())
   const processedMessagesMapRef = useRef<Map<string, Set<string>>>(new Map())
   const sessionUnsubscribeMapRef = useRef<Map<string, () => void>>(new Map())
   const tabsRef = useRef<ChatTab[]>([])
@@ -189,36 +296,33 @@ export function ChatPage() {
   const fetchPlatforms = useCallback(async () => {
     setIsLoadingPlatforms(true)
     try {
-      const response = await fetchWithAuth('/api/chat/platforms')
-      if (response.ok) {
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json()
-          setPlatforms(data.platforms || [])
-        } else {
-          const text = await response.text()
-          console.error('[Chat] 获取平台列表失败: 非 JSON 响应:', text.substring(0, 200))
-          toast({
-            title: t('chat.toast.connectionFailed'),
-            description: t('chat.toast.backendUnavailable'),
-            variant: 'destructive',
-          })
-        }
-      } else {
-        console.error('[Chat] 获取平台列表失败: HTTP', response.status)
+      const data = await backendApi.get<{ platforms?: PlatformInfo[] }>('/api/chat/platforms')
+      setPlatforms(data.platforms || [])
+    } catch (e) {
+      if (e instanceof ApiError && e.status !== undefined && (e.status < 200 || e.status >= 300)) {
+        // HTTP 层失败
+        console.error('[Chat] 获取平台列表失败: HTTP', e.status)
         toast({
           title: t('chat.toast.platformFailed'),
-          description: t('chat.toast.serverError', { status: response.status }),
+          description: t('chat.toast.serverError', { status: e.status }),
+          variant: 'destructive',
+        })
+      } else if (e instanceof ApiError && e.status !== undefined) {
+        // HTTP 成功但响应不是合法 JSON（后端不可用，命中了前端页面等）
+        console.error('[Chat] 获取平台列表失败: 非 JSON 响应:', e.message)
+        toast({
+          title: t('chat.toast.connectionFailed'),
+          description: t('chat.toast.backendUnavailable'),
+          variant: 'destructive',
+        })
+      } else {
+        console.error('[Chat] 获取平台列表失败:', e)
+        toast({
+          title: t('chat.toast.networkError'),
+          description: t('chat.toast.backendUnavailableShort'),
           variant: 'destructive',
         })
       }
-    } catch (e) {
-      console.error('[Chat] 获取平台列表失败:', e)
-      toast({
-        title: t('chat.toast.networkError'),
-        description: t('chat.toast.backendUnavailableShort'),
-        variant: 'destructive',
-      })
     } finally {
       setIsLoadingPlatforms(false)
     }
@@ -228,21 +332,14 @@ export function ChatPage() {
   const fetchPersons = useCallback(async (platform: string, search?: string) => {
     setIsLoadingPersons(true)
     try {
-      const params = new URLSearchParams()
-      if (platform) params.append('platform', platform)
-      if (search) params.append('search', search)
-      params.append('limit', '50')
-
-      const response = await fetchWithAuth(`/api/chat/persons?${params.toString()}`)
-      if (response.ok) {
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json()
-          setPersons(data.persons || [])
-        } else {
-          console.error('[Chat] 获取用户列表失败: 后端返回非 JSON 响应')
-        }
-      }
+      const data = await backendApi.get<{ persons?: PersonInfo[] }>('/api/chat/persons', {
+        query: {
+          platform: platform || undefined,
+          search: search || undefined,
+          limit: 50,
+        },
+      })
+      setPersons(data.persons || [])
     } catch (e) {
       console.error('[Chat] 获取用户列表失败:', e)
     } finally {
@@ -266,15 +363,36 @@ export function ChatPage() {
     ) => {
       switch (data.type) {
         case 'session_info':
-          updateTab(tabId, {
-            sessionInfo: {
-              session_id: data.session_id,
-              user_id: data.user_id,
-              user_name: data.user_name,
-              bot_name: data.bot_name,
-              bot_qq: data.bot_qq,
-            },
-          })
+          setTabs((prev) =>
+            prev.map((tab) => {
+              if (tab.id !== tabId) {
+                return tab
+              }
+              const nextTab: ChatTab = {
+                ...tab,
+                sessionInfo: {
+                  session_id: data.session_id,
+                  user_id: data.user_id,
+                  user_name: data.user_name,
+                  bot_name: data.bot_name,
+                  bot_qq: data.bot_qq,
+                  group_id: data.group_id,
+                  platform: data.platform,
+                  virtual_mode: data.virtual_mode,
+                },
+              }
+              const currentStatus = Array.from(monitorStatusesRef.current.values()).find((status) =>
+                matchesMonitorTarget(nextTab, status)
+              )
+              if (!currentStatus) {
+                return nextTab
+              }
+              return {
+                ...nextTab,
+                runtimeStatus: buildRuntimeStatusFromStage(currentStatus),
+              }
+            })
+          )
           break
 
         case 'system':
@@ -287,6 +405,7 @@ export function ChatPage() {
           break
 
         case 'user_message': {
+          updateTab(tabId, { runtimeStatus: null })
           const senderUserId = data.sender?.user_id
           const currentUserId = tabType === 'virtual' && config ? config.userId : userIdRef.current
 
@@ -325,7 +444,7 @@ export function ChatPage() {
         }
 
         case 'bot_message': {
-          updateTab(tabId, { isTyping: false })
+          updateTab(tabId, { isTyping: false, runtimeStatus: null })
           const processedSet = processedMessagesMapRef.current.get(tabId) || new Set()
           const contentHash = `bot-${data.content}-${Math.floor((data.timestamp || 0) * 1000)}`
           if (processedSet.has(contentHash)) {
@@ -361,7 +480,16 @@ export function ChatPage() {
         }
 
         case 'typing':
-          updateTab(tabId, { isTyping: data.is_typing || false })
+          updateTab(tabId, {
+            isTyping: data.is_typing || false,
+            runtimeStatus: data.is_typing
+              ? {
+                  kind: 'typing',
+                  stage: 'typing',
+                  updatedAt: data.timestamp || Date.now() / 1000,
+                }
+              : null,
+          })
           break
 
         case 'error':
@@ -370,6 +498,11 @@ export function ChatPage() {
               if (tab.id !== tabId) return tab
               return {
                 ...tab,
+                runtimeStatus: {
+                  kind: 'error',
+                  detail: data.content,
+                  updatedAt: data.timestamp || Date.now() / 1000,
+                },
                 messages: [
                   ...tab.messages,
                   {
@@ -450,6 +583,7 @@ export function ChatPage() {
       try {
         if (tabType === 'virtual' && config) {
           await chatWsClient.openSession(tabId, {
+            client: { type: 'webui', name: 'MaiBot WebUI' },
             user_id: config.userId,
             user_name: config.userName,
             platform: config.platform,
@@ -459,6 +593,7 @@ export function ChatPage() {
           })
         } else {
           await chatWsClient.openSession(tabId, {
+            client: { type: 'webui', name: 'MaiBot WebUI' },
             user_id: userIdRef.current,
             user_name: userName,
           })
@@ -481,7 +616,7 @@ export function ChatPage() {
   // 用于追踪组件是否已卸载
   const isUnmountedRef = useRef(false)
 
-  // 初始化连接（默认 WebUI 标签页）
+  // 初始化连接（默认本地聊天标签页）
   useEffect(() => {
     isUnmountedRef.current = false
 
@@ -502,12 +637,6 @@ export function ChatPage() {
       )
     })
 
-    const unsubscribeStatus = chatWsClient.onStatusChange((status) => {
-      if (!isUnmountedRef.current) {
-        setIsConnecting(status === 'connecting')
-      }
-    })
-
     tabs.forEach((tab) => {
       processedMessagesMapRef.current.set(tab.id, new Set())
       void openSessionForTab(tab.id, tab.type, tab.virtualConfig)
@@ -516,7 +645,6 @@ export function ChatPage() {
     return () => {
       isUnmountedRef.current = true
       unsubscribeConnection()
-      unsubscribeStatus()
 
       sessionUnsubscribeMap.forEach((unsubscribe) => {
         unsubscribe()
@@ -528,6 +656,136 @@ export function ChatPage() {
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    let unsubscribe: (() => Promise<void>) | undefined
+
+    void maisakaMonitorClient
+      .subscribe((event) => {
+        if (!active) {
+          return
+        }
+
+        if (event.type === 'stage.snapshot') {
+          monitorStatusesRef.current = new Map(
+            event.data.entries.map((entry) => [entry.session_id, entry])
+          )
+          setTabs((prev) =>
+            prev.map((tab) => {
+              const status = event.data.entries.find((entry) => matchesMonitorTarget(tab, entry))
+              if (!status) {
+                return tab
+              }
+              return {
+                ...tab,
+                runtimeStatus: buildRuntimeStatusFromStage(status),
+              }
+            })
+          )
+          return
+        }
+
+        if (event.type === 'stage.status') {
+          monitorStatusesRef.current.set(event.data.session_id, event.data)
+          setTabs((prev) =>
+            prev.map((tab) => {
+              if (!matchesMonitorTarget(tab, event.data)) {
+                return tab
+              }
+              const nextStatus = buildRuntimeStatusFromStage(event.data)
+              if (!nextStatus && tab.runtimeStatus?.kind === 'error') {
+                return tab
+              }
+              return {
+                ...tab,
+                runtimeStatus: nextStatus,
+                isTyping: nextStatus?.kind === 'typing',
+              }
+            })
+          )
+          return
+        }
+
+        if (event.type === 'stage.removed') {
+          monitorStatusesRef.current.delete(event.data.session_id)
+          setTabs((prev) =>
+            prev.map((tab) =>
+              matchesMonitorTarget(tab, event.data)
+                ? { ...tab, isTyping: false, runtimeStatus: null }
+                : tab
+            )
+          )
+          return
+        }
+
+        if (event.type === 'llm.retry') {
+          setTabs((prev) =>
+            prev.map((tab) => {
+              if (!matchesMonitorTarget(tab, event.data)) {
+                return tab
+              }
+              const currentStatus = tab.runtimeStatus
+              const nextStatus: ChatRuntimeStatus = {
+                kind: currentStatus?.kind ?? resolveRetryStatusKind(event.data),
+                stage: currentStatus?.stage,
+                detail: event.data.reason,
+                retry: {
+                  attempt: event.data.attempt,
+                  maxAttempts: event.data.max_attempts,
+                },
+                updatedAt: event.data.timestamp || Date.now() / 1000,
+              }
+              return {
+                ...tab,
+                runtimeStatus: nextStatus,
+                isTyping: nextStatus.kind === 'typing',
+              }
+            })
+          )
+          return
+        }
+
+        if (event.type === 'llm.error') {
+          setTabs((prev) =>
+            prev.map((tab) => {
+              if (!matchesMonitorTarget(tab, event.data)) {
+                return tab
+              }
+              const currentStatus = tab.runtimeStatus
+              return {
+                ...tab,
+                isTyping: false,
+                runtimeStatus: {
+                  kind: 'error',
+                  stage: currentStatus?.stage,
+                  detail: event.data.message,
+                  retry: currentStatus?.retry,
+                  updatedAt: event.data.timestamp || Date.now() / 1000,
+                },
+              }
+            })
+          )
+        }
+      })
+      .then((cleanup) => {
+        if (active) {
+          unsubscribe = cleanup
+          return
+        }
+        void cleanup()
+      })
+      .catch((error) => {
+        console.error('[Chat] 订阅 MaiSaka 状态失败:', error)
+      })
+
+    return () => {
+      active = false
+      if (unsubscribe) {
+        void unsubscribe()
+      }
+    }
   }, [])
 
   // 发送消息到当前活动标签页
@@ -589,6 +847,7 @@ export function ChatPage() {
           return {
             ...tab,
             isTyping: false,
+            runtimeStatus: null,
           }
         })
       )
@@ -666,11 +925,6 @@ export function ChatPage() {
     [activeTab?.isConnected, activeTabId, t]
   )
 
-  // 重新连接当前标签页
-  const handleReconnect = () => {
-    void chatWsClient.restart()
-  }
-
   // 打开虚拟身份配置对话框（新建标签页用）
   const openVirtualConfig = () => {
     setTempVirtualConfig({
@@ -716,6 +970,7 @@ export function ChatPage() {
       messages: [],
       isConnected: false,
       isTyping: false,
+      runtimeStatus: null,
       sessionInfo: {},
     }
 
@@ -754,7 +1009,7 @@ export function ChatPage() {
   const closeTab = (tabId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
     e?.stopPropagation()
 
-    // 不能关闭默认 WebUI 标签页
+    // 不能关闭默认本地聊天标签页
     if (tabId === 'webui-default') {
       return
     }
@@ -807,8 +1062,6 @@ export function ChatPage() {
     }))
   }
 
-  const botDisplayName = activeTab?.sessionInfo.bot_name || t('chat.botNameFallback')
-
   return (
     <div className="bg-background flex h-full min-h-0">
       {/* 虚拟身份配置对话框 */}
@@ -828,19 +1081,44 @@ export function ChatPage() {
       />
 
       {/* 桌面端：左侧会话侧边栏 */}
-      <ChatWorkspaceSidebar
-        className="hidden md:flex"
-        tabs={tabs}
-        activeTabId={activeTabId}
-        userName={userName}
-        onSwitch={switchTab}
-        onClose={closeTab}
-        onAddVirtual={openVirtualConfig}
-        onUpdateUserName={handleUpdateUserName}
-      />
+      <motion.div
+        className="hidden shrink-0 md:block"
+        variants={{
+          initial: { opacity: 0, x: '-100%' },
+          animate: { opacity: 1, x: 0 },
+          exit: {
+            opacity: 0,
+            x: '-100%',
+            transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+          },
+        }}
+        transition={{ type: 'spring', stiffness: 360, damping: 30, mass: 0.75 }}
+      >
+        <ChatWorkspaceSidebar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          userName={userName}
+          onSwitch={switchTab}
+          onClose={closeTab}
+          onAddVirtual={openVirtualConfig}
+          onUpdateUserName={handleUpdateUserName}
+        />
+      </motion.div>
 
       {/* 主聊天区 */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <motion.div
+        className="flex min-w-0 flex-1 flex-col"
+        variants={{
+          initial: { opacity: 0, y: '100%' },
+          animate: { opacity: 1, y: 0 },
+          exit: {
+            opacity: 0,
+            y: '100%',
+            transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+          },
+        }}
+        transition={{ type: 'spring', stiffness: 360, damping: 30, mass: 0.75 }}
+      >
         {/* 移动端会话切换条 */}
         <div className="md:hidden">
           <ChatTabBar
@@ -852,21 +1130,14 @@ export function ChatPage() {
           />
         </div>
 
-        <ChatHeaderBar
-          activeTab={activeTab}
-          botDisplayName={botDisplayName}
-          isConnecting={isConnecting}
-          isLoadingHistory={isLoadingHistory}
-          onReconnect={handleReconnect}
-        />
-
         <MessageList
           messages={activeTab?.messages ?? []}
           isLoadingHistory={isLoadingHistory}
-          botDisplayName={botDisplayName}
+          botDisplayName={activeTab?.sessionInfo.bot_name || t('chat.botNameFallback')}
           botQq={activeTab?.sessionInfo.bot_qq}
           userName={userName}
           language={i18n.language}
+          runtimeStatus={activeTab?.runtimeStatus ?? null}
         />
 
         <ChatComposer
@@ -879,7 +1150,7 @@ export function ChatPage() {
           images={selectedImages}
           isConnected={!!activeTab?.isConnected}
         />
-      </div>
+      </motion.div>
     </div>
   )
 }

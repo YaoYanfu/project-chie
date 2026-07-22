@@ -6,9 +6,9 @@ import {
   CheckCircle2,
   Globe,
   Key,
+  ShieldCheck,
   SkipForward,
   Sparkles,
-  User,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -36,6 +36,7 @@ import {
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/lib/version'
 import { useToast } from '@/hooks/use-toast'
+import { validateToken } from '@/lib/token-validator'
 import type {
   ApiProviderSetupConfig,
   SetupStep,
@@ -46,11 +47,13 @@ import type {
 import {
   ApiProviderSetupForm,
   BotBasicForm,
+  CustomTokenForm,
   ModelSetupForm,
   PersonalityForm,
 } from './StepForms'
 import {
   loadBotBasicConfig,
+  loadSetupStatus,
   loadPersonalityConfig,
   loadApiProviderSetupConfig,
   loadModelSetupConfig,
@@ -59,9 +62,8 @@ import {
   saveApiProviderSetupConfig,
   saveModelSetupConfig,
   completeSetup,
+  updateAccessToken,
 } from './api'
-import { RestartProvider, useRestart } from '@/lib/restart-context'
-import { RestartOverlay } from '@/components/restart-overlay'
 
 const LANGUAGE_CODES = ['zh', 'en', 'ja', 'ko'] as const
 const LANGUAGE_NAMES: Record<(typeof LANGUAGE_CODES)[number], string> = {
@@ -71,13 +73,8 @@ const LANGUAGE_NAMES: Record<(typeof LANGUAGE_CODES)[number], string> = {
   ko: '한국어',
 }
 
-// 主导出组件：包装 RestartProvider
 export function SetupPage() {
-  return (
-    <RestartProvider>
-      <SetupPageContent />
-    </RestartProvider>
-  )
+  return <SetupPageContent />
 }
 
 // 内部实现组件
@@ -85,7 +82,6 @@ function SetupPageContent() {
   const navigate = useNavigate()
   const { t, i18n: i18nInstance } = useTranslation()
   const { toast } = useToast()
-  const { triggerRestart } = useRestart()
   const currentLang = i18nInstance.resolvedLanguage || i18nInstance.language || 'zh'
   const createDefaultPersonalityConfig = (): PersonalityConfig => ({
     personality: t('setupPage.defaults.personality.personality'),
@@ -102,6 +98,8 @@ function SetupPageContent() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [requiresCustomToken, setRequiresCustomToken] = useState(false)
+  const [customToken, setCustomToken] = useState('')
 
   // 步骤1：Bot基础信息
   const [botBasic, setBotBasic] = useState<BotBasicConfig>({
@@ -136,18 +134,12 @@ function SetupPageContent() {
     replyer_thinking: true,
   })
 
-  const steps: SetupStep[] = [
+  const setupSteps: SetupStep[] = [
     {
-      id: 'bot-basic',
-      title: t('setupPage.steps.botBasic.title'),
-      description: t('setupPage.steps.botBasic.description'),
+      id: 'bot-profile',
+      title: t('setupPage.steps.botProfile.title'),
+      description: t('setupPage.steps.botProfile.description'),
       icon: Bot,
-    },
-    {
-      id: 'personality',
-      title: t('setupPage.steps.personality.title'),
-      description: t('setupPage.steps.personality.description'),
-      icon: User,
     },
     {
       id: 'api-provider',
@@ -162,8 +154,20 @@ function SetupPageContent() {
       icon: Brain,
     },
   ]
+  const steps: SetupStep[] = requiresCustomToken
+    ? [
+        {
+          id: 'custom-token',
+          title: t('setupPage.steps.customToken.title'),
+          description: t('setupPage.steps.customToken.description'),
+          icon: ShieldCheck,
+        },
+        ...setupSteps,
+      ]
+    : setupSteps
 
   const progress = ((currentStep + 1) / steps.length) * 100
+  const currentStepId = steps[currentStep]?.id
 
   // 加载现有配置
   useEffect(() => {
@@ -172,13 +176,15 @@ function SetupPageContent() {
         setIsLoading(true)
 
         // 并行加载所有配置
-        const [bot, personality, apiProvider, model] = await Promise.all([
+        const [setupStatus, bot, personality, apiProvider, model] = await Promise.all([
+          loadSetupStatus(),
           loadBotBasicConfig(),
           loadPersonalityConfig(),
           loadApiProviderSetupConfig(),
           loadModelSetupConfig(),
         ])
 
+        setRequiresCustomToken(setupStatus.requires_custom_token)
         setBotBasic(bot)
         setPersonality(personality)
         setApiProviderSetup(apiProvider)
@@ -202,17 +208,15 @@ function SetupPageContent() {
   const saveCurrentStep = async () => {
     setIsSaving(true)
     try {
-      switch (currentStep) {
-        case 0: // Bot基础
+      switch (currentStepId) {
+        case 'bot-profile': // Bot基础与人格
           await saveBotBasicConfig(botBasic)
-          break
-        case 1: // 人格配置
           await savePersonalityConfig(personality)
           break
-        case 2: // API 提供商
+        case 'api-provider': // API 提供商
           await saveApiProviderSetupConfig(apiProviderSetup)
           break
-        case 3: // 基础模型
+        case 'model-setup': // 基础模型
           await saveModelSetupConfig(modelSetup, apiProviderSetup.provider_name)
           break
       }
@@ -237,20 +241,58 @@ function SetupPageContent() {
     }
   }
 
+  const saveCustomToken = async () => {
+    const trimmedToken = customToken.trim()
+    const tokenValidation = validateToken(trimmedToken)
+    if (!tokenValidation.isValid) {
+      const failedRules = tokenValidation.rules
+        .filter((rule) => !rule.passed)
+        .map((rule) => rule.label)
+        .join(', ')
+      toast({
+        title: t('setupPage.toast.validationFailedTitle'),
+        description: t('setupPage.validation.customTokenInvalid', { failedRules }),
+        variant: 'destructive',
+      })
+      return false
+    }
+
+    setIsSaving(true)
+    try {
+      const result = await updateAccessToken(trimmedToken)
+      if (!result.success) {
+        toast({
+          title: t('setupPage.toast.saveFailedTitle'),
+          description: result.message,
+          variant: 'destructive',
+        })
+        return false
+      }
+
+      toast({
+        title: t('setupPage.toast.customTokenSuccessTitle'),
+        description: t('setupPage.toast.customTokenSuccessDescription'),
+      })
+      setCustomToken('')
+      setTimeout(() => {
+        navigate({ to: '/auth' })
+      }, 1200)
+      return true
+    } catch (error) {
+      toast({
+        title: t('setupPage.toast.saveFailedTitle'),
+        description: error instanceof Error ? error.message : t('setupPage.toast.unknownError'),
+        variant: 'destructive',
+      })
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   // Step 1 验证
   function validateBotBasic(config: BotBasicConfig): string | null {
-    if (!config.platform) return t('setupPage.validation.selectPlatform')
     if (!config.nickname.trim()) return t('setupPage.validation.enterNickname')
-    if (config.platform === 'qq') {
-      if (!config.qq_account.trim()) {
-        return t('setupPage.validation.enterQqAccount')
-      }
-    } else {
-      const hasAccount = config.platforms.some(
-        (p) => p.startsWith(config.platform + ':') && p.split(':')[1]?.trim()
-      )
-      if (!hasAccount) return t('setupPage.validation.enterAccountId')
-    }
     return null
   }
 
@@ -273,8 +315,13 @@ function SetupPageContent() {
   }
 
   const handleNext = async () => {
+    if (currentStepId === 'custom-token') {
+      await saveCustomToken()
+      return
+    }
+
     // Step 1 验证
-    if (currentStep === 0) {
+    if (currentStepId === 'bot-profile') {
       const error = validateBotBasic(botBasic)
       if (error) {
         toast({
@@ -285,7 +332,7 @@ function SetupPageContent() {
         return
       }
     }
-    if (currentStep === 2) {
+    if (currentStepId === 'api-provider') {
       const error = validateApiProviderSetup(apiProviderSetup)
       if (error) {
         toast({
@@ -296,7 +343,7 @@ function SetupPageContent() {
         return
       }
     }
-    if (currentStep === 3) {
+    if (currentStepId === 'model-setup') {
       const error = validateModelSetup(modelSetup)
       if (error) {
         toast({
@@ -356,8 +403,8 @@ function SetupPageContent() {
         }),
       })
 
-      // 3. 触发千惠重启（使用新的重启组件）
-      await triggerRestart()
+      // 3. 配置文件会被 MaiBot 热加载；完成后直接回到首页。
+      navigate({ to: '/' })
     } catch (error) {
       toast({
         title: t('setupPage.toast.completeFailedTitle'),
@@ -384,14 +431,21 @@ function SetupPageContent() {
 
   // 渲染当前步骤的表单
   const renderStepForm = () => {
-    switch (currentStep) {
-      case 0:
-        return <BotBasicForm config={botBasic} onChange={setBotBasic} />
-      case 1:
-        return <PersonalityForm config={personality} onChange={setPersonality} />
-      case 2:
+    switch (currentStepId) {
+      case 'custom-token':
+        return <CustomTokenForm token={customToken} onChange={setCustomToken} />
+      case 'bot-profile':
+        return (
+          <div className="space-y-8">
+            <BotBasicForm config={botBasic} onChange={setBotBasic} />
+            <div className="border-t pt-6">
+              <PersonalityForm config={personality} onChange={setPersonality} />
+            </div>
+          </div>
+        )
+      case 'api-provider':
         return <ApiProviderSetupForm config={apiProviderSetup} onChange={setApiProviderSetup} />
-      case 3:
+      case 'model-setup':
         return <ModelSetupForm config={modelSetup} onChange={setModelSetup} />
       default:
         return null
@@ -399,10 +453,7 @@ function SetupPageContent() {
   }
 
   return (
-    <div className="from-primary/5 via-background to-secondary/5 relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br p-4 md:p-6">
-      {/* 重启遮罩层 */}
-      <RestartOverlay />
-
+    <div className="from-primary/5 via-background to-secondary/5 relative flex h-full min-h-screen flex-col items-center justify-center overflow-y-auto overflow-x-hidden bg-gradient-to-br p-4 md:p-6">
       {/* 语言切换 */}
       <div className="absolute top-4 right-4 z-20">
         <DropdownMenu>
@@ -556,7 +607,10 @@ function SetupPageContent() {
                   </div>
 
                   {/* 表单内容 */}
-                  <ScrollArea className="h-[400px] md:h-[500px]">
+                  <ScrollArea
+                    className="h-[400px] md:h-[500px]"
+                    viewportClassName="overscroll-auto"
+                  >
                     <div className="pr-2">{renderStepForm()}</div>
                   </ScrollArea>
                 </div>
@@ -580,7 +634,7 @@ function SetupPageContent() {
                     <Button
                       variant="ghost"
                       className="flex-1 gap-2 sm:flex-none"
-                      disabled={isSaving || isCompleting}
+                      disabled={isSaving || isCompleting || currentStepId === 'custom-token'}
                     >
                       <SkipForward className="h-4 w-4" strokeWidth={2} fill="none" />
                       {t('setupPage.actions.skip')}
@@ -602,7 +656,7 @@ function SetupPageContent() {
                   </AlertDialogContent>
                 </AlertDialog>
 
-                {currentStep === steps.length - 1 ? (
+                {currentStep === steps.length - 1 && currentStepId !== 'custom-token' ? (
                   <Button
                     onClick={handleComplete}
                     disabled={isCompleting || isSaving}
@@ -631,7 +685,9 @@ function SetupPageContent() {
                       </>
                     ) : (
                       <>
-                        {t('setupPage.actions.next')}
+                        {currentStepId === 'custom-token'
+                          ? t('setupPage.actions.saveToken')
+                          : t('setupPage.actions.next')}
                         <ArrowRight className="ml-2 h-4 w-4" strokeWidth={2} fill="none" />
                       </>
                     )}

@@ -13,38 +13,30 @@ MODULE_COLORS: Dict[str, Tuple[str, Optional[str], bool]] = {
     "llm_api": ("#ff8700", None, False),
     # 消息处理
     "chat": ("#5fff00", None, False),
-    "chat_image": ("#5f87d7", None, False),
-    # emoji
+    "image": ("#5f87d7", None, False),
+    "image_cache_cleanup": ("#5f87d7", None, False),
     "emoji": ("#ffaf00", None, False),  # 橙黄色，偏向橙色
-    "emoji_api": ("#ffaf00", None, False),  # 橙黄色，偏向橙色
+    "update_notice": ("#daaf10", None, False),
+    "emoji_cache_cleanup": ("#ffaf00", None, False),  # 与表情包模块保持一致
     # 核心模块
     "main": ("#ffffff", None, True),  # 亮白色 + 粗体 (主程序)
-    "memory": ("#00af00", None, False),
-    "memory_retrieval": ("#00af00", None, False),
-    "config": ("#ffff00", None, False),
+    "config": ("#a2ff00", None, False),
     "common": ("#ff00ff", None, False),
     "tools": ("#00ffff", None, False),
-    "lpmm": ("#00ffff", None, False),
-    "plugin_system": ("#ff0000", None, False),
     "person_info": ("#008000", None, False),
     "manager": ("#800080", None, False),
     "llm_models": ("#008080", None, False),
     "remote": ("#6c6c6c", None, False),  # 深灰色，更不显眼
     "planner": ("#008080", None, False),
-    "maisaka_reasoning_engine": ("#008080", None, False),
-    "maisaka_chat_loop": ("#0087ff", None, False),
-    "maisaka_runtime": ("#ff5fff", None, False),
-    "relation": ("#af87af", None, False),  # 柔和的紫色，不刺眼
-    # 聊天相关模块
-    "hfc": ("#d787af", None, False),  # 柔和的粉色，不显眼但保持粉色系
-    "bc": ("#d787af", None, False),  # 柔和的粉色，不显眼但保持粉色系
-    "sub_heartflow": ("#ff5fff", None, False),
-    "subheartflow_manager": ("#ff00ff", None, False),
-    "background_tasks": ("#585858", None, False),
+    "maisaka_reasoning_engine": ("#0fd5d5", None, False),
+    "maisaka_chat_loop": ("#1bb2ed", None, False),
+    "maisaka_turn_scheduler": ("#ff8700", None, False),
+    "maisaka_runtime": ("#e5810f", None, False),
     "chat_message": ("#00d7ff", None, False),
     "chat_stream": ("#00ffff", None, False),
     "message_storage": ("#0087ff", None, False),
     "expressor": ("#d75f00", None, False),
+    "expression_utils":("#d75f00", None, False),
     # jargon相关
     "jargon": ("#ffd700", None, False),  # 金黄色，突出显示
     # 插件系统
@@ -64,6 +56,8 @@ MODULE_COLORS: Dict[str, Tuple[str, Optional[str], bool]] = {
     "plugin_runtime.host.hook_dispatcher": ("#5fd7af", None, False),
     "plugin_runtime.host.message_gateway": ("#5fd7d7", None, False),
     "plugin_runtime.host.message_utils": ("#5faf87", None, False),
+    "plugin_runtime.group.core": ("#ff8700", None, False),
+    "plugin_runtime.group.extension": ("#d787ff", None, False),
     "plugin_runtime.runner.main": ("#d787ff", None, False),
     "plugin_runtime.runner.rpc_client": ("#8787ff", None, False),
     "plugin_runtime.runner.manifest_validator": ("#5fafff", None, False),
@@ -90,7 +84,6 @@ MODULE_COLORS: Dict[str, Tuple[str, Optional[str], bool]] = {
     "webui_system": ("#87afff", None, False),
     "stream_api": ("#ffd700", None, False),
     "config_api": ("#ffff00", None, False),
-    "heartflow_api": ("#afff00", None, False),
     "action_apis": ("#87ff00", None, False),
     "independent_apis": ("#5fff00", None, False),
     "database_api": ("#00ff00", None, False),
@@ -110,10 +103,7 @@ MODULE_COLORS: Dict[str, Tuple[str, Optional[str], bool]] = {
     "chat_utils": ("#87afff", None, False),
     "maibot_statistic": ("#af00ff", None, False),
     # 特殊功能插件
-    "mute_plugin": ("#585858", None, False),
     "core_actions": ("#87d7ff", None, False),
-    "tts_action": ("#5f5f00", None, False),
-    "doubao_pic_plugin": ("#5f8700", None, False),
     # 数据库和消息
     "database_model": ("#875f00", None, False),
     "maim_message": ("#af87d7", None, False),
@@ -122,9 +112,6 @@ MODULE_COLORS: Dict[str, Tuple[str, Optional[str], bool]] = {
     "confirm": ("#ffff00", None, True),  # 黄色 + 粗体
     # 模型相关
     "model_utils": ("#d700d7", None, False),
-    "relationship_fetcher": ("#d75fd7", None, False),
-    "relationship_builder": ("#8700ff", None, False),
-    "conflict_tracker": ("#5fff00", None, False),  # 柔和的粉色，不显眼但保持粉色系
 }
 
 # 定义模块别名映射 - 将真实的logger名称映射到显示的别名
@@ -134,27 +121,29 @@ MODULE_ALIASES = {
     "send_api": "消息发送API",
     "replyer": "言语",
     "llm_api": "生成API",
+    "image": "图片",
+    "image_cache_cleanup": "图片缓存清理",
     "emoji": "表情包",
-    "emoji_api": "表情包API",
+    "emoji_cache_cleanup": "表情包缓存清理",
     "chat": "所见",
+    "maisaka_turn_scheduler": "读空气",
     "chat_image": "识图",
     "action_manager": "动作",
     "memory_activator": "记忆",
     "tool_use": "工具",
     "expressor": "表达方式",
+    "expression_utils": "表达方式",
     "database_model": "数据库",
-    "mood": "情绪",
-    "memory": "记忆",
-    "memory_retrieval": "回忆",
     "tool_executor": "工具",
-    "hfc": "聊天节奏",
     "plugin_manager": "插件",
-    "relationship_builder": "关系",
     "llm_models": "模型",
     "person_info": "人物",
     "chat_stream": "聊天流",
     "planner": "规划器",
     "config": "配置",
+    "chat_manager": "聊天管理器",
+    "A_Memorix.EmbeddingAPIAdapter": "记忆嵌入",
+    "A_Memorix.GraphStore": "记忆图",
     "main": "主程序",
     "plugin_runtime.integration": "IPC插件系统",
     "plugin_runtime.host.supervisor": "插件监督器",
@@ -167,6 +156,8 @@ MODULE_ALIASES = {
     "plugin_runtime.host.message_gateway": "插件消息网关",
     "plugin_runtime.host.message_utils": "插件消息工具",
     "plugin_runtime.host.workflow_executor": "插件工作流",
+    "plugin_runtime.group.core": "核心插件",
+    "plugin_runtime.group.extension": "扩展插件",
     "plugin_runtime.runner.main": "插件运行器",
     "plugin_runtime.runner.rpc_client": "插件RPC客户端",
     "plugin_runtime.runner.manifest_validator": "插件清单校验",
@@ -191,6 +182,7 @@ MODULE_ALIASES = {
     "webui.anti_crawler": "WebUI反爬",
     "webui_server": "WebUI服务",
     "webui_system": "WebUI系统",
+    "maisaka_runtime": "MaiSaka",
 }
 
 RESET_COLOR = "\033[0m"

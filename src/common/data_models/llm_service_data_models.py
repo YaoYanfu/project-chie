@@ -5,7 +5,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, TypeAlias
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, TypeAlias
 
 import asyncio
 
@@ -23,7 +23,7 @@ PromptMessage: TypeAlias = Dict[str, Any]
 PromptInput: TypeAlias = str | List[PromptMessage]
 """统一的提示输入类型。"""
 
-MessageFactory: TypeAlias = Callable[..., List["Message"]]
+MessageFactory: TypeAlias = Callable[..., List["Message"] | Awaitable[List["Message"]]]
 """统一的消息工厂类型。"""
 
 
@@ -33,8 +33,10 @@ class LLMServiceRequest(BaseDataModel):
 
     task_name: str
     request_type: str
+    session_id: str = ""
     prompt: PromptInput | None = None
     message_factory: MessageFactory | None = None
+    model_name: str | None = None
     tool_options: List[ToolDefinitionInput] | None = None
     temperature: float | None = None
     max_tokens: int | None = None
@@ -49,6 +51,7 @@ class LLMServiceRequest(BaseDataModel):
                 的组合非法时抛出。
         """
         self.task_name = self.task_name.strip()
+        self.session_id = str(self.session_id or "").strip()
         if not self.task_name:
             raise ValueError("`task_name` 不能为空")
         has_prompt = self.prompt is not None
@@ -153,6 +156,7 @@ class LLMGenerationOptions(BaseDataModel):
 
     temperature: float | None = None
     max_tokens: int | None = None
+    model_name: str | None = None
     tool_options: List[ToolDefinitionInput] | None = None
     response_format: RespFormat | None = None
     interrupt_flag: asyncio.Event | None = None
@@ -181,6 +185,8 @@ class LLMEmbeddingResult(BaseDataModel):
 
     embedding: List[float] = field(default_factory=list)
     model_name: str = field(default_factory=str)
+    model_identifier: str = field(default_factory=str)
+    api_provider: str = field(default_factory=str)
 
 
 __all__ = [

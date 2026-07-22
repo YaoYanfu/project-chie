@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ThinkingIllustration } from '@/components/ui/thinking-illustration'
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { formatChatDisplayName } from '@/lib/chat-display'
 import { cn } from '@/lib/utils'
 
 import {
@@ -205,10 +207,10 @@ export function LegacyExpressionImportDialog({
     if (!open) return
 
     const loadTargets = async () => {
-      const result = await getExpressionChatTargets()
-      if (result.success) {
-        setTargetChatList(result.data)
-      } else {
+      try {
+        const targets = await getExpressionChatTargets()
+        setTargetChatList(targets)
+      } catch {
         setTargetChatList(chatList)
       }
     }
@@ -228,18 +230,10 @@ export function LegacyExpressionImportDialog({
       const result = localPath
         ? await previewLegacyExpressionImport({ db_path: localPath })
         : await previewLegacyExpressionImportFile(file)
-      if (!result.success) {
-        toast({
-          title: '预览失败',
-          description: result.error,
-          variant: 'destructive',
-        })
-        return
-      }
 
       const initialMap: Record<string, string> = {}
       const initialEnabledMap: Record<string, boolean> = {}
-      result.data.groups.forEach((group) => {
+      result.groups.forEach((group) => {
         if (group.matched_sessions.length > 1) {
           initialMap[group.old_chat_id] = '__all_matched__'
         } else if (group.matched_session_id) {
@@ -247,10 +241,16 @@ export function LegacyExpressionImportDialog({
         }
         initialEnabledMap[group.old_chat_id] = group.matched_sessions.length > 0 || Boolean(group.matched_session_id)
       })
-      setPreview(result.data)
-      setDbPath(localPath || result.data.db_path)
+      setPreview(result)
+      setDbPath(localPath || result.db_path)
       setTargetMap(initialMap)
       setEnabledMap(initialEnabledMap)
+    } catch (error) {
+      toast({
+        title: '预览失败',
+        description: error instanceof Error ? error.message : '预览旧版导入失败',
+        variant: 'destructive',
+      })
     } finally {
       setLoadingPreview(false)
     }
@@ -279,21 +279,18 @@ export function LegacyExpressionImportDialog({
         db_path: preview.db_path,
         mappings,
       })
-      if (!result.success) {
-        toast({
-          title: '导入失败',
-          description: result.error,
-          variant: 'destructive',
-        })
-        return
-      }
-
       toast({
         title: '导入完成',
-        description: result.data.message,
+        description: result.message,
       })
       onSuccess()
       onOpenChange(false)
+    } catch (error) {
+      toast({
+        title: '导入失败',
+        description: error instanceof Error ? error.message : '旧版导入失败',
+        variant: 'destructive',
+      })
     } finally {
       setImporting(false)
     }
@@ -312,9 +309,11 @@ export function LegacyExpressionImportDialog({
         {isBusy && (
           <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
             <div className="rounded-lg border bg-background px-5 py-4 text-center shadow-lg">
-              <div className="text-sm font-medium">
-                {loadingPreview ? 'Thinking...' : '正在导入表达方式，请勿关闭'}
-              </div>
+              {loadingPreview ? (
+                <ThinkingIllustration className="mx-auto" />
+              ) : (
+                <div className="text-sm font-medium">正在导入表达方式，请勿关闭</div>
+              )}
               <div className="mt-1 text-xs text-muted-foreground">数据量较大时可能需要等待一会儿</div>
             </div>
           </div>
@@ -429,14 +428,14 @@ export function LegacyExpressionImportDialog({
                           )}
                           {group.matched_sessions.map((session) => (
                             <SelectItem key={`matched-${session.session_id}`} value={session.session_id}>
-                              {session.chat_name}
+                              {formatChatDisplayName(session.chat_name, session.account_id)}
                             </SelectItem>
                           ))}
                           {targetChatList
                             .filter((chat) => !group.matched_sessions.some((session) => session.session_id === chat.chat_id))
                             .map((chat) => (
                             <SelectItem key={chat.chat_id} value={chat.chat_id}>
-                              {chat.chat_name}
+                              {formatChatDisplayName(chat.chat_name, chat.account_id)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -501,25 +500,17 @@ export function ExpressionCreateDialog({
 
     try {
       setSaving(true)
-      const result = await createExpression(formData)
-      if (result.success) {
-        toast({
-          title: '创建成功',
-          description: '表达方式已创建',
-        })
-        setFormData({
-          situation: '',
-          style: '',
-          chat_id: '',
-        })
-        onSuccess()
-      } else {
-        toast({
-          title: '创建失败',
-          description: result.error,
-          variant: 'destructive',
-        })
-      }
+      await createExpression(formData)
+      toast({
+        title: '创建成功',
+        description: '表达方式已创建',
+      })
+      setFormData({
+        situation: '',
+        style: '',
+        chat_id: '',
+      })
+      onSuccess()
     } catch (error) {
       toast({
         title: '创建失败',
@@ -583,7 +574,7 @@ export function ExpressionCreateDialog({
                 {chatList.map((chat) => (
                   <SelectItem key={chat.chat_id} value={chat.chat_id}>
                     <span className="truncate" style={{ wordBreak: 'keep-all' }}>
-                      {chat.chat_name}
+                      {formatChatDisplayName(chat.chat_name, chat.account_id)}
                       {chat.is_group && <span className="text-muted-foreground ml-1">(群聊)</span>}
                     </span>
                   </SelectItem>
@@ -642,20 +633,12 @@ export function ExpressionEditDialog({
 
     try {
       setSaving(true)
-      const result = await updateExpression(expression.id, formData)
-      if (result.success) {
-        toast({
-          title: '保存成功',
-          description: '表达方式已更新',
-        })
-        onSuccess()
-      } else {
-        toast({
-          title: '保存失败',
-          description: result.error,
-          variant: 'destructive',
-        })
-      }
+      await updateExpression(expression.id, formData)
+      toast({
+        title: '保存成功',
+        description: '表达方式已更新',
+      })
+      onSuccess()
     } catch (error) {
       toast({
         title: '保存失败',
@@ -715,7 +698,7 @@ export function ExpressionEditDialog({
                 {chatList.map((chat) => (
                   <SelectItem key={chat.chat_id} value={chat.chat_id}>
                     <span className="truncate" style={{ wordBreak: 'keep-all' }}>
-                      {chat.chat_name}
+                      {formatChatDisplayName(chat.chat_name, chat.account_id)}
                       {chat.is_group && <span className="text-muted-foreground ml-1">(群聊)</span>}
                     </span>
                   </SelectItem>

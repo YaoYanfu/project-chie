@@ -1,109 +1,24 @@
 import type { PluginConfigSchema } from '@/lib/plugin-api'
 
-import { getApiBaseUrl } from './api-base'
-import { isElectron } from './runtime'
+import { backendApi } from '@/lib/http'
+import type { HttpMethod } from '@/lib/http'
 
-async function getMemoryApiBase(): Promise<string> {
-  if (isElectron()) {
-    const base = await getApiBaseUrl()
-    return normalizeMemoryApiBase(base)
-  }
-  return normalizeMemoryApiBase(import.meta.env.VITE_API_BASE_URL)
+const API_BASE = '/api/webui/memory'
+
+interface MemoryRequestOptions {
+  method?: HttpMethod
+  /** 请求体：对象走 JSON 序列化，FormData 原样发送 */
+  body?: unknown
 }
 
-function normalizeMemoryApiBase(rawBase?: string | null): string {
-  const base = String(rawBase ?? '').replace(/\/+$/, '')
-  if (!base) {
-    return '/api/webui/memory'
-  }
-  if (base.endsWith('/api/webui/memory')) {
-    return base
-  }
-  if (base.endsWith('/api/webui')) {
-    return `${base}/memory`
-  }
-  return `${base}/api/webui/memory`
-}
-
-function withMemoryRequestDefaults(init?: RequestInit): RequestInit {
-  return {
-    ...init,
-    credentials: init?.credentials ?? 'include',
-  }
-}
-
-function isHtmlResponse(rawText: string): boolean {
-  const normalizedText = rawText.trimStart().toLowerCase()
-  return normalizedText.startsWith('<!doctype') || normalizedText.startsWith('<html')
-}
-
-function formatRequestUrl(url: string): string {
-  if (typeof window === 'undefined') {
-    return url
-  }
-  try {
-    return new URL(url, window.location.href).toString()
-  } catch {
-    return url
-  }
-}
-
-function getLocalMemoryApiFallbackBases(primaryBase: string): string[] {
-  const fallbackBases: string[] = []
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      fallbackBases.push(`http://${hostname}:8001/api/webui/memory`)
-    }
-  }
-  fallbackBases.push('http://127.0.0.1:8001/api/webui/memory')
-  fallbackBases.push('http://localhost:8001/api/webui/memory')
-  return Array.from(new Set(fallbackBases)).filter((base) => base !== primaryBase)
-}
-
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const primaryBase = await getMemoryApiBase()
-  const urls = [
-    `${primaryBase}${path}`,
-    ...getLocalMemoryApiFallbackBases(primaryBase).map((base) => `${base}${path}`),
-  ]
-  const requestInit = withMemoryRequestDefaults(init)
-
-  for (let index = 0; index < urls.length; index += 1) {
-    const url = urls[index]
-    const response = await fetch(url, requestInit)
-    const rawText = await response.text()
-    const htmlResponse = isHtmlResponse(rawText)
-    const canRetry = index < urls.length - 1
-
-    if ((htmlResponse || response.status === 404) && canRetry) {
-      continue
-    }
-
-    if (!response.ok) {
-      let detail = `${response.status}`
-      try {
-        const payload = JSON.parse(rawText)
-        detail = String(payload?.detail ?? payload?.error ?? detail)
-      } catch {
-        if (htmlResponse) {
-          detail = `接口返回了前端页面，未命中后端 API 路由；当前请求：${formatRequestUrl(url)}`
-        }
-      }
-      throw new Error(detail)
-    }
-
-    try {
-      return JSON.parse(rawText) as T
-    } catch {
-      if (htmlResponse) {
-        throw new Error(`接口返回了前端页面，未命中后端 API 路由；当前请求：${formatRequestUrl(url)}`)
-      }
-      throw new Error(rawText ? '接口响应不是合法 JSON' : '接口返回了空响应')
-    }
-  }
-
-  throw new Error('接口请求失败')
+/**
+ * 记忆 API 统一入口：拼接记忆模块路径前缀，请求经由主后端实例 backendApi。
+ * 失败统一抛出 ApiError（含路由未命中诊断），不再静默重试本地兜底地址。
+ */
+function requestJson<T>(path: string, options: MemoryRequestOptions = {}): Promise<T> {
+  return backendApi.request<T>(options.method ?? 'GET', `${API_BASE}${path}`, {
+    body: options.body,
+  })
 }
 
 export interface MemoryGraphNodePayload {
@@ -254,16 +169,67 @@ export interface MemoryGraphEdgeDetailPayload {
   evidence_graph: MemoryEvidenceGraphPayload
 }
 
+export interface MemoryGraphParagraphDetailResponsePayload {
+  success: boolean
+  paragraph: MemoryGraphParagraphDetailPayload
+  evidence_graph: MemoryEvidenceGraphPayload
+}
+
+export interface MemoryVectorStoreSnapshot {
+  available: boolean
+  dimension: number
+  num_vectors: number
+  has_data: boolean
+}
+
+export interface MemoryVectorMigrationProgress extends Record<string, unknown> {
+  total?: number
+  processed?: number
+  percent?: number
+  elapsed_seconds?: number
+  estimated_remaining_seconds?: number | null
+}
+
+export interface MemoryVectorAutoMigrationStatus {
+  running?: boolean
+  attempted?: boolean
+  success?: boolean
+  stage?: string
+  progress?: MemoryVectorMigrationProgress
+  last_error?: string
+  started_at?: number | null
+  finished_at?: number | null
+  updated_at?: number | null
+}
+
+export interface MemoryVectorPoolsStatus {
+  configured_mode?: string
+  effective_mode?: string
+  ready?: boolean
+  single_pool?: MemoryVectorStoreSnapshot
+  paragraph_pool?: MemoryVectorStoreSnapshot
+  graph_pool?: MemoryVectorStoreSnapshot
+  ready_manifest?: string
+  auto_migration?: MemoryVectorAutoMigrationStatus
+}
+
 export interface MemoryRuntimeConfigPayload {
   success: boolean
   config: Record<string, unknown>
   data_dir: string
   embedding_dimension: number
+  embedding_fingerprint?: Record<string, unknown>
+  stored_embedding_fingerprint?: Record<string, unknown>
+  embedding_fingerprint_status?: string
+  fuzzy_modify_candidate_limit?: number
   stored_vector_dimension?: number
   vector_rebuild_required?: boolean
   vector_rebuild_message?: string
   auto_save: boolean
   relation_vectors_enabled: boolean
+  vector_pools?: MemoryVectorPoolsStatus
+  vector_pools_ready?: boolean
+  vector_pools_effective_mode?: string
   runtime_ready: boolean
   embedding_degraded: boolean
   embedding_degraded_reason: string
@@ -292,6 +258,9 @@ export interface MemoryVectorRebuildPayload {
   errors?: string[]
   elapsed_ms?: number
   embedding_degraded?: boolean
+  embedding_fingerprint?: Record<string, unknown>
+  stored_embedding_fingerprint?: Record<string, unknown>
+  embedding_fingerprint_status?: string
   stored_vector_dimension?: number
   embedding_dimension?: number
   vector_rebuild_required?: boolean
@@ -362,6 +331,10 @@ export interface MemoryImportSettings {
   max_paste_chars?: number
   default_file_concurrency?: number
   default_chunk_concurrency?: number
+  default_narrative_window_size?: number
+  default_narrative_overlap?: number
+  default_factual_target_size?: number
+  max_chunk_chars?: number
   max_file_concurrency?: number
   max_chunk_concurrency?: number
   poll_interval_ms?: number
@@ -381,6 +354,69 @@ export interface MemoryImportSettingsPayload {
 export interface MemoryImportPathAliasesPayload {
   success: boolean
   path_aliases: Record<string, string>
+}
+
+export interface MemoryImportChatTargetPayload {
+  chat_id: string
+  chat_name: string
+  platform?: string | null
+  group_id?: string | null
+  user_id?: string | null
+  account_id?: string | null
+  scope?: string | null
+  is_group: boolean
+  last_active_at?: number | null
+}
+
+export interface MemoryImportChatTargetsPayload {
+  success: boolean
+  data: MemoryImportChatTargetPayload[]
+}
+
+export type MemoryTimelineEventCategory =
+  | 'paragraph'
+  | 'episode'
+  | 'profile'
+  | 'feedback'
+  | 'delete'
+  | 'maintenance'
+
+export interface MemoryTimelineJumpTargetPayload {
+  tab: 'graph' | 'episodes' | 'profiles' | 'feedback' | 'delete' | 'maintenance' | 'timeline'
+  params: Record<string, string | number | boolean | null | undefined>
+}
+
+export interface MemoryTimelineEventPayload {
+  event_id: string
+  event_type: string
+  category: MemoryTimelineEventCategory
+  occurred_at: number
+  chat_id: string
+  chat_name: string
+  title: string
+  summary: string
+  object_count: number
+  key_id?: string
+  source?: string
+  attribution?: string
+  metadata?: Record<string, unknown>
+  jump_target: MemoryTimelineJumpTargetPayload
+}
+
+export interface MemoryTimelinePayload {
+  success: boolean
+  chat: Pick<MemoryImportChatTargetPayload, 'chat_id' | 'chat_name' | 'platform' | 'group_id' | 'user_id' | 'account_id' | 'is_group'>
+  range: {
+    time_start?: number | null
+    time_end?: number | null
+    min_time?: number | null
+    max_time?: number | null
+  }
+  items: MemoryTimelineEventPayload[]
+  summary: {
+    total: number
+    by_type: Record<string, number>
+  }
 }
 
 export interface MemoryImportResolvePathPayload {
@@ -499,6 +535,8 @@ export interface MemoryImportActionPayload {
 export interface MemoryTuningProfilePayload {
   success: boolean
   profile?: Record<string, unknown>
+  runtime_profile?: Record<string, unknown>
+  persistable_profile?: Record<string, unknown>
   settings?: Record<string, unknown>
   toml?: string
 }
@@ -593,6 +631,355 @@ export interface MemoryDeleteOperationListPayload {
 export interface MemoryDeleteOperationDetailPayload {
   success: boolean
   operation?: MemoryDeleteOperationPayload | null
+  error?: string
+}
+
+export interface MemoryCorrectionRequestPayload {
+  request_text: string
+  scope?: string
+  person_id?: string
+  person_keyword?: string
+  chat_id?: string
+  limit?: number
+  requested_by?: string
+  reason?: string
+}
+
+export interface MemoryCorrectionExecuteRequestPayload {
+  plan_id: string
+  confirmed?: boolean
+  requested_by?: string
+  reason?: string
+}
+
+export interface MemoryCorrectionRollbackRequestPayload {
+  requested_by?: string
+  reason?: string
+}
+
+export type MemoryCorrectionScope = 'person_profile' | 'memory' | (string & {})
+export type MemoryCorrectionTargetType = 'paragraph' | 'relation' | (string & {})
+export type MemoryCorrectionAction = 'mark_superseded' | 'ingest_text' | 'refresh_person_profile' | (string & {})
+export type MemoryCorrectionStatus =
+  | 'awaiting_confirmation'
+  | 'executing'
+  | 'executed'
+  | 'failed'
+  | 'rolled_back'
+  | 'rollback_failed'
+  | (string & {})
+
+export interface MemoryCorrectionRelationPayload {
+  subject: string
+  predicate: string
+  object: string
+  confidence: number
+}
+
+export type MemoryCorrectionRelationCascadeAction =
+  | 'mark_inactive'
+  | 'mark_stale_evidence'
+  | 'skipped_protected'
+
+export type MemoryCorrectionEntityCascadeAction = 'record_impact_only'
+
+export interface MemoryCorrectionStaleMarkPayload {
+  paragraph_hash: string
+  relation_hash: string
+  query_tool_id: string
+  task_id?: number | null
+  reason: string
+  source_type: string
+  source_id: string
+  source_operation_id: string
+  created_at?: number | null
+  updated_at?: number | null
+}
+
+export interface MemoryCorrectionRelationCascadePayload {
+  paragraph_hash: string
+  relation_hash: string
+  action: MemoryCorrectionRelationCascadeAction
+  reason: string
+  source_reason?: string
+  subject: string
+  predicate: string
+  object: string
+  is_pinned?: boolean
+  protected_until?: number | null
+  is_inactive?: boolean
+  inactive_since?: number | null
+  preview_only?: boolean
+  source_operation_id?: string
+  previous_metadata?: Record<string, unknown>
+  updated_metadata?: Record<string, unknown>
+  previous_is_inactive?: boolean
+  previous_inactive_since?: number | null
+  written_mark?: MemoryCorrectionStaleMarkPayload | null
+}
+
+export interface MemoryCorrectionEntityCascadePayload {
+  paragraph_hash: string
+  entity_hash: string
+  action: MemoryCorrectionEntityCascadeAction
+  reason: string
+  name: string
+  type: string
+  preview_only?: boolean
+}
+
+export interface MemoryCorrectionCascadeCountsPayload {
+  relations: number
+  relations_mark_inactive: number
+  relations_mark_stale_evidence: number
+  relations_skipped_protected: number
+  entities: number
+}
+
+export interface MemoryCorrectionCascadePreviewPayload {
+  relations: MemoryCorrectionRelationCascadePayload[]
+  entities: MemoryCorrectionEntityCascadePayload[]
+  counts: MemoryCorrectionCascadeCountsPayload
+}
+
+export interface MemoryCorrectionStaleMarkSnapshotPayload {
+  paragraph_hash: string
+  relation_hash: string
+  source_type: string
+  source_id: string
+  source_operation_id: string
+  previous_mark?: MemoryCorrectionStaleMarkPayload | null
+  written_mark?: MemoryCorrectionStaleMarkPayload | null
+}
+
+export interface MemoryCorrectionTargetCascadePayload {
+  relations_marked_inactive: MemoryCorrectionRelationCascadePayload[]
+  relations_marked_stale: MemoryCorrectionRelationCascadePayload[]
+  relations_skipped: MemoryCorrectionRelationCascadePayload[]
+  impacted_entities: MemoryCorrectionEntityCascadePayload[]
+  stale_mark_snapshots: MemoryCorrectionStaleMarkSnapshotPayload[]
+}
+
+export type MemoryCorrectionStaleRollbackAction =
+  | 'deleted'
+  | 'restored'
+  | 'skipped_due_to_source_mismatch'
+  | 'already_missing'
+  | 'restore_failed'
+  | 'invalid_target'
+
+export interface MemoryCorrectionStaleMarkRollbackPayload {
+  success: boolean
+  action: MemoryCorrectionStaleRollbackAction
+  paragraph_hash: string
+  relation_hash: string
+  before?: MemoryCorrectionStaleMarkPayload
+  after?: MemoryCorrectionStaleMarkPayload | null
+  current?: MemoryCorrectionStaleMarkPayload
+  expected_source?: {
+    source_type: string
+    source_id: string
+    source_operation_id: string
+  }
+  error?: string
+}
+
+export interface MemoryCorrectionCandidatePayload {
+  candidate_id: string
+  target_type: MemoryCorrectionTargetType
+  evidence_type: string
+  hash: string
+  content: string
+  source: string
+  metadata: Record<string, unknown>
+  score?: number | null
+}
+
+export interface MemoryCorrectionMarkSupersededOperationPayload {
+  action: 'mark_superseded'
+  candidate_id: string
+  target_type: MemoryCorrectionTargetType
+  hash: string
+  reason: string
+  valid_to?: number | null
+}
+
+export interface MemoryCorrectionIngestTextOperationPayload {
+  action: 'ingest_text'
+  text: string
+  source_type: string
+  chat_id: string
+  person_ids: string[]
+  participants: string[]
+  tags: string[]
+  relations: MemoryCorrectionRelationPayload[]
+  valid_from?: number | null
+  reason: string
+}
+
+export interface MemoryCorrectionRefreshPersonProfileOperationPayload {
+  action: 'refresh_person_profile'
+  person_id: string
+}
+
+export type MemoryCorrectionOperationPayload =
+  | MemoryCorrectionMarkSupersededOperationPayload
+  | MemoryCorrectionIngestTextOperationPayload
+  | MemoryCorrectionRefreshPersonProfileOperationPayload
+  | {
+      action: MemoryCorrectionAction
+      reason?: string
+    }
+
+export interface MemoryCorrectionPlanContentPayload {
+  scope: MemoryCorrectionScope
+  request_text: string
+  person_id: string
+  chat_id: string
+  confidence: number
+  risk_level: string
+  reason: string
+  operations: MemoryCorrectionOperationPayload[]
+}
+
+export interface MemoryCorrectionPreviewContentPayload {
+  request_text: string
+  scope: MemoryCorrectionScope
+  person_id: string
+  person_keyword: string
+  chat_id: string
+  candidates: MemoryCorrectionCandidatePayload[]
+  operations: MemoryCorrectionOperationPayload[]
+  cascade_preview?: MemoryCorrectionCascadePreviewPayload
+  requires_confirmation: boolean
+  confirm_threshold: number
+  reason: string
+}
+
+export interface MemoryCorrectionAttemptPayload {
+  status: string
+  started_at?: number
+  finished_at?: number
+  requested_by?: string
+  reason?: string
+  recovered_from_stale_executing?: boolean
+}
+
+export interface MemoryCorrectionIngestResultPayload {
+  operation: MemoryCorrectionIngestTextOperationPayload
+  result: Record<string, unknown>
+}
+
+export interface MemoryCorrectionSupersededTargetPayload {
+  target_type: MemoryCorrectionTargetType
+  hash: string
+  previous_metadata: Record<string, unknown>
+  previous_is_inactive?: boolean
+  previous_inactive_since?: number | null
+  cascade?: MemoryCorrectionTargetCascadePayload
+}
+
+export interface MemoryCorrectionExecutionPayload {
+  success?: boolean
+  stored_ids?: string[]
+  ingest_results?: MemoryCorrectionIngestResultPayload[]
+  superseded_targets?: MemoryCorrectionSupersededTargetPayload[]
+  refreshed_profiles?: Array<Record<string, unknown>>
+  changed_at?: number
+  changed_by?: string
+  reason?: string
+  attempt?: MemoryCorrectionAttemptPayload
+  rollback?: MemoryCorrectionRollbackResultPayload
+  error?: string
+}
+
+export interface MemoryCorrectionRollbackItemPayload {
+  type: string
+  result: Record<string, unknown>
+}
+
+export interface MemoryCorrectionRestoredTargetPayload {
+  target_type: MemoryCorrectionTargetType
+  hash: string
+}
+
+export interface MemoryCorrectionRestoreFailurePayload {
+  target_type: MemoryCorrectionTargetType
+  hash: string
+  error: string
+}
+
+export interface MemoryCorrectionRollbackResultPayload {
+  success: boolean
+  stored_ids_deleted?: string[]
+  stored_ids_delete_requested?: string[]
+  new_relations_deactivated: string[]
+  restored_targets: MemoryCorrectionRestoredTargetPayload[]
+  restore_failures?: MemoryCorrectionRestoreFailurePayload[]
+  stale_marks_deleted?: MemoryCorrectionStaleMarkRollbackPayload[]
+  stale_marks_restored?: MemoryCorrectionStaleMarkRollbackPayload[]
+  stale_marks_skipped?: MemoryCorrectionStaleMarkRollbackPayload[]
+  items: MemoryCorrectionRollbackItemPayload[]
+  requested_by: string
+  reason: string
+  error?: string
+}
+
+export interface MemoryCorrectionPlanPayload {
+  plan_id: string
+  request_text: string
+  scope: MemoryCorrectionScope
+  target_person_id: string
+  target_chat_id: string
+  status: MemoryCorrectionStatus
+  confidence: number
+  plan: MemoryCorrectionPlanContentPayload
+  preview: MemoryCorrectionPreviewContentPayload
+  execution: MemoryCorrectionExecutionPayload
+  created_at: number
+  updated_at: number
+  executed_at?: number | null
+  requested_by: string
+  reason: string
+}
+
+export interface MemoryCorrectionPreviewPayload {
+  success: boolean
+  plan_id?: string
+  plan?: MemoryCorrectionPlanPayload | null
+  preview?: MemoryCorrectionPreviewContentPayload
+  requires_confirmation?: boolean
+  raw_plan?: Record<string, unknown>
+  candidates?: MemoryCorrectionCandidatePayload[]
+  request_text?: string
+  error?: string
+}
+
+export interface MemoryCorrectionExecutePayload {
+  success: boolean
+  plan?: MemoryCorrectionPlanPayload | null
+  execution?: MemoryCorrectionExecutionPayload
+  requires_confirmation?: boolean
+  error?: string
+}
+
+export interface MemoryCorrectionPlanListPayload {
+  success: boolean
+  items: MemoryCorrectionPlanPayload[]
+  count?: number
+  error?: string
+}
+
+export interface MemoryCorrectionPlanDetailPayload {
+  success: boolean
+  plan?: MemoryCorrectionPlanPayload | null
+  error?: string
+}
+
+export interface MemoryCorrectionRollbackPayload {
+  success: boolean
+  plan?: MemoryCorrectionPlanPayload | null
+  rollback?: MemoryCorrectionRollbackResultPayload
   error?: string
 }
 
@@ -722,8 +1109,8 @@ export interface MemoryEpisodeDetailPayload {
 
 export interface MemoryEpisodeStatusPayload extends Record<string, unknown> {
   success: boolean
-  pending_queue?: number
   counts?: Record<string, number>
+  running?: Array<Record<string, unknown>>
   failed?: Array<Record<string, unknown>>
   error?: string
 }
@@ -732,6 +1119,12 @@ export interface MemoryEpisodeActionPayload extends Record<string, unknown> {
   success: boolean
   error?: string
   detail?: string
+  processed?: number
+  rebuilt?: number
+  failed?: number
+  unfinished?: number
+  failures?: Array<{ source?: string; error?: string; reason?: string }>
+  unfinished_items?: Array<{ source?: string; error?: string; reason?: string }>
 }
 
 export interface MemoryProfileItemPayload extends Record<string, unknown> {
@@ -759,6 +1152,49 @@ export interface MemoryProfileQueryPayload extends Record<string, unknown> {
   person_id?: string
   profile_text?: string
   evidence?: Array<Record<string, unknown>>
+  error?: string
+}
+
+export interface MemoryProfileEvidenceItemPayload extends Record<string, unknown> {
+  evidence_key?: string
+  evidence_type?: string
+  hash?: string
+  content?: string
+  source?: string
+  source_type?: string
+  metadata?: Record<string, unknown>
+  score?: number | null
+  confidence?: number | null
+  correction_mode?: string
+  deletable?: boolean
+  not_deletable_reason?: string
+}
+
+export interface MemoryProfileEvidencePayload extends Record<string, unknown> {
+  success: boolean
+  person_id?: string
+  person_name?: string
+  profile_text?: string
+  auto_profile_text?: string
+  profile_version?: number
+  updated_at?: number | null
+  expires_at?: number | null
+  profile_source?: string
+  has_manual_override?: boolean
+  manual_override_text?: string
+  evidence?: MemoryProfileEvidenceItemPayload[]
+  evidence_count?: number
+  error?: string
+}
+
+export interface MemoryProfileEvidenceCorrectPayload extends Record<string, unknown> {
+  success: boolean
+  person_id?: string
+  evidence?: MemoryProfileEvidenceItemPayload
+  delete_result?: Record<string, unknown>
+  operation_id?: string
+  refreshed_profile?: Record<string, unknown>
+  refreshed_evidence?: MemoryProfileEvidencePayload
   error?: string
 }
 
@@ -844,13 +1280,25 @@ export async function getMemoryGraphEdgeDetail(
   return requestJson<MemoryGraphEdgeDetailPayload>(`/graph/edge-detail?${params.toString()}`)
 }
 
+export async function getMemoryGraphParagraphDetail(
+  paragraphHash: string,
+  options?: {
+    evidenceNodeLimit?: number
+  },
+): Promise<MemoryGraphParagraphDetailResponsePayload> {
+  const params = new URLSearchParams({
+    paragraph_hash: paragraphHash,
+    evidence_node_limit: String(options?.evidenceNodeLimit ?? 80),
+  })
+  return requestJson<MemoryGraphParagraphDetailResponsePayload>(`/graph/paragraph-detail?${params.toString()}`)
+}
+
 export async function previewMemoryDelete(
   payload: MemoryDeleteRequestPayload,
 ): Promise<MemoryDeletePreviewPayload> {
   return requestJson<MemoryDeletePreviewPayload>('/delete/preview', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -859,8 +1307,7 @@ export async function executeMemoryDelete(
 ): Promise<MemoryDeleteExecutePayload> {
   return requestJson<MemoryDeleteExecutePayload>('/delete/execute', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -873,8 +1320,7 @@ export async function restoreMemoryDelete(payload: {
 }): Promise<Record<string, unknown>> {
   return requestJson('/delete/restore', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -893,6 +1339,63 @@ export async function getMemoryDeleteOperation(
   operationId: string,
 ): Promise<MemoryDeleteOperationDetailPayload> {
   return requestJson<MemoryDeleteOperationDetailPayload>(`/delete/operations/${encodeURIComponent(operationId)}`)
+}
+
+export async function previewMemoryCorrection(
+  payload: MemoryCorrectionRequestPayload,
+): Promise<MemoryCorrectionPreviewPayload> {
+  const body = { ...payload }
+  if (body.limit === undefined) {
+    delete body.limit
+  }
+  return requestJson<MemoryCorrectionPreviewPayload>('/corrections/preview', {
+    method: 'POST',
+    body,
+  })
+}
+
+export async function executeMemoryCorrection(
+  payload: MemoryCorrectionExecuteRequestPayload,
+): Promise<MemoryCorrectionExecutePayload> {
+  return requestJson<MemoryCorrectionExecutePayload>('/corrections/execute', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export async function getMemoryCorrectionPlans(
+  options?: {
+    limit?: number
+    status?: string
+    scope?: string
+  },
+): Promise<MemoryCorrectionPlanListPayload> {
+  const params = new URLSearchParams({
+    limit: String(options?.limit ?? 50),
+  })
+  if (options?.status?.trim()) {
+    params.set('status', options.status.trim())
+  }
+  if (options?.scope?.trim()) {
+    params.set('scope', options.scope.trim())
+  }
+  return requestJson<MemoryCorrectionPlanListPayload>(`/corrections/plans?${params.toString()}`)
+}
+
+export async function getMemoryCorrectionPlan(
+  planId: string,
+): Promise<MemoryCorrectionPlanDetailPayload> {
+  return requestJson<MemoryCorrectionPlanDetailPayload>(`/corrections/plans/${encodeURIComponent(planId)}`)
+}
+
+export async function rollbackMemoryCorrectionPlan(
+  planId: string,
+  payload: MemoryCorrectionRollbackRequestPayload,
+): Promise<MemoryCorrectionRollbackPayload> {
+  return requestJson<MemoryCorrectionRollbackPayload>(`/corrections/plans/${encodeURIComponent(planId)}/rollback`, {
+    method: 'POST',
+    body: payload,
+  })
 }
 
 export async function getMemoryFeedbackCorrections(
@@ -933,13 +1436,36 @@ export async function rollbackMemoryFeedbackCorrection(
 ): Promise<MemoryFeedbackCorrectionRollbackPayload> {
   return requestJson<MemoryFeedbackCorrectionRollbackPayload>(`/feedback-corrections/${taskId}/rollback`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function getMemorySources(): Promise<MemorySourceListPayload> {
   return requestJson<MemorySourceListPayload>('/sources')
+}
+
+export async function getMemoryTimeline(options: {
+  chatId: string
+  timeStart?: number
+  timeEnd?: number
+  types?: string[]
+  limit?: number
+}): Promise<MemoryTimelinePayload> {
+  const params = new URLSearchParams({
+    chat_id: options.chatId,
+    limit: String(options.limit ?? 100),
+  })
+  if (options.timeStart !== undefined) {
+    params.set('time_start', String(options.timeStart))
+  }
+  if (options.timeEnd !== undefined) {
+    params.set('time_end', String(options.timeEnd))
+  }
+  const cleanTypes = (options.types ?? []).map((item) => item.trim()).filter(Boolean)
+  if (cleanTypes.length > 0) {
+    params.set('types', cleanTypes.join(','))
+  }
+  return requestJson<MemoryTimelinePayload>(`/timeline?${params.toString()}`)
 }
 
 export async function getMemoryEpisodes(options?: {
@@ -980,8 +1506,7 @@ export async function rebuildMemoryEpisodes(payload: {
 }): Promise<MemoryEpisodeActionPayload> {
   return requestJson<MemoryEpisodeActionPayload>('/episodes/rebuild', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -995,8 +1520,7 @@ export async function processMemoryEpisodePending(payload: {
 }): Promise<MemoryEpisodeActionPayload> {
   return requestJson<MemoryEpisodeActionPayload>('/episodes/process-pending', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -1048,14 +1572,47 @@ export async function setMemoryProfileOverride(payload: {
 }): Promise<MemoryProfileOverridePayload> {
   return requestJson<MemoryProfileOverridePayload>('/profiles/override', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function deleteMemoryProfileOverride(personId: string): Promise<MemoryProfileOverridePayload> {
   return requestJson<MemoryProfileOverridePayload>(`/profiles/override/${encodeURIComponent(personId)}`, {
     method: 'DELETE',
+  })
+}
+
+export async function getMemoryProfileEvidence(options: {
+  personId: string
+  limit?: number
+  forceRefresh?: boolean
+}): Promise<MemoryProfileEvidencePayload> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 12),
+    force_refresh: options.forceRefresh ? 'true' : 'false',
+  })
+  return requestJson<MemoryProfileEvidencePayload>(`/profiles/${encodeURIComponent(options.personId)}/evidence?${params.toString()}`)
+}
+
+export async function correctMemoryProfileEvidence(payload: {
+  person_id: string
+  evidence_type: string
+  hash: string
+  requested_by?: string
+  reason?: string
+  refresh?: boolean
+  limit?: number
+}): Promise<MemoryProfileEvidenceCorrectPayload> {
+  return requestJson<MemoryProfileEvidenceCorrectPayload>(`/profiles/${encodeURIComponent(payload.person_id)}/evidence/correct`, {
+    method: 'POST',
+    body: {
+      evidence_type: payload.evidence_type,
+      hash: payload.hash,
+      requested_by: payload.requested_by ?? 'knowledge_base',
+      reason: payload.reason ?? 'profile_evidence_correction',
+      refresh: payload.refresh ?? true,
+      limit: payload.limit ?? 12,
+    },
   })
 }
 
@@ -1066,8 +1623,7 @@ export async function getMemoryRecycleBin(limit: number = 50): Promise<MemoryRec
 function maintainMemory(path: string, payload: { target: string; hours?: number }): Promise<MemoryMaintenanceActionPayload> {
   return requestJson<MemoryMaintenanceActionPayload>(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -1104,8 +1660,7 @@ export async function rebuildMemoryRuntimeVectors(payload: {
 } = {}): Promise<MemoryVectorRebuildPayload> {
   return requestJson<MemoryVectorRebuildPayload>('/runtime/vectors/rebuild', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -1120,8 +1675,7 @@ export async function getMemoryConfig(): Promise<MemoryConfigPayload> {
 export async function updateMemoryConfig(config: Record<string, unknown>): Promise<{ success: boolean; message?: string }> {
   return requestJson('/config', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ config }),
+    body: { config },
   })
 }
 
@@ -1132,8 +1686,7 @@ export async function getMemoryConfigRaw(): Promise<MemoryRawConfigPayload> {
 export async function updateMemoryConfigRaw(config: string): Promise<{ success: boolean; message?: string }> {
   return requestJson('/config/raw', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ config }),
+    body: { config },
   })
 }
 
@@ -1149,6 +1702,10 @@ export async function getMemoryImportPathAliases(): Promise<MemoryImportPathAlia
   return requestJson<MemoryImportPathAliasesPayload>('/import/path-aliases')
 }
 
+export async function getMemoryImportChatTargets(): Promise<MemoryImportChatTargetsPayload> {
+  return requestJson<MemoryImportChatTargetsPayload>('/import/chat-targets')
+}
+
 export async function resolveMemoryImportPath(payload: {
   alias: string
   relative_path?: string
@@ -1156,8 +1713,7 @@ export async function resolveMemoryImportPath(payload: {
 }): Promise<MemoryImportResolvePathPayload> {
   return requestJson<MemoryImportResolvePathPayload>('/import/resolve-path', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -1197,48 +1753,42 @@ export async function createMemoryUploadImport(files: File[], payload: Record<st
 export async function createMemoryPasteImport(payload: Record<string, unknown>): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>('/import/paste', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function createMemoryRawScanImport(payload: Record<string, unknown>): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>('/import/raw-scan', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function createMemoryLpmmOpenieImport(payload: Record<string, unknown>): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>('/import/lpmm-openie', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function createMemoryLpmmConvertImport(payload: Record<string, unknown>): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>('/import/lpmm-convert', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function createMemoryTemporalBackfillImport(payload: Record<string, unknown>): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>('/import/temporal-backfill', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
 export async function createMemoryMaibotMigrationImport(payload: Record<string, unknown>): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>('/import/maibot-migration', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -1256,8 +1806,7 @@ export async function retryMemoryImportTask(
 ): Promise<MemoryImportActionPayload> {
   return requestJson<MemoryImportActionPayload>(`/import/tasks/${encodeURIComponent(taskId)}/retry`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
@@ -1269,17 +1818,25 @@ export async function getMemoryTuningTasks(limit: number = 20): Promise<MemoryTa
   return requestJson<MemoryTaskListPayload>(`/retrieval_tuning/tasks?limit=${limit}`)
 }
 
-export async function createMemoryTuningTask(payload: Record<string, unknown>): Promise<{ success: boolean; task?: MemoryTaskPayload }> {
+export async function createMemoryTuningTask(payload: Record<string, unknown>): Promise<{
+  success: boolean
+  task?: MemoryTaskPayload
+  error?: string
+  message?: string
+}> {
   return requestJson('/retrieval_tuning/tasks', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
   })
 }
 
-export async function applyBestMemoryTuningProfile(taskId: string): Promise<{ success: boolean; error?: string }> {
+export async function applyBestMemoryTuningProfile(
+  taskId: string,
+  payload: { persist?: boolean; validate?: boolean } = {},
+): Promise<{ success: boolean; error?: string; message?: string; persisted?: boolean; runtime_rebuilt?: boolean; validation_passed?: boolean }> {
   return requestJson(`/retrieval_tuning/tasks/${encodeURIComponent(taskId)}/apply-best`, {
     method: 'POST',
+    body: payload,
   })
 }
 

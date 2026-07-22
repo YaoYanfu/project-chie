@@ -7,95 +7,102 @@ import { BackgroundLayer } from '@/components/background-layer'
 
 import { LogoArea } from './LogoArea'
 import { NavItem } from './NavItem'
-import { menuSections } from './constants'
+import { useMenuSections } from './use-menu-sections'
 
 interface SidebarProps {
   sidebarOpen: boolean
   mobileMenuOpen: boolean
-  tooltipsEnabled: boolean
   onMobileMenuClose: () => void
 }
 
-export function Sidebar({ 
-  sidebarOpen, 
-  mobileMenuOpen, 
-  tooltipsEnabled, 
-  onMobileMenuClose 
+export function Sidebar({
+  sidebarOpen,
+  mobileMenuOpen,
+  onMobileMenuClose,
 }: SidebarProps) {
   const { t } = useTranslation()
   const { config: sidebarBg, inheritedFrom } = useBackground('sidebar')
   const inheritsPageBackground = inheritedFrom === 'page'
+  const menuSections = useMenuSections()
 
   return (
     <aside
+      data-dashboard-sidebar="true"
       className={cn(
-        'fixed inset-y-0 left-0 z-50 isolate flex flex-col border-r transition-all duration-300 lg:relative lg:z-0 lg:h-full',
+        'fixed inset-y-0 left-0 isolate z-50 flex flex-col border-r transition-transform duration-300 lg:relative lg:z-0 lg:h-full lg:transition-none',
         inheritsPageBackground ? 'bg-transparent' : 'bg-card',
         // 移动端始终显示完整宽度，桌面端根据 sidebarOpen 切换
-        'w-52 lg:w-auto',
-        sidebarOpen ? 'lg:w-52' : 'lg:w-16',
+        'w-[var(--layout-sidebar-width)] lg:w-full',
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}
     >
       {!inheritsPageBackground && <BackgroundLayer config={sidebarBg} layerId="sidebar" />}
-      
+
       {/* Logo 区域 */}
       <div className="relative z-10">
         <LogoArea sidebarOpen={sidebarOpen} />
       </div>
 
-      <ScrollArea className={cn(
-        'relative z-10',
-        "min-h-0 flex-1 overflow-x-hidden",
-        !sidebarOpen && "lg:w-16"
-      )}
-      viewportClassName="[&>div]:!block"
+      <ScrollArea
+        className={cn(
+          'relative z-10',
+          'min-h-0 flex-1 overflow-x-hidden',
+          !sidebarOpen && 'lg:w-[var(--layout-sidebar-collapsed-width)]'
+        )}
+        viewportClassName="[&>div]:!block"
       >
         <nav
           aria-label={t('a11y.sidebarNav')}
           className={cn(
-          "p-4",
-          !sidebarOpen && "lg:p-2 lg:w-16"
-        )}>
-          <ul className={cn(
-            // 移动端始终使用正常间距,桌面端根据 sidebarOpen 切换
-            "space-y-6",
-            !sidebarOpen && "lg:space-y-3 lg:w-full"
-          )}>
-          {menuSections.map((section, sectionIndex) => (
-            <li key={section.title}>
-              {/* 块标题 - 移动端始终可见，桌面端根据 sidebarOpen 切换 */}
-              <div className={cn(
-                "px-3 h-[1.25rem]",
-                // 移动端始终显示，桌面端根据状态切换
-                "mb-2",
-                !sidebarOpen && "lg:mb-1 lg:invisible"
-              )}>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 whitespace-nowrap">
-                  {t(section.title)}
-                </h3>
-              </div>
+            'p-[var(--layout-sidebar-nav-padding)]',
+            !sidebarOpen &&
+              'lg:w-[var(--layout-sidebar-collapsed-width)] lg:p-[var(--layout-sidebar-nav-padding-collapsed)]'
+          )}
+        >
+          <ul
+            className={cn(
+              // 移动端始终使用正常间距,桌面端根据 sidebarOpen 切换
+              'flex flex-col gap-[var(--layout-sidebar-section-gap)]',
+              !sidebarOpen && 'lg:w-full'
+            )}
+          >
+            {menuSections.map((section, sectionIndex) => (
+              <li key={section.title}>
+                {/* 块标题 - 移动端始终可见，桌面端根据 sidebarOpen 切换 */}
+                <div
+                  className={cn(
+                    'h-[var(--layout-sidebar-section-title-height)] px-[var(--layout-sidebar-nav-item-padding-x)]',
+                    section.title === 'sidebar.groups.overview' && 'hidden',
+                    // 移动端始终显示，桌面端根据状态切换
+                    'mb-[var(--layout-sidebar-section-title-margin-bottom)]',
+                    !sidebarOpen &&
+                      'lg:invisible lg:mb-[var(--layout-sidebar-section-title-margin-bottom-collapsed)]'
+                  )}
+                >
+                  <h3 className="text-muted-foreground/60 text-sm font-semibold tracking-wider whitespace-nowrap uppercase">
+                    {t(section.title)}
+                  </h3>
+                </div>
 
-              {/* 分割线 - 仅在桌面端折叠时显示 */}
-              {!sidebarOpen && sectionIndex > 0 && (
-                <div className="hidden lg:block mb-2 border-t border-border" />
-              )}
+                {/* 分割线 - 仅在桌面端折叠时显示 */}
+                {!sidebarOpen && sectionIndex > 0 && (
+                  <div className="border-border mb-2 hidden border-t lg:block" />
+                )}
 
-              {/* 菜单项列表 */}
-              <ul className="space-y-1">
-                {section.items.map((item) => (
-                  <NavItem
-                    key={item.path}
-                    item={item}
-                    sidebarOpen={sidebarOpen}
-                    tooltipsEnabled={tooltipsEnabled}
-                    onMobileMenuClose={onMobileMenuClose}
-                  />
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+                {/* 菜单项列表 */}
+                <ul className="flex flex-col gap-[var(--layout-sidebar-nav-item-gap)]">
+                  {section.items.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      item={item}
+                      sidebarOpen={sidebarOpen}
+                      onMobileMenuClose={onMobileMenuClose}
+                    />
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
         </nav>
       </ScrollArea>
     </aside>

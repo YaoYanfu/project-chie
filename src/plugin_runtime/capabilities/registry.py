@@ -2,15 +2,15 @@ from typing import TYPE_CHECKING
 
 from src.common.logger import get_logger
 from src.plugin_runtime.host.capability_service import CapabilityImpl
-from src.plugin_runtime.host.supervisor import PluginSupervisor
 
 if TYPE_CHECKING:
+    from src.plugin_runtime.host.supervisor import PluginSupervisor
     from src.plugin_runtime.integration import PluginRuntimeManager
 
 logger = get_logger("plugin_runtime.integration")
 
 
-def register_capability_impls(manager: "PluginRuntimeManager", supervisor: PluginSupervisor) -> None:
+def register_capability_impls(manager: "PluginRuntimeManager", supervisor: "PluginSupervisor") -> None:
     """向指定 Supervisor 注册主程序提供的能力实现。"""
     cap_service = supervisor.capability_service
 
@@ -34,6 +34,7 @@ def register_capability_impls(manager: "PluginRuntimeManager", supervisor: Plugi
     _register("llm.generate", manager._cap_llm_generate)
     _register("llm.generate_with_tools", manager._cap_llm_generate_with_tools)
     _register("llm.embed", manager._cap_llm_embed)
+    _register("llm.transcribe_audio", manager._cap_llm_transcribe_audio)
     _register("llm.get_available_models", manager._cap_llm_get_available_models)
 
     _register("config.get", manager._cap_config_get)
@@ -90,6 +91,7 @@ def register_capability_impls(manager: "PluginRuntimeManager", supervisor: Plugi
     _register("component.get_all_plugins", manager._cap_component_get_all_plugins)
     _register("component.get_plugin_info", manager._cap_component_get_plugin_info)
     _register("component.get_plugin_config_schema", manager._cap_component_get_plugin_config_schema)
+    _register("component.update_plugin_config", manager._cap_component_update_plugin_config)
     _register("component.list_loaded_plugins", manager._cap_component_list_loaded_plugins)
     _register("component.list_registered_plugins", manager._cap_component_list_registered_plugins)
     _register("component.enable", manager._cap_component_enable)
@@ -99,5 +101,12 @@ def register_capability_impls(manager: "PluginRuntimeManager", supervisor: Plugi
     _register("component.reload_plugin", manager._cap_component_reload_plugin)
 
     _register("knowledge.search", manager._cap_knowledge_search)
+    _register("statistics.local.models", manager._cap_statistics_local_models)
+    _register("statistics.local.model_trend", manager._cap_statistics_local_model_trend)
+    _register("statistics.local.token_trend", manager._cap_statistics_local_token_trend)
+    _register("statistics.local.token_distribution", manager._cap_statistics_local_token_distribution)
+    _register("statistics.local.message_trend", manager._cap_statistics_local_message_trend)
+    _register("statistics.local.tool_trend", manager._cap_statistics_local_tool_trend)
+    _register("statistics.local.online_time_trend", manager._cap_statistics_local_online_time_trend)
     _register("render.html2png", manager._cap_render_html2png)
     logger.debug("已注册全部主程序能力实现")

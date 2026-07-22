@@ -5,7 +5,7 @@ import io
 from PIL import Image
 
 from src.common.database.database import get_db_session
-from src.common.database.database_model import ModelUsage, ModelUser
+from src.common.database.database_model import ModelUsage
 from src.common.logger import get_logger
 from src.config.model_configs import ModelInfo
 
@@ -193,7 +193,8 @@ class LLMUsageRecorder:
         model_usage: UsageRecord,
         user_id: str,
         request_type: str,
-        endpoint: str,
+        task_name: str | None = None,
+        session_id: str = "",
         time_cost: float = 0.0,
     ):
         input_cost = self._calculate_input_cost(model_info, model_usage)
@@ -205,14 +206,17 @@ class LLMUsageRecorder:
                     model_name=model_info.model_identifier,
                     model_assign_name=model_info.name,
                     model_api_provider_name=model_info.api_provider,
-                    endpoint=endpoint,
-                    user_type=ModelUser.SYSTEM,
+                    session_id=session_id.strip(),
+                    task_name=task_name,
                     request_type=request_type,
                     time_cost=round(time_cost or 0.0, 3),
                     timestamp=datetime.now(),
                     prompt_tokens=model_usage.prompt_tokens or 0,
                     completion_tokens=model_usage.completion_tokens or 0,
                     total_tokens=model_usage.total_tokens or 0,
+                    prompt_cache_enabled=bool(model_info.cache),
+                    prompt_cache_hit_tokens=model_usage.prompt_cache_hit_tokens or 0,
+                    prompt_cache_miss_tokens=model_usage.prompt_cache_miss_tokens or 0,
                     cost=total_cost or 0.0,
                 )
                 session.add(record)

@@ -4,13 +4,14 @@ import { python } from '@codemirror/lang-python'
 import { StreamLanguage } from '@codemirror/language'
 import { toml as tomlMode } from '@codemirror/legacy-modes/mode/toml'
 import { linter } from '@codemirror/lint'
+import type { Range, RangeSet } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { Decoration, EditorView, ViewPlugin } from '@codemirror/view'
 import CodeMirror from '@uiw/react-codemirror'
 
 import { useTheme } from '@/components/use-theme'
 
-import type { CodeEditorProps, Language } from './CodeEditor'
+import type { CodeEditorProps, CodeEditorRangeClassName, Language } from './CodeEditor'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const languageExtensions: Record<Language, any[]> = {
@@ -19,6 +20,59 @@ const languageExtensions: Record<Language, any[]> = {
   toml: [StreamLanguage.define(tomlMode)],
   css: [css()],
   text: [],
+}
+
+const dashboardCodeScrollerMarker = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      // 标记 CodeMirror 的真实 scrollDOM，避免依赖它内部 class 的注入顺序。
+      view.scrollDOM.dataset.dashboardCodeScroller = 'true'
+    }
+  }
+)
+
+function createDiffDecorationExtension(
+  lineClassNames: Record<number, string> = {},
+  rangeClassNames: CodeEditorRangeClassName[] = []
+) {
+  return EditorView.decorations.compute([], (state) => {
+    const lineDecorations = Object.entries(lineClassNames)
+      .map(([lineNumber, className]) => {
+        const parsedLineNumber = Number(lineNumber)
+        if (!Number.isInteger(parsedLineNumber) || parsedLineNumber < 1 || parsedLineNumber > state.doc.lines) {
+          return null
+        }
+        return Decoration.line({ class: className }).range(state.doc.line(parsedLineNumber).from)
+      })
+      .filter((decoration): decoration is Range<Decoration> => decoration !== null)
+
+    const rangeDecorations = rangeClassNames
+      .map((range) => {
+        if (
+          range.fromLine < 1 ||
+          range.toLine < 1 ||
+          range.fromLine > state.doc.lines ||
+          range.toLine > state.doc.lines ||
+          range.fromLine > range.toLine
+        ) {
+          return null
+        }
+
+        const fromLine = state.doc.line(range.fromLine)
+        const toLine = state.doc.line(range.toLine)
+        const fromCh = Math.max(0, Math.min(range.fromCh, fromLine.length))
+        const toCh = Math.max(0, Math.min(range.toCh, toLine.length))
+        const from = fromLine.from + fromCh
+        const to = toLine.from + toCh
+        if (to <= from) {
+          return null
+        }
+        return Decoration.mark({ class: range.className }).range(from, to)
+      })
+      .filter((decoration): decoration is Range<Decoration> => decoration !== null)
+
+    return Decoration.set([...lineDecorations, ...rangeDecorations], true) as RangeSet<Decoration>
+  })
 }
 
 export default function CodeEditorImpl({
@@ -32,6 +86,8 @@ export default function CodeEditorImpl({
   placeholder,
   theme,
   className = '',
+  lineClassNames = {},
+  rangeClassNames = [],
 }: CodeEditorProps) {
   const { resolvedTheme } = useTheme()
 
@@ -42,6 +98,7 @@ export default function CodeEditorImpl({
     EditorView.theme({
       '&': {
         fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace',
+        minHeight: 0,
       },
       '.cm-content': {
         fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace',
@@ -51,8 +108,32 @@ export default function CodeEditorImpl({
       },
       '.cm-scroller': {
         fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace',
+        minHeight: 0,
+        overflow: 'auto !important',
+        overscrollBehavior: 'contain',
+        touchAction: 'pan-x pan-y',
+      },
+      '.cm-prompt-diff-added': {
+        backgroundColor: 'rgba(34, 197, 94, 0.18)',
+        boxShadow: 'inset 4px 0 0 rgb(34, 197, 94)',
+      },
+      '.cm-prompt-diff-removed': {
+        backgroundColor: 'rgba(239, 68, 68, 0.18)',
+        boxShadow: 'inset 4px 0 0 rgb(239, 68, 68)',
+      },
+      '.cm-prompt-diff-added-text': {
+        backgroundColor: 'rgba(34, 197, 94, 0.38)',
+        borderRadius: '2px',
+        color: 'rgb(20, 83, 45)',
+      },
+      '.cm-prompt-diff-removed-text': {
+        backgroundColor: 'rgba(239, 68, 68, 0.34)',
+        borderRadius: '2px',
+        color: 'rgb(127, 29, 29)',
       },
     }),
+    dashboardCodeScrollerMarker,
+    createDiffDecorationExtension(lineClassNames, rangeClassNames),
   ]
 
   if (readOnly) {
@@ -63,12 +144,17 @@ export default function CodeEditorImpl({
   const effectiveTheme = theme ?? resolvedTheme
 
   return (
-    <div className={`custom-scrollbar overflow-hidden rounded-md border ${className}`}>
+    <div
+      data-dashboard-code-editor="true"
+      className={`custom-scrollbar min-h-0 overflow-hidden rounded-md border ${className}`}
+    >
       <CodeMirror
+        className="min-h-0"
         value={value}
         height={height}
         minHeight={minHeight}
         maxHeight={maxHeight}
+        style={{ height, minHeight, maxHeight }}
         theme={effectiveTheme === 'dark' ? oneDark : undefined}
         extensions={extensions}
         onChange={onChange}

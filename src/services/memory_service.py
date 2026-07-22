@@ -42,14 +42,14 @@ class MemorySearchResult:
     success: bool = True
     error: str = ""
 
-    def to_text(self, limit: int = 5) -> str:
+    def to_text(self, limit: int = 5, *, truncate_content: bool = True, max_content_chars: int = 160) -> str:
         if not self.hits:
             return ""
         lines = []
         for index, item in enumerate(self.hits[: max(1, int(limit))], start=1):
             content = item.content.strip().replace("\n", " ")
-            if len(content) > 160:
-                content = content[:160] + "..."
+            if truncate_content and len(content) > max_content_chars:
+                content = content[:max_content_chars] + "..."
             lines.append(f"{index}. {content}")
         return "\n".join(lines)
 
@@ -90,7 +90,9 @@ class PersonProfileResult:
 
 
 class MemoryService:
-    async def _invoke(self, component_name: str, args: Optional[Dict[str, Any]] = None, *, timeout_ms: int = 30000) -> Any:
+    async def _invoke(
+        self, component_name: str, args: Optional[Dict[str, Any]] = None, *, timeout_ms: int = 30000
+    ) -> Any:
         response = await a_memorix_host_service.invoke(
             component_name,
             args or {},
@@ -255,7 +257,9 @@ class MemoryService:
         except Exception as exc:
             logger.warning(f"反馈纠错任务入队失败: {exc}")
             return {"success": False, "queued": False, "reason": str(exc)}
-        return payload if isinstance(payload, dict) else {"success": False, "queued": False, "reason": "invalid_payload"}
+        return (
+            payload if isinstance(payload, dict) else {"success": False, "queued": False, "reason": "invalid_payload"}
+        )
 
     async def ingest_summary(
         self,
@@ -454,9 +458,21 @@ class MemoryService:
             logger.warning(f"删除管理调用失败: {exc}")
             return {"success": False, "error": str(exc)}
 
+    async def memory_correction_admin(self, *, action: str, timeout_ms: int = 120000, **kwargs) -> Dict[str, Any]:
+        try:
+            return await self._invoke_admin("memory_correction_admin", action=action, timeout_ms=timeout_ms, **kwargs)
+        except Exception as exc:
+            logger.warning(f"记忆修正管理调用失败: {exc}")
+            return {"success": False, "error": str(exc)}
+
+    async def fuzzy_modify_admin(self, *, action: str, timeout_ms: int = 120000, **kwargs) -> Dict[str, Any]:
+        return await self.memory_correction_admin(action=action, timeout_ms=timeout_ms, **kwargs)
+
     async def get_recycle_bin(self, *, limit: int = 50) -> Dict[str, Any]:
         try:
-            payload = await self._invoke("maintain_memory", {"action": "recycle_bin", "limit": max(1, int(limit or 50))})
+            payload = await self._invoke(
+                "maintain_memory", {"action": "recycle_bin", "limit": max(1, int(limit or 50))}
+            )
             return payload if isinstance(payload, dict) else {"success": False, "error": "invalid_payload"}
         except Exception as exc:
             logger.warning(f"获取回收站失败: {exc}")

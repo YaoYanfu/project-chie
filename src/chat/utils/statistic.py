@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from html import escape
 from os import getenv
 from pathlib import Path
 from typing import cast
@@ -10,30 +11,86 @@ import json
 
 from typing_extensions import TypedDict
 
-from sqlmodel import col, select
-
 from src.common.logger import get_logger
-from src.common.database.database import get_db_session
-from src.common.database.database_model import OnlineTime
 from src.manager.async_task_manager import AsyncTask
-from src.manager.local_store_manager import local_storage
-from src.services.statistics_service import (
-    fetch_messages_since,
-    fetch_model_usage_since,
-    fetch_online_time_since,
-    get_earliest_statistics_time,
-    refresh_dashboard_statistics_cache,
-)
-from src.services.statistics_aggregation_service import (
-    count_tool_records_since,
-    fetch_message_count_by_chat_since,
-    refresh_statistics_aggregates,
-)
 
 logger = get_logger("maibot_statistic")
 
 STATISTICS_REPORT_PATH_ENV = "MAIBOT_STATISTICS_REPORT_PATH"
 DEFAULT_STATISTICS_REPORT_PATH = "maibot_statistics.html"
+
+
+class _LocalStorageProxy:
+    """延迟访问本地存储，避免导入统计任务时读取完整本地记事本。"""
+
+    @staticmethod
+    def _store():
+        from src.manager.local_store_manager import local_storage
+
+        return local_storage
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._store()
+
+    def __getitem__(self, key: str):
+        return self._store()[key]
+
+    def __setitem__(self, key: str, value) -> None:
+        self._store()[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._store()[key]
+
+
+local_storage = _LocalStorageProxy()
+
+
+def fetch_messages_since(*args, **kwargs):
+    from src.services.statistics_service import fetch_messages_since as impl
+
+    return impl(*args, **kwargs)
+
+
+def fetch_model_usage_since(*args, **kwargs):
+    from src.services.statistics_service import fetch_model_usage_since as impl
+
+    return impl(*args, **kwargs)
+
+
+def fetch_online_time_since(*args, **kwargs):
+    from src.services.statistics_service import fetch_online_time_since as impl
+
+    return impl(*args, **kwargs)
+
+
+def get_earliest_statistics_time(*args, **kwargs):
+    from src.services.statistics_service import get_earliest_statistics_time as impl
+
+    return impl(*args, **kwargs)
+
+
+async def refresh_dashboard_statistics_cache(*args, **kwargs):
+    from src.services.statistics_service import refresh_dashboard_statistics_cache as impl
+
+    return await impl(*args, **kwargs)
+
+
+def count_tool_records_since(*args, **kwargs):
+    from src.services.statistics_aggregation_service import count_tool_records_since as impl
+
+    return impl(*args, **kwargs)
+
+
+def fetch_message_count_by_chat_since(*args, **kwargs):
+    from src.services.statistics_aggregation_service import fetch_message_count_by_chat_since as impl
+
+    return impl(*args, **kwargs)
+
+
+def refresh_statistics_aggregates(*args, **kwargs):
+    from src.services.statistics_aggregation_service import refresh_statistics_aggregates as impl
+
+    return impl(*args, **kwargs)
 
 
 def _resolve_statistics_report_path(record_file_path: str | None = None) -> str:
@@ -67,6 +124,17 @@ class StatPeriodData(TypedDict):
     costs_by_user: defaultdict[str, float]
     costs_by_model: defaultdict[str, float]
     costs_by_module: defaultdict[str, float]
+    costs_by_chat: defaultdict[str, float]
+    cache_hit_tokens: int
+    cache_miss_tokens: int
+    cache_hit_tokens_by_type: defaultdict[str, int]
+    cache_hit_tokens_by_user: defaultdict[str, int]
+    cache_hit_tokens_by_model: defaultdict[str, int]
+    cache_hit_tokens_by_module: defaultdict[str, int]
+    cache_miss_tokens_by_type: defaultdict[str, int]
+    cache_miss_tokens_by_user: defaultdict[str, int]
+    cache_miss_tokens_by_model: defaultdict[str, int]
+    cache_miss_tokens_by_module: defaultdict[str, int]
     time_costs_by_type: defaultdict[str, list[float]]
     time_costs_by_user: defaultdict[str, list[float]]
     time_costs_by_model: defaultdict[str, list[float]]
@@ -110,6 +178,18 @@ COST_BY_TYPE = "costs_by_type"
 COST_BY_USER = "costs_by_user"
 COST_BY_MODEL = "costs_by_model"
 COST_BY_MODULE = "costs_by_module"
+COST_BY_CHAT = "costs_by_chat"
+GLOBAL_COST_SESSION_KEY = "__global__"
+CACHE_HIT_TOK = "cache_hit_tokens"
+CACHE_MISS_TOK = "cache_miss_tokens"
+CACHE_HIT_TOK_BY_TYPE = "cache_hit_tokens_by_type"
+CACHE_HIT_TOK_BY_USER = "cache_hit_tokens_by_user"
+CACHE_HIT_TOK_BY_MODEL = "cache_hit_tokens_by_model"
+CACHE_HIT_TOK_BY_MODULE = "cache_hit_tokens_by_module"
+CACHE_MISS_TOK_BY_TYPE = "cache_miss_tokens_by_type"
+CACHE_MISS_TOK_BY_USER = "cache_miss_tokens_by_user"
+CACHE_MISS_TOK_BY_MODEL = "cache_miss_tokens_by_model"
+CACHE_MISS_TOK_BY_MODULE = "cache_miss_tokens_by_module"
 TIME_COST_BY_TYPE = "time_costs_by_type"
 TIME_COST_BY_USER = "time_costs_by_user"
 TIME_COST_BY_MODEL = "time_costs_by_model"
@@ -142,6 +222,8 @@ class OnlineTimeRecordTask(AsyncTask):
     @staticmethod
     def _init_database():
         """初始化数据库"""
+        from src.common.database.database import get_db_session
+
         with get_db_session() as _:
             return
 
@@ -152,6 +234,10 @@ class OnlineTimeRecordTask(AsyncTask):
 
             if self.record_id:
                 # 如果有记录，则更新结束时间
+                from sqlmodel import col, select
+                from src.common.database.database import get_db_session
+                from src.common.database.database_model import OnlineTime
+
                 with get_db_session() as session:
                     statement = select(OnlineTime).where(col(OnlineTime.id) == self.record_id).limit(1)
                     existing_record = session.exec(statement).first()
@@ -164,6 +250,10 @@ class OnlineTimeRecordTask(AsyncTask):
             if not self.record_id:  # Check again if record_id was reset or initially None
                 # 如果没有记录，检查一分钟以内是否已有记录
                 # Look for a record whose end_timestamp is recent enough to be considered ongoing
+                from sqlmodel import col, select
+                from src.common.database.database import get_db_session
+                from src.common.database.database_model import OnlineTime
+
                 with get_db_session() as session:
                     statement = (
                         select(OnlineTime)
@@ -233,7 +323,7 @@ def _format_large_number(num: float | int, html: bool = False) -> str:
 
         if html:
             # HTML输出：K着色为主题色并加粗大写
-            return f"{number_part}<span style='color: #8b5cf6; font-weight: bold;'>K</span>"
+            return f"{number_part}<span style='color: var(--statistics-primary); font-weight: bold;'>K</span>"
         else:
             # 控制台输出：纯文本，K大写
             return f"{number_part}{k_suffix}"
@@ -245,14 +335,71 @@ def _format_large_number(num: float | int, html: bool = False) -> str:
             return str(num)
 
 
+def _normalize_prompt_cache_tokens(prompt_tokens: int, hit_tokens: int, miss_tokens: int) -> tuple[int, int]:
+    """将 provider 返回的 prompt cache token 统计规范化为可聚合值。"""
+
+    normalized_hit_tokens = max(hit_tokens, 0)
+    normalized_miss_tokens = max(miss_tokens, 0)
+    if normalized_miss_tokens == 0 and normalized_hit_tokens > 0:
+        normalized_miss_tokens = max(prompt_tokens - normalized_hit_tokens, 0)
+    if normalized_hit_tokens + normalized_miss_tokens == 0 and prompt_tokens > 0:
+        normalized_miss_tokens = prompt_tokens
+    return normalized_hit_tokens, normalized_miss_tokens
+
+
+def _format_cache_hit_rate(hit_tokens: int, miss_tokens: int) -> str:
+    total_cache_tokens = hit_tokens + miss_tokens
+    if total_cache_tokens <= 0:
+        return "N/A"
+    return f"{hit_tokens / total_cache_tokens * 100:.2f}%"
+
+
+def _json_for_html_script(value: object) -> str:
+    json_text = json.dumps(value, ensure_ascii=False)
+    return (
+        json_text.replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
+
+
+def _build_llm_owner_costs(costs_by_type: defaultdict[str, float]) -> dict[str, float]:
+    """按 LLM 调用来源聚合花费，区分本体与各插件。"""
+
+    owner_costs: defaultdict[str, float] = defaultdict(float)
+    for request_type, cost in costs_by_type.items():
+        normalized_request_type = str(request_type or "").strip()
+        if normalized_request_type.startswith("plugin."):
+            plugin_id = normalized_request_type.removeprefix("plugin.").strip()
+            if plugin_id.endswith(".asr"):
+                plugin_id = plugin_id.removesuffix(".asr").strip()
+            owner_label = f"插件 {plugin_id}" if plugin_id else "插件（未知）"
+        else:
+            owner_label = "本体"
+        owner_costs[owner_label] += float(cost or 0.0)
+
+    return {
+        owner_label: owner_costs[owner_label]
+        for owner_label in sorted(owner_costs.keys(), key=lambda label: (label != "本体", label))
+        if owner_costs[owner_label] > 0
+    }
+
+
 class StatisticOutputTask(AsyncTask):
     """统计输出任务"""
 
     SEP_LINE = "-" * 84
+    RUN_INTERVAL_SECONDS = 15 * 60
 
     def __init__(self, record_file_path: str | None = None):
-        # 延迟300秒启动，运行间隔300秒
-        super().__init__(task_name="Statistics Data Output Task", wait_before_start=0, run_interval=300)
+        # 启动后立即运行，之后每15分钟输出一次统计数据
+        super().__init__(
+            task_name="Statistics Data Output Task",
+            wait_before_start=0,
+            run_interval=self.RUN_INTERVAL_SECONDS,
+        )
 
         self.name_mapping: dict[str, tuple[str, float]] = {}
         """
@@ -274,7 +421,9 @@ class StatisticOutputTask(AsyncTask):
             deploy_time = datetime(2000, 1, 1)
             local_storage["deploy_time"] = now.timestamp()
 
-        self.all_time_start_time = get_earliest_statistics_time(deploy_time)
+        self._deploy_time = deploy_time
+        self._all_time_start_resolved = False
+        self.all_time_start_time = deploy_time
 
         self.stat_period: list[tuple[str, timedelta, str]] = [
             ("all_time", now - self.all_time_start_time, "自部署以来"),  # 必须保留"all_time"
@@ -289,6 +438,18 @@ class StatisticOutputTask(AsyncTask):
         """
         统计时间段 [(统计名称, 统计时间段, 统计描述), ...]
         """
+
+
+    def _ensure_all_time_start_time(self, now: datetime) -> None:
+        """首次输出统计前再查询真实最早统计时间。"""
+
+        if self._all_time_start_resolved:
+            return
+
+        self.all_time_start_time = get_earliest_statistics_time(self._deploy_time)
+        self.stat_period = [item for item in self.stat_period if item[0] != "all_time"]
+        self.stat_period.insert(0, ("all_time", now - self.all_time_start_time, "自部署以来"))
+        self._all_time_start_resolved = True
 
 
     def _statistic_console_output(self, stats: StatPeriodMapping, now: datetime) -> None:
@@ -319,6 +480,7 @@ class StatisticOutputTask(AsyncTask):
     async def run(self):
         try:
             now = datetime.now()
+            self._ensure_all_time_start_time(now)
 
             # 使用线程池并行执行耗时操作
             loop = asyncio.get_event_loop()
@@ -362,6 +524,7 @@ class StatisticOutputTask(AsyncTask):
                 import concurrent.futures
 
                 now = datetime.now()
+                self._ensure_all_time_start_time(now)
                 loop = asyncio.get_event_loop()
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -430,6 +593,17 @@ class StatisticOutputTask(AsyncTask):
             COST_BY_USER: defaultdict(float),
             COST_BY_MODEL: defaultdict(float),
             COST_BY_MODULE: defaultdict(float),
+            COST_BY_CHAT: defaultdict(float),
+            CACHE_HIT_TOK: 0,
+            CACHE_MISS_TOK: 0,
+            CACHE_HIT_TOK_BY_TYPE: defaultdict(int),
+            CACHE_HIT_TOK_BY_USER: defaultdict(int),
+            CACHE_HIT_TOK_BY_MODEL: defaultdict(int),
+            CACHE_HIT_TOK_BY_MODULE: defaultdict(int),
+            CACHE_MISS_TOK_BY_TYPE: defaultdict(int),
+            CACHE_MISS_TOK_BY_USER: defaultdict(int),
+            CACHE_MISS_TOK_BY_MODEL: defaultdict(int),
+            CACHE_MISS_TOK_BY_MODULE: defaultdict(int),
             TIME_COST_BY_TYPE: time_costs_by_type,
             TIME_COST_BY_USER: time_costs_by_user,
             TIME_COST_BY_MODEL: time_costs_by_model,
@@ -503,6 +677,8 @@ class StatisticOutputTask(AsyncTask):
                         user_id = cast(str | None, record["model_api_provider_name"]) or "unknown"
                         model_assign_name = cast(str | None, record["model_assign_name"])
                         model_name = model_assign_name or cast(str | None, record["model_name"]) or "unknown"
+                        session_id = str(record.get("session_id") or "").strip()
+                        chat_cost_key = session_id if session_id else GLOBAL_COST_SESSION_KEY
 
                         # 提取模块名：如果请求类型包含"."，取第一个"."之前的部分
                         module_name = request_type.split(".")[0] if "." in request_type else request_type
@@ -515,6 +691,15 @@ class StatisticOutputTask(AsyncTask):
                         prompt_tokens = cast(int | None, record["prompt_tokens"]) or 0
                         completion_tokens = cast(int | None, record["completion_tokens"]) or 0
                         total_tokens = prompt_tokens + completion_tokens
+                        prompt_cache_enabled = bool(record.get("prompt_cache_enabled"))
+                        prompt_cache_hit_tokens = 0
+                        prompt_cache_miss_tokens = 0
+                        if prompt_cache_enabled:
+                            prompt_cache_hit_tokens, prompt_cache_miss_tokens = _normalize_prompt_cache_tokens(
+                                prompt_tokens=prompt_tokens,
+                                hit_tokens=cast(int | None, record.get("prompt_cache_hit_tokens")) or 0,
+                                miss_tokens=cast(int | None, record.get("prompt_cache_miss_tokens")) or 0,
+                            )
 
                         StatisticOutputTask._add_defaultdict_int(
                             stats[period_key], IN_TOK_BY_TYPE, request_type, prompt_tokens
@@ -555,12 +740,40 @@ class StatisticOutputTask(AsyncTask):
                             stats[period_key], TOTAL_TOK_BY_MODULE, module_name, total_tokens
                         )
 
+                        StatisticOutputTask._add_int_stat(stats[period_key], CACHE_HIT_TOK, prompt_cache_hit_tokens)
+                        StatisticOutputTask._add_int_stat(stats[period_key], CACHE_MISS_TOK, prompt_cache_miss_tokens)
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_HIT_TOK_BY_TYPE, request_type, prompt_cache_hit_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_HIT_TOK_BY_USER, user_id, prompt_cache_hit_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_HIT_TOK_BY_MODEL, model_name, prompt_cache_hit_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_HIT_TOK_BY_MODULE, module_name, prompt_cache_hit_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_MISS_TOK_BY_TYPE, request_type, prompt_cache_miss_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_MISS_TOK_BY_USER, user_id, prompt_cache_miss_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_MISS_TOK_BY_MODEL, model_name, prompt_cache_miss_tokens
+                        )
+                        StatisticOutputTask._add_defaultdict_int(
+                            stats[period_key], CACHE_MISS_TOK_BY_MODULE, module_name, prompt_cache_miss_tokens
+                        )
+
                         cost = cast(float | None, record["cost"]) or 0.0
                         StatisticOutputTask._add_float_stat(stats[period_key], TOTAL_COST, cost)
                         StatisticOutputTask._add_defaultdict_float(stats[period_key], COST_BY_TYPE, request_type, cost)
                         StatisticOutputTask._add_defaultdict_float(stats[period_key], COST_BY_USER, user_id, cost)
                         StatisticOutputTask._add_defaultdict_float(stats[period_key], COST_BY_MODEL, model_name, cost)
                         StatisticOutputTask._add_defaultdict_float(stats[period_key], COST_BY_MODULE, module_name, cost)
+                        StatisticOutputTask._add_defaultdict_float(stats[period_key], COST_BY_CHAT, chat_cost_key, cost)
 
                         # 收集time_cost数据
                         time_cost = cast(float | None, record["time_cost"]) or 0.0
@@ -910,6 +1123,8 @@ class StatisticOutputTask(AsyncTask):
         """
         # 计算总token数（从所有模型的token数中累加）
         total_tokens = sum(stats[TOTAL_TOK_BY_MODEL].values()) if stats[TOTAL_TOK_BY_MODEL] else 0
+        cache_hit_tokens = cast(int, stats.get(CACHE_HIT_TOK, 0))
+        cache_miss_tokens = cast(int, stats.get(CACHE_MISS_TOK, 0))
 
         # 计算花费/消息数量指标（每100条）
         cost_per_100_messages = (stats[TOTAL_COST] / stats[TOTAL_MSG_CNT] * 100) if stats[TOTAL_MSG_CNT] > 0 else 0.0
@@ -939,6 +1154,8 @@ class StatisticOutputTask(AsyncTask):
             f"总回复数: {_format_large_number(total_replies)}",
             f"总请求数: {_format_large_number(stats[TOTAL_REQ_CNT])}",
             f"总Token数: {_format_large_number(total_tokens)}",
+            f"Prompt缓存命中率: {_format_cache_hit_rate(cache_hit_tokens, cache_miss_tokens)}",
+            f"Prompt缓存命中Token: {_format_large_number(cache_hit_tokens)}",
             f"总花费: {stats[TOTAL_COST]:.2f}¥",
             f"花费/消息数量: {cost_per_100_messages:.4f}¥/100条" if stats[TOTAL_MSG_CNT] > 0 else "花费/消息数量: N/A",
             f"花费/接受消息数量: {cost_per_100_messages_excluding_replies:.4f}¥/100条"
@@ -959,13 +1176,13 @@ class StatisticOutputTask(AsyncTask):
         """
         if stats[TOTAL_REQ_CNT] <= 0:
             return ""
-        data_fmt = "{:<32}  {:>10}  {:>12}  {:>12}  {:>12}  {:>9.2f}¥  {:>10.1f}  {:>10.1f}  {:>12}  {:>12}  {:>12}"
+        data_fmt = "{:<32}  {:>10}  {:>12}  {:>12}  {:>12}  {:>9.2f}¥  {:>10.1f}  {:>10.1f}  {:>12}  {:>12}  {:>12}  {:>12}"
 
         total_replies = stats.get(TOTAL_REPLY_CNT, 0)
 
         output = [
             "按模型分类统计:",
-            " 模型名称                          调用次数    输入Token     输出Token     Token总量     累计花费    平均耗时(秒)  标准差(秒)  每次回复平均调用次数  每次回复平均Token数  每次调用平均Token",
+            " 模型名称                          调用次数    输入Token     输出Token     Token总量     累计花费    平均耗时(秒)  标准差(秒)  每次回复平均调用次数  每次回复平均Token数  每次调用平均Token     缓存命中率",
         ]
         for model_name, count in sorted(stats[REQ_CNT_BY_MODEL].items()):
             name = f"{model_name[:29]}..." if len(model_name) > 32 else model_name
@@ -975,6 +1192,10 @@ class StatisticOutputTask(AsyncTask):
             cost = stats[COST_BY_MODEL][model_name]
             avg_time_cost = stats[AVG_TIME_COST_BY_MODEL][model_name]
             std_time_cost = stats[STD_TIME_COST_BY_MODEL][model_name]
+            cache_hit_rate = _format_cache_hit_rate(
+                stats[CACHE_HIT_TOK_BY_MODEL][model_name],
+                stats[CACHE_MISS_TOK_BY_MODEL][model_name],
+            )
 
             # 计算每次回复平均值
             avg_count_per_reply = count / total_replies if total_replies > 0 else 0.0
@@ -1005,6 +1226,7 @@ class StatisticOutputTask(AsyncTask):
                     formatted_avg_count,
                     formatted_avg_tokens,
                     formatted_avg_tokens_per_call,
+                    cache_hit_rate,
                 )
             )
 
@@ -1018,13 +1240,13 @@ class StatisticOutputTask(AsyncTask):
         """
         if stats[TOTAL_REQ_CNT] <= 0:
             return ""
-        data_fmt = "{:<32}  {:>10}  {:>12}  {:>12}  {:>12}  {:>9.2f}¥  {:>10.1f}  {:>10.1f}  {:>12}  {:>12}  {:>12}"
+        data_fmt = "{:<32}  {:>10}  {:>12}  {:>12}  {:>12}  {:>9.2f}¥  {:>10.1f}  {:>10.1f}  {:>12}  {:>12}  {:>12}  {:>12}"
 
         total_replies = stats.get(TOTAL_REPLY_CNT, 0)
 
         output = [
             "按模块分类统计:",
-            " 模块名称                          调用次数    输入Token     输出Token     Token总量     累计花费    平均耗时(秒)  标准差(秒)  每次回复平均调用次数  每次回复平均Token数  每次调用平均Token",
+            " 模块名称                          调用次数    输入Token     输出Token     Token总量     累计花费    平均耗时(秒)  标准差(秒)  每次回复平均调用次数  每次回复平均Token数  每次调用平均Token     缓存命中率",
         ]
         for module_name, count in sorted(stats[REQ_CNT_BY_MODULE].items()):
             name = f"{module_name[:29]}..." if len(module_name) > 32 else module_name
@@ -1034,6 +1256,10 @@ class StatisticOutputTask(AsyncTask):
             cost = stats[COST_BY_MODULE][module_name]
             avg_time_cost = stats[AVG_TIME_COST_BY_MODULE][module_name]
             std_time_cost = stats[STD_TIME_COST_BY_MODULE][module_name]
+            cache_hit_rate = _format_cache_hit_rate(
+                stats[CACHE_HIT_TOK_BY_MODULE][module_name],
+                stats[CACHE_MISS_TOK_BY_MODULE][module_name],
+            )
 
             # 计算每次回复平均值
             avg_count_per_reply = count / total_replies if total_replies > 0 else 0.0
@@ -1064,6 +1290,7 @@ class StatisticOutputTask(AsyncTask):
                     formatted_avg_count,
                     formatted_avg_tokens,
                     formatted_avg_tokens_per_call,
+                    cache_hit_rate,
                 )
             )
 
@@ -1140,6 +1367,8 @@ class StatisticOutputTask(AsyncTask):
 
             # 按模型分类统计
             total_replies = stat_data.get(TOTAL_REPLY_CNT, 0)
+            total_cache_hit_tokens = cast(int, stat_data.get(CACHE_HIT_TOK, 0))
+            total_cache_miss_tokens = cast(int, stat_data.get(CACHE_MISS_TOK, 0))
             model_rows = "\n".join(
                 [
                     f"<tr>"
@@ -1148,6 +1377,9 @@ class StatisticOutputTask(AsyncTask):
                     f"<td>{_format_large_number(stat_data[IN_TOK_BY_MODEL][model_name], html=True)}</td>"
                     f"<td>{_format_large_number(stat_data[OUT_TOK_BY_MODEL][model_name], html=True)}</td>"
                     f"<td>{_format_large_number(stat_data[TOTAL_TOK_BY_MODEL][model_name], html=True)}</td>"
+                    f"<td>{_format_large_number(stat_data[CACHE_HIT_TOK_BY_MODEL][model_name], html=True)}</td>"
+                    f"<td>{_format_large_number(stat_data[CACHE_MISS_TOK_BY_MODEL][model_name], html=True)}</td>"
+                    f"<td>{_format_cache_hit_rate(stat_data[CACHE_HIT_TOK_BY_MODEL][model_name], stat_data[CACHE_MISS_TOK_BY_MODEL][model_name])}</td>"
                     f"<td>{stat_data[COST_BY_MODEL][model_name]:.2f} ¥</td>"
                     f"<td>{stat_data[AVG_TIME_COST_BY_MODEL][model_name]:.1f} 秒</td>"
                     f"<td>{stat_data[STD_TIME_COST_BY_MODEL][model_name]:.1f} 秒</td>"
@@ -1158,7 +1390,7 @@ class StatisticOutputTask(AsyncTask):
                     for model_name, count in sorted(stat_data[REQ_CNT_BY_MODEL].items())
                 ]
                 if stat_data[REQ_CNT_BY_MODEL]
-                else ["<tr><td colspan='11' style='text-align: center; color: #999;'>暂无数据</td></tr>"]
+                else ["<tr><td colspan='14' style='text-align: center; color: #999;'>暂无数据</td></tr>"]
             )
             # 按请求类型分类统计
             type_rows = "\n".join(
@@ -1169,6 +1401,9 @@ class StatisticOutputTask(AsyncTask):
                     f"<td>{_format_large_number(stat_data[IN_TOK_BY_TYPE][req_type], html=True)}</td>"
                     f"<td>{_format_large_number(stat_data[OUT_TOK_BY_TYPE][req_type], html=True)}</td>"
                     f"<td>{_format_large_number(stat_data[TOTAL_TOK_BY_TYPE][req_type], html=True)}</td>"
+                    f"<td>{_format_large_number(stat_data[CACHE_HIT_TOK_BY_TYPE][req_type], html=True)}</td>"
+                    f"<td>{_format_large_number(stat_data[CACHE_MISS_TOK_BY_TYPE][req_type], html=True)}</td>"
+                    f"<td>{_format_cache_hit_rate(stat_data[CACHE_HIT_TOK_BY_TYPE][req_type], stat_data[CACHE_MISS_TOK_BY_TYPE][req_type])}</td>"
                     f"<td>{stat_data[COST_BY_TYPE][req_type]:.2f} ¥</td>"
                     f"<td>{stat_data[AVG_TIME_COST_BY_TYPE][req_type]:.1f} 秒</td>"
                     f"<td>{stat_data[STD_TIME_COST_BY_TYPE][req_type]:.1f} 秒</td>"
@@ -1179,7 +1414,7 @@ class StatisticOutputTask(AsyncTask):
                     for req_type, count in sorted(stat_data[REQ_CNT_BY_TYPE].items())
                 ]
                 if stat_data[REQ_CNT_BY_TYPE]
-                else ["<tr><td colspan='11' style='text-align: center; color: #999;'>暂无数据</td></tr>"]
+                else ["<tr><td colspan='14' style='text-align: center; color: #999;'>暂无数据</td></tr>"]
             )
             # 按模块分类统计
             module_rows = "\n".join(
@@ -1190,6 +1425,9 @@ class StatisticOutputTask(AsyncTask):
                     f"<td>{_format_large_number(stat_data[IN_TOK_BY_MODULE][module_name], html=True)}</td>"
                     f"<td>{_format_large_number(stat_data[OUT_TOK_BY_MODULE][module_name], html=True)}</td>"
                     f"<td>{_format_large_number(stat_data[TOTAL_TOK_BY_MODULE][module_name], html=True)}</td>"
+                    f"<td>{_format_large_number(stat_data[CACHE_HIT_TOK_BY_MODULE][module_name], html=True)}</td>"
+                    f"<td>{_format_large_number(stat_data[CACHE_MISS_TOK_BY_MODULE][module_name], html=True)}</td>"
+                    f"<td>{_format_cache_hit_rate(stat_data[CACHE_HIT_TOK_BY_MODULE][module_name], stat_data[CACHE_MISS_TOK_BY_MODULE][module_name])}</td>"
                     f"<td>{stat_data[COST_BY_MODULE][module_name]:.2f} ¥</td>"
                     f"<td>{stat_data[AVG_TIME_COST_BY_MODULE][module_name]:.1f} 秒</td>"
                     f"<td>{stat_data[STD_TIME_COST_BY_MODULE][module_name]:.1f} 秒</td>"
@@ -1200,15 +1438,19 @@ class StatisticOutputTask(AsyncTask):
                     for module_name, count in sorted(stat_data[REQ_CNT_BY_MODULE].items())
                 ]
                 if stat_data[REQ_CNT_BY_MODULE]
-                else ["<tr><td colspan='11' style='text-align: center; color: #999;'>暂无数据</td></tr>"]
+                else ["<tr><td colspan='14' style='text-align: center; color: #999;'>暂无数据</td></tr>"]
             )
 
             # 聊天消息统计
             chat_rows = []
+            sorted_chat_ids = sorted(stat_data[MSG_CNT_BY_CHAT].keys())
             for chat_id, count in sorted(stat_data[MSG_CNT_BY_CHAT].items()):
                 try:
                     chat_name = self.name_mapping.get(chat_id, ("未知聊天", 0))[0]
-                    chat_rows.append(f"<tr><td>{chat_name}</td><td>{_format_large_number(count, html=True)}</td></tr>")
+                    escaped_chat_name = escape(str(chat_name), quote=True)
+                    chat_rows.append(
+                        f"<tr><td>{escaped_chat_name}</td><td>{_format_large_number(count, html=True)}</td></tr>"
+                    )
                 except (IndexError, TypeError) as e:
                     logger.warning(f"生成HTML聊天统计时发生错误，chat_id: {chat_id}, 错误: {e}")
                     chat_rows.append(f"<tr><td>未知聊天</td><td>{_format_large_number(count, html=True)}</td></tr>")
@@ -1218,6 +1460,27 @@ class StatisticOutputTask(AsyncTask):
                 if chat_rows
                 else "<tr><td colspan='2' style='text-align: center; color: #999;'>暂无数据</td></tr>"
             )
+            chat_labels = [str(self.name_mapping.get(chat_id, ("未知聊天", 0))[0]) for chat_id in sorted_chat_ids]
+            chat_counts = [stat_data[MSG_CNT_BY_CHAT][chat_id] for chat_id in sorted_chat_ids]
+            chat_labels_json = _json_for_html_script(chat_labels)
+            chat_counts_json = _json_for_html_script(chat_counts)
+
+            sorted_chat_cost_ids = sorted(stat_data[COST_BY_CHAT].keys())
+            chat_cost_labels = [
+                "全局"
+                if chat_id == GLOBAL_COST_SESSION_KEY
+                else str(self.name_mapping.get(chat_id, (self._get_chat_display_name_from_id(chat_id), 0))[0])
+                for chat_id in sorted_chat_cost_ids
+            ]
+            chat_costs = [stat_data[COST_BY_CHAT][chat_id] for chat_id in sorted_chat_cost_ids]
+            chat_cost_labels_json = _json_for_html_script(chat_cost_labels)
+            chat_costs_json = _json_for_html_script(chat_costs)
+
+            owner_costs_by_label = _build_llm_owner_costs(stat_data[COST_BY_TYPE])
+            owner_cost_labels = list(owner_costs_by_label.keys())
+            owner_costs = [owner_costs_by_label[label] for label in owner_cost_labels]
+            owner_cost_labels_json = _json_for_html_script(owner_cost_labels)
+            owner_costs_json = _json_for_html_script(owner_costs)
             # 生成HTML
             return f"""
             <div id=\"{div_id}\" class=\"tab-content\">
@@ -1245,6 +1508,14 @@ class StatisticOutputTask(AsyncTask):
                     <div class=\"kpi-card\">
                         <div class=\"kpi-title\">总Token数</div>
                         <div class=\"kpi-value\">{_format_large_number(sum(stat_data[TOTAL_TOK_BY_MODEL].values()) if stat_data[TOTAL_TOK_BY_MODEL] else 0, html=True)}</div>
+                    </div>
+                    <div class=\"kpi-card\">
+                        <div class=\"kpi-title\">Prompt缓存命中率</div>
+                        <div class=\"kpi-value\">{_format_cache_hit_rate(total_cache_hit_tokens, total_cache_miss_tokens)}</div>
+                    </div>
+                    <div class=\"kpi-card\">
+                        <div class=\"kpi-title\">Prompt缓存命中Token</div>
+                        <div class=\"kpi-value\">{_format_large_number(total_cache_hit_tokens, html=True)}</div>
                     </div>
                     <div class=\"kpi-card\">
                         <div class=\"kpi-title\">总花费</div>
@@ -1275,7 +1546,7 @@ class StatisticOutputTask(AsyncTask):
                 <h2>按模型分类统计</h2>
                 <div class=\"table-wrap\">
                     <table>
-                        <thead><tr><th>模型名称</th><th>调用次数</th><th>输入Token</th><th>输出Token</th><th>Token总量</th><th>累计花费</th><th>平均耗时(秒)</th><th>标准差(秒)</th><th>每次回复平均调用次数</th><th>每次回复平均Token数</th><th>每次调用平均Token</th></tr></thead>
+                        <thead><tr><th>模型名称</th><th>调用次数</th><th>输入Token</th><th>输出Token</th><th>Token总量</th><th>缓存命中Token</th><th>缓存未命中Token</th><th>缓存命中率</th><th>累计花费</th><th>平均耗时(秒)</th><th>标准差(秒)</th><th>每次回复平均调用次数</th><th>每次回复平均Token数</th><th>每次调用平均Token</th></tr></thead>
                         <tbody>
                             {model_rows}
                         </tbody>
@@ -1286,7 +1557,7 @@ class StatisticOutputTask(AsyncTask):
                 <div class=\"table-wrap\">
                     <table>
                         <thead>
-                            <tr><th>模块名称</th><th>调用次数</th><th>输入Token</th><th>输出Token</th><th>Token总量</th><th>累计花费</th><th>平均耗时(秒)</th><th>标准差(秒)</th><th>每次回复平均调用次数</th><th>每次回复平均Token数</th><th>每次调用平均Token</th></tr>
+                            <tr><th>模块名称</th><th>调用次数</th><th>输入Token</th><th>输出Token</th><th>Token总量</th><th>缓存命中Token</th><th>缓存未命中Token</th><th>缓存命中率</th><th>累计花费</th><th>平均耗时(秒)</th><th>标准差(秒)</th><th>每次回复平均调用次数</th><th>每次回复平均Token数</th><th>每次调用平均Token</th></tr>
                         </thead>
                         <tbody>
                         {module_rows}
@@ -1298,7 +1569,7 @@ class StatisticOutputTask(AsyncTask):
                 <div class=\"table-wrap\">
                     <table>
                         <thead>
-                            <tr><th>请求类型</th><th>调用次数</th><th>输入Token</th><th>输出Token</th><th>Token总量</th><th>累计花费</th><th>平均耗时(秒)</th><th>标准差(秒)</th><th>每次回复平均调用次数</th><th>每次回复平均Token数</th><th>每次调用平均Token</th></tr>
+                            <tr><th>请求类型</th><th>调用次数</th><th>输入Token</th><th>输出Token</th><th>Token总量</th><th>缓存命中Token</th><th>缓存未命中Token</th><th>缓存命中率</th><th>累计花费</th><th>平均耗时(秒)</th><th>标准差(秒)</th><th>每次回复平均调用次数</th><th>每次回复平均Token数</th><th>每次调用平均Token</th></tr>
                         </thead>
                         <tbody>
                         {type_rows}
@@ -1319,22 +1590,48 @@ class StatisticOutputTask(AsyncTask):
                 </div>
                 
                 <h2>数据分布图表</h2>
-                <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px;">
-                    <div style="flex: 1; min-width: 300px;">
+                <div class="pie-chart-grid">
+                    <div class="pie-chart-card">
+                        <h3>调用来源花费分布</h3>
+                        <div class="pie-chart-canvas-wrap">
+                            <canvas id="ownerPieChart_{div_id}"></canvas>
+                        </div>
+                        <div id="ownerPieLegend_{div_id}" class="pie-chart-legend"></div>
+                    </div>
+                    <div class="pie-chart-card">
                         <h3>模型花费分布</h3>
-                        <canvas id="modelPieChart_{div_id}" width="300" height="300"></canvas>
+                        <div class="pie-chart-canvas-wrap">
+                            <canvas id="modelPieChart_{div_id}"></canvas>
+                        </div>
+                        <div id="modelPieLegend_{div_id}" class="pie-chart-legend"></div>
                     </div>
-                    <div style="flex: 1; min-width: 300px;">
+                    <div class="pie-chart-card">
                         <h3>模块花费分布</h3>
-                        <canvas id="modulePieChart_{div_id}" width="300" height="300"></canvas>
+                        <div class="pie-chart-canvas-wrap">
+                            <canvas id="modulePieChart_{div_id}"></canvas>
+                        </div>
+                        <div id="modulePieLegend_{div_id}" class="pie-chart-legend"></div>
                     </div>
-                    <div style="flex: 1; min-width: 300px;">
+                    <div class="pie-chart-card">
                         <h3>请求类型花费分布</h3>
-                        <canvas id="typePieChart_{div_id}" width="300" height="300"></canvas>
+                        <div class="pie-chart-canvas-wrap">
+                            <canvas id="typePieChart_{div_id}"></canvas>
+                        </div>
+                        <div id="typePieLegend_{div_id}" class="pie-chart-legend"></div>
                     </div>
-                    <div style="flex: 1; min-width: 300px;">
+                    <div class="pie-chart-card">
                         <h3>聊天消息分布</h3>
-                        <canvas id="chatPieChart_{div_id}" width="300" height="300"></canvas>
+                        <div class="pie-chart-canvas-wrap">
+                            <canvas id="chatPieChart_{div_id}"></canvas>
+                        </div>
+                        <div id="chatPieLegend_{div_id}" class="pie-chart-legend"></div>
+                    </div>
+                    <div class="pie-chart-card">
+                        <h3>聊天流花费分布</h3>
+                        <div class="pie-chart-canvas-wrap">
+                            <canvas id="chatCostPieChart_{div_id}"></canvas>
+                        </div>
+                        <div id="chatCostPieLegend_{div_id}" class="pie-chart-legend"></div>
                     </div>
                 </div>
                 
@@ -1345,8 +1642,89 @@ class StatisticOutputTask(AsyncTask):
                     }});
                     
                     function createPieCharts_{div_id}() {{
-                        const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#f1c40f'];
-                        
+                        const colors = ['#b35b34', '#0d4b50', '#cfa54b', '#6f665b', '#dfc79a', '#8f4b38', '#74825a', '#854f46', '#2f5f62', '#b98556'];
+
+                        function getPieColors(labelCount) {{
+                            return Array.from({{ length: labelCount }}, (_, index) => colors[index % colors.length]);
+                        }}
+
+                        function renderPieLegend_{div_id}(chart, legendId) {{
+                            const legendContainer = document.getElementById(legendId);
+                            if (!legendContainer) return;
+
+                            legendContainer.innerHTML = '';
+                            const items = chart.options.plugins.legend.labels.generateLabels(chart);
+                            items.forEach((item) => {{
+                                const legendItem = document.createElement('button');
+                                legendItem.type = 'button';
+                                legendItem.className = 'pie-chart-legend-item' + (item.hidden ? ' is-hidden' : '');
+                                legendItem.onclick = () => {{
+                                    chart.toggleDataVisibility(item.index);
+                                    chart.update();
+                                    renderPieLegend_{div_id}(chart, legendId);
+                                }};
+
+                                const colorBox = document.createElement('span');
+                                colorBox.className = 'pie-chart-legend-color';
+                                colorBox.style.backgroundColor = item.fillStyle;
+
+                                const labelText = document.createElement('span');
+                                labelText.className = 'pie-chart-legend-label';
+                                labelText.textContent = item.text;
+
+                                legendItem.appendChild(colorBox);
+                                legendItem.appendChild(labelText);
+                                legendContainer.appendChild(legendItem);
+                            }});
+                        }}
+
+                        function createPieChart_{div_id}(canvasId, legendId, chartData, labelFormatter) {{
+                            const chart = new Chart(document.getElementById(canvasId), {{
+                                type: 'pie',
+                                data: chartData,
+                                options: {{
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {{
+                                        legend: {{
+                                            display: false
+                                        }},
+                                        tooltip: {{
+                                            callbacks: {{
+                                                label: labelFormatter
+                                            }}
+                                        }}
+                                    }}
+                                }}
+                            }});
+                            renderPieLegend_{div_id}(chart, legendId);
+                            return chart;
+                        }}
+
+                        // 调用来源花费分布饼图
+                        const ownerLabels = {owner_cost_labels_json};
+                        if (ownerLabels.length > 0) {{
+                            const ownerData = {{
+                                labels: ownerLabels,
+                                datasets: [{{
+                                    data: {owner_costs_json},
+                                    backgroundColor: getPieColors(ownerLabels.length),
+                                    borderColor: getPieColors(ownerLabels.length),
+                                    borderWidth: 2
+                                }}]
+                            }};
+
+                            createPieChart_{div_id}('ownerPieChart_{div_id}', 'ownerPieLegend_{div_id}', ownerData, function(context) {{
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
+                            }});
+                        }} else {{
+                            document.getElementById('ownerPieChart_{div_id}').style.display = 'none';
+                            document.getElementById('ownerPieLegend_{div_id}').style.display = 'none';
+                            document.querySelector('#ownerPieChart_{div_id}').closest('.pie-chart-card').querySelector('h3').textContent = '调用来源花费分布 (无数据)';
+                        }}
+
                         // 模型花费分布饼图
                         const modelLabels = {list(sorted(stat_data[COST_BY_MODEL].keys())) if stat_data[COST_BY_MODEL] else []};
                         if (modelLabels.length > 0) {{
@@ -1354,36 +1732,21 @@ class StatisticOutputTask(AsyncTask):
                                 labels: modelLabels,
                                 datasets: [{{
                                     data: {[stat_data[COST_BY_MODEL][model_name] for model_name in sorted(stat_data[COST_BY_MODEL].keys())] if stat_data[COST_BY_MODEL] else []},
-                                    backgroundColor: colors.slice(0, {len(stat_data[COST_BY_MODEL]) if stat_data[COST_BY_MODEL] else 0}),
-                                    borderColor: colors.slice(0, {len(stat_data[COST_BY_MODEL]) if stat_data[COST_BY_MODEL] else 0}),
+                                    backgroundColor: getPieColors(modelLabels.length),
+                                    borderColor: getPieColors(modelLabels.length),
                                     borderWidth: 2
                                 }}]
                             }};
-                            
-                            new Chart(document.getElementById('modelPieChart_{div_id}'), {{
-                                type: 'pie',
-                                data: modelData,
-                                options: {{
-                                    responsive: true,
-                                    plugins: {{
-                                        legend: {{
-                                            position: 'bottom'
-                                        }},
-                                        tooltip: {{
-                                            callbacks: {{
-                                                label: function(context) {{
-                                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                                    return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
-                                                }}
-                                            }}
-                                        }}
-                                    }}
-                                }}
+
+                            createPieChart_{div_id}('modelPieChart_{div_id}', 'modelPieLegend_{div_id}', modelData, function(context) {{
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
                             }});
                         }} else {{
                             document.getElementById('modelPieChart_{div_id}').style.display = 'none';
-                            document.querySelector('#modelPieChart_{div_id}').parentElement.querySelector('h3').textContent = '模型花费分布 (无数据)';
+                            document.getElementById('modelPieLegend_{div_id}').style.display = 'none';
+                            document.querySelector('#modelPieChart_{div_id}').closest('.pie-chart-card').querySelector('h3').textContent = '模型花费分布 (无数据)';
                         }}
                         
                         // 模块花费分布饼图
@@ -1393,36 +1756,21 @@ class StatisticOutputTask(AsyncTask):
                                 labels: moduleLabels,
                                 datasets: [{{
                                     data: {[stat_data[COST_BY_MODULE][module_name] for module_name in sorted(stat_data[COST_BY_MODULE].keys())] if stat_data[COST_BY_MODULE] else []},
-                                    backgroundColor: colors.slice(0, {len(stat_data[COST_BY_MODULE]) if stat_data[COST_BY_MODULE] else 0}),
-                                    borderColor: colors.slice(0, {len(stat_data[COST_BY_MODULE]) if stat_data[COST_BY_MODULE] else 0}),
+                                    backgroundColor: getPieColors(moduleLabels.length),
+                                    borderColor: getPieColors(moduleLabels.length),
                                     borderWidth: 2
                                 }}]
                             }};
                             
-                            new Chart(document.getElementById('modulePieChart_{div_id}'), {{
-                                type: 'pie',
-                                data: moduleData,
-                                options: {{
-                                    responsive: true,
-                                    plugins: {{
-                                        legend: {{
-                                            position: 'bottom'
-                                        }},
-                                        tooltip: {{
-                                            callbacks: {{
-                                                label: function(context) {{
-                                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                                    return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
-                                                }}
-                                            }}
-                                        }}
-                                    }}
-                                }}
+                            createPieChart_{div_id}('modulePieChart_{div_id}', 'modulePieLegend_{div_id}', moduleData, function(context) {{
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
                             }});
                         }} else {{
                             document.getElementById('modulePieChart_{div_id}').style.display = 'none';
-                            document.querySelector('#modulePieChart_{div_id}').parentElement.querySelector('h3').textContent = '模块花费分布 (无数据)';
+                            document.getElementById('modulePieLegend_{div_id}').style.display = 'none';
+                            document.querySelector('#modulePieChart_{div_id}').closest('.pie-chart-card').querySelector('h3').textContent = '模块花费分布 (无数据)';
                         }}
                         
                         // 请求类型花费分布饼图
@@ -1432,75 +1780,69 @@ class StatisticOutputTask(AsyncTask):
                                 labels: typeLabels,
                                 datasets: [{{
                                     data: {[stat_data[COST_BY_TYPE][req_type] for req_type in sorted(stat_data[COST_BY_TYPE].keys())] if stat_data[COST_BY_TYPE] else []},
-                                    backgroundColor: colors.slice(0, {len(stat_data[COST_BY_TYPE]) if stat_data[COST_BY_TYPE] else 0}),
-                                    borderColor: colors.slice(0, {len(stat_data[COST_BY_TYPE]) if stat_data[COST_BY_TYPE] else 0}),
+                                    backgroundColor: getPieColors(typeLabels.length),
+                                    borderColor: getPieColors(typeLabels.length),
                                     borderWidth: 2
                                 }}]
                             }};
                             
-                            new Chart(document.getElementById('typePieChart_{div_id}'), {{
-                                type: 'pie',
-                                data: typeData,
-                                options: {{
-                                    responsive: true,
-                                    plugins: {{
-                                        legend: {{
-                                            position: 'bottom'
-                                        }},
-                                        tooltip: {{
-                                            callbacks: {{
-                                                label: function(context) {{
-                                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                                    return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
-                                                }}
-                                            }}
-                                        }}
-                                    }}
-                                }}
+                            createPieChart_{div_id}('typePieChart_{div_id}', 'typePieLegend_{div_id}', typeData, function(context) {{
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
                             }});
                         }} else {{
                             document.getElementById('typePieChart_{div_id}').style.display = 'none';
-                            document.querySelector('#typePieChart_{div_id}').parentElement.querySelector('h3').textContent = '请求类型花费分布 (无数据)';
+                            document.getElementById('typePieLegend_{div_id}').style.display = 'none';
+                            document.querySelector('#typePieChart_{div_id}').closest('.pie-chart-card').querySelector('h3').textContent = '请求类型花费分布 (无数据)';
                         }}
                         
                         // 聊天消息分布饼图
-                        const chatLabels = {[self.name_mapping.get(chat_id, ("未知聊天", 0))[0] for chat_id in sorted(stat_data[MSG_CNT_BY_CHAT].keys())] if stat_data[MSG_CNT_BY_CHAT] else []};
+                        const chatLabels = {chat_labels_json};
                         if (chatLabels.length > 0) {{
                             const chatData = {{
                                 labels: chatLabels,
                                 datasets: [{{
-                                    data: {[stat_data[MSG_CNT_BY_CHAT][chat_id] for chat_id in sorted(stat_data[MSG_CNT_BY_CHAT].keys())] if stat_data[MSG_CNT_BY_CHAT] else []},
-                                    backgroundColor: colors.slice(0, {len(stat_data[MSG_CNT_BY_CHAT]) if stat_data[MSG_CNT_BY_CHAT] else 0}),
-                                    borderColor: colors.slice(0, {len(stat_data[MSG_CNT_BY_CHAT]) if stat_data[MSG_CNT_BY_CHAT] else 0}),
+                                    data: {chat_counts_json},
+                                    backgroundColor: getPieColors(chatLabels.length),
+                                    borderColor: getPieColors(chatLabels.length),
                                     borderWidth: 2
                                 }}]
                             }};
                             
-                            new Chart(document.getElementById('chatPieChart_{div_id}'), {{
-                                type: 'pie',
-                                data: chatData,
-                                options: {{
-                                    responsive: true,
-                                    plugins: {{
-                                        legend: {{
-                                            position: 'bottom'
-                                        }},
-                                        tooltip: {{
-                                            callbacks: {{
-                                                label: function(context) {{
-                                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                                                }}
-                                            }}
-                                        }}
-                                    }}
-                                }}
+                            createPieChart_{div_id}('chatPieChart_{div_id}', 'chatPieLegend_{div_id}', chatData, function(context) {{
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
                             }});
                         }} else {{
                             document.getElementById('chatPieChart_{div_id}').style.display = 'none';
-                            document.querySelector('#chatPieChart_{div_id}').parentElement.querySelector('h3').textContent = '聊天消息分布 (无数据)';
+                            document.getElementById('chatPieLegend_{div_id}').style.display = 'none';
+                            document.querySelector('#chatPieChart_{div_id}').closest('.pie-chart-card').querySelector('h3').textContent = '聊天消息分布 (无数据)';
+                        }}
+
+                        // 聊天流花费分布饼图
+                        const chatCostLabels = {chat_cost_labels_json};
+                        if (chatCostLabels.length > 0) {{
+                            const chatCostData = {{
+                                labels: chatCostLabels,
+                                datasets: [{{
+                                    data: {chat_costs_json},
+                                    backgroundColor: getPieColors(chatCostLabels.length),
+                                    borderColor: getPieColors(chatCostLabels.length),
+                                    borderWidth: 2
+                                }}]
+                            }};
+
+                            createPieChart_{div_id}('chatCostPieChart_{div_id}', 'chatCostPieLegend_{div_id}', chatCostData, function(context) {{
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ¥' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
+                            }});
+                        }} else {{
+                            document.getElementById('chatCostPieChart_{div_id}').style.display = 'none';
+                            document.getElementById('chatCostPieLegend_{div_id}').style.display = 'none';
+                            document.querySelector('#chatCostPieChart_{div_id}').closest('.pie-chart-card').querySelector('h3').textContent = '聊天流花费分布 (无数据)';
                         }}
                     }}
                 </script>
@@ -1544,28 +1886,57 @@ class StatisticOutputTask(AsyncTask):
     <title>MaiBot运行统计报告</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --statistics-background: hsl(35.4 61.9% 87.6%);
+            --statistics-foreground: hsl(189 72% 18.2%);
+            --statistics-card: hsl(36 66% 89.6%);
+            --statistics-card-strong: hsl(34.1 54.8% 81.8%);
+            --statistics-muted: hsl(34.9 48.3% 82.5%);
+            --statistics-muted-foreground: hsl(39.1 11.6% 39%);
+            --statistics-primary: hsl(15.6 68.7% 45.1%);
+            --statistics-primary-foreground: hsl(39.5 100% 92%);
+            --statistics-accent: hsl(34.7 45.6% 75.5%);
+            --statistics-border: hsl(188.1 74% 19.6%);
+            --statistics-ring: hsl(15.6 68.7% 45.1%);
+            --statistics-row-alt: hsl(34.1 54.8% 81.8% / 0.42);
+        }
+
+        html {
+            box-sizing: border-box;
+        }
+
+        *, *::before, *::after {
+            box-sizing: inherit;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: "Bahnschrift Condensed", "Agency FB", "Arial Narrow", "Microsoft YaHei UI", system-ui, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #faf7ff;
-            color: #3a2f57;
+            background:
+                linear-gradient(90deg, hsl(188.1 74% 19.6% / 0.05) 1px, transparent 1px),
+                linear-gradient(0deg, hsl(188.1 74% 19.6% / 0.04) 1px, transparent 1px),
+                var(--statistics-background);
+            background-size: 28px 28px;
+            color: var(--statistics-foreground);
             line-height: 1.6;
         }
         .container {
-            max-width: 900px;
+            width: 100%;
+            max-width: none;
             margin: 20px auto;
-            background-color: #ffffff;
+            background-color: hsl(36 66% 89.6% / 0.94);
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 10px 28px rgba(122, 98, 182, 0.12);
-            border: 1px solid #e5dcff;
+            border-radius: 4px;
+            box-shadow: none;
+            border: 2px solid var(--statistics-border);
         }
         h1, h2 {
-            color: #473673;
-            border-bottom: 2px solid #9f8efb;
+            color: var(--statistics-foreground);
+            border-bottom: 2px solid var(--statistics-border);
             padding-bottom: 10px;
             margin-top: 0;
+            letter-spacing: 0;
         }
         h1 {
             text-align: center;
@@ -1579,39 +1950,40 @@ class StatisticOutputTask(AsyncTask):
             margin-bottom: 10px;
         }
         .info-item {
-            background-color: #f3eeff;
+            background-color: var(--statistics-muted);
             padding: 8px 12px;
-            border-radius: 6px;
+            border: 1px solid var(--statistics-border);
+            border-radius: 3px;
             margin-bottom: 8px;
             font-size: 0.95em;
         }
         .info-item strong {
-            color: #7162bf;
+            color: var(--statistics-primary);
         }
         /* 新增：顶部工具条与按钮 */
-        .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+        .toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
         .toolbar .right { display: flex; gap: 8px; align-items: center; }
         .btn {
-            border: 1px solid #e3daff;
-            background-color: #fbf9ff;
-            color: #4a3c75;
+            border: 1px solid var(--statistics-border);
+            background-color: var(--statistics-card);
+            color: var(--statistics-foreground);
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 3px;
             cursor: pointer;
             transition: all .2s ease;
         }
-        .btn:hover { border-color: #9f8efb; color: #7c6bcf; background-color: #f1ecff; }
+        .btn:hover { border-color: var(--statistics-ring); color: var(--statistics-primary); background-color: var(--statistics-accent); }
         /* 新增：KPI 卡片 */
-        .kpi-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 12px 0 6px; }
+        .kpi-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 12px 0 6px; }
         .kpi-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f6f2ff 100%);
-            border: 1px solid #e3dbff;
-            border-radius: 10px;
+            background: var(--statistics-card);
+            border: 2px solid var(--statistics-border);
+            border-radius: 4px;
             padding: 14px 16px;
-            box-shadow: 0 6px 16px rgba(113, 98, 191, 0.1);
+            box-shadow: none;
         }
-        .kpi-title { font-size: 12px; color: #8579a6; letter-spacing: .3px; margin-bottom: 6px; }
-        .kpi-value { font-size: 20px; font-weight: 700; letter-spacing: .2px; color: #8b5cf6; }
+        .kpi-title { font-size: 12px; color: var(--statistics-muted-foreground); letter-spacing: 0; margin-bottom: 6px; }
+        .kpi-value { font-size: 20px; font-weight: 800; letter-spacing: 0; color: var(--statistics-primary); }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -1619,60 +1991,147 @@ class StatisticOutputTask(AsyncTask):
             font-size: 0.9em;
         }
         /* 新增：表格包裹容器，支持横向滚动 */
-        .table-wrap { width: 100%; overflow-x: auto; border-radius: 6px; }
+        .table-wrap { width: 100%; overflow-x: auto; border-radius: 3px; border: 1px solid var(--statistics-border); }
         th, td {
-            border: 1px solid #e6ddff;
+            border: 1px solid hsl(188.1 74% 19.6% / 0.35);
             padding: 10px;
             text-align: left;
         }
         th {
-            background-color: #9f8efb;
-            color: white;
+            background-color: var(--statistics-border);
+            color: var(--statistics-primary-foreground);
             font-weight: bold;
             position: sticky;
             top: 0;
             z-index: 1;
         }
         tr:nth-child(even) {
-            background-color: #f6f1ff;
+            background-color: var(--statistics-row-alt);
         }
         .footer {
             text-align: center;
             margin-top: 30px;
             font-size: 0.8em;
-            color: #7f8c8d;
+            color: var(--statistics-muted-foreground);
         }
         .tabs {
             overflow: hidden;
-            background: #f9f6ff;
+            background: var(--statistics-card-strong);
             display: flex;
-            border: 1px solid #e4dcff;
-            border-radius: 10px;
-            box-shadow: 0 8px 18px rgba(120, 101, 179, 0.08);
+            flex-wrap: wrap;
+            border: 2px solid var(--statistics-border);
+            border-radius: 4px;
+            box-shadow: none;
         }
         .tabs button {
             background: inherit; border: none; outline: none;
             padding: 12px 14px; cursor: pointer;
             transition: 0.2s; font-size: 15px;
-            color: #52467a;
+            color: var(--statistics-foreground);
         }
         .tabs button:hover {
-            background-color: #efe9ff;
+            background-color: var(--statistics-accent);
         }
         .tabs button.active {
-            background-color: rgba(159, 142, 251, 0.25);
-            color: #6253a9;
+            background-color: var(--statistics-primary);
+            color: var(--statistics-primary-foreground);
         }
         .tab-content {
             display: none;
             padding: 20px;
-            background-color: #fefcff;
-            border: 1px solid #e4dcff;
+            background-color: hsl(36 66% 89.6% / 0.76);
+            border: 2px solid var(--statistics-border);
             border-top: none;
-            border-radius: 0 0 10px 10px;
+            border-radius: 0 0 4px 4px;
         }
         .tab-content.active {
             display: block;
+        }
+        canvas {
+            max-width: 100%;
+        }
+        .pie-chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+            align-items: stretch;
+        }
+        .pie-chart-card {
+            display: flex;
+            min-width: 0;
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px;
+            border: 1px solid var(--statistics-border);
+            border-radius: 4px;
+            background: hsl(36 66% 89.6% / 0.55);
+        }
+        .pie-chart-card h3 {
+            margin: 0;
+            min-height: 1.6em;
+            color: var(--statistics-foreground);
+            font-size: 1.1em;
+        }
+        .pie-chart-canvas-wrap {
+            width: 100%;
+            height: 450px;
+            min-height: 450px;
+        }
+        .pie-chart-canvas-wrap canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .pie-chart-legend {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px 10px;
+            max-height: 128px;
+            min-height: 44px;
+            overflow-y: auto;
+            padding: 8px;
+            border: 1px solid hsl(188.1 74% 19.6% / 0.35);
+            border-radius: 3px;
+            background: hsl(34.9 48.3% 82.5% / 0.5);
+        }
+        .pie-chart-legend-item {
+            display: grid;
+            grid-template-columns: 12px minmax(0, 1fr);
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            padding: 3px 4px;
+            border: 0;
+            background: transparent;
+            color: var(--statistics-foreground);
+            cursor: pointer;
+            font: inherit;
+            line-height: 1.25;
+            text-align: left;
+        }
+        .pie-chart-legend-item.is-hidden {
+            opacity: 0.45;
+            text-decoration: line-through;
+        }
+        .pie-chart-legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid hsl(188.1 74% 19.6% / 0.25);
+        }
+        .pie-chart-legend-label {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        @media (max-width: 760px) {
+            .pie-chart-grid {
+                grid-template-columns: 1fr;
+            }
+            .pie-chart-legend {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -1833,16 +2292,16 @@ class StatisticOutputTask(AsyncTask):
 
         # 生成不同颜色的调色板
         colors = [
-            "#8b5cf6",
-            "#9f8efb",
-            "#b5a6ff",
-            "#c7bbff",
-            "#d9ceff",
-            "#a78bfa",
-            "#9073d8",
-            "#bfaefc",
-            "#cabdfd",
-            "#e6e0ff",
+            "#b35b34",
+            "#0d4b50",
+            "#cfa54b",
+            "#6f665b",
+            "#dfc79a",
+            "#8f4b38",
+            "#74825a",
+            "#854f46",
+            "#2f5f62",
+            "#b98556",
         ]
 
         # 默认使用24小时数据生成数据集
@@ -1856,8 +2315,8 @@ class StatisticOutputTask(AsyncTask):
         for i, (model_name, cost_data) in enumerate(cost_by_model.items()):
             color = colors[i % len(colors)]
             model_datasets.append(f"""{{
-                label: '{model_name}',
-                data: {cost_data},
+                label: {_json_for_html_script(str(model_name))},
+                data: {_json_for_html_script(cost_data)},
                 borderColor: '{color}',
                 backgroundColor: '{color}20',
                 tension: 0.4,
@@ -1871,8 +2330,8 @@ class StatisticOutputTask(AsyncTask):
         for i, (module_name, cost_data) in enumerate(cost_by_module.items()):
             color = colors[i % len(colors)]
             module_datasets.append(f"""{{
-                label: '{module_name}',
-                data: {cost_data},
+                label: {_json_for_html_script(str(module_name))},
+                data: {_json_for_html_script(cost_data)},
                 borderColor: '{color}',
                 backgroundColor: '{color}20',
                 tension: 0.4,
@@ -1886,8 +2345,8 @@ class StatisticOutputTask(AsyncTask):
         for i, (chat_name, message_data) in enumerate(message_by_chat.items()):
             color = colors[i % len(colors)]
             message_datasets.append(f"""{{
-                label: '{chat_name}',
-                data: {message_data},
+                label: {_json_for_html_script(str(chat_name))},
+                data: {_json_for_html_script(message_data)},
                 borderColor: '{color}',
                 backgroundColor: '{color}20',
                 tension: 0.4,
@@ -1926,25 +2385,25 @@ class StatisticOutputTask(AsyncTask):
             
             <style>
                 .time-range-btn {{
-                    background-color: #ecf0f1;
-                    border: 1px solid #bdc3c7;
-                    color: #2c3e50;
+                    background-color: var(--statistics-card);
+                    border: 1px solid var(--statistics-border);
+                    color: var(--statistics-foreground);
                     padding: 8px 16px;
                     margin: 0 5px;
-                    border-radius: 4px;
+                    border-radius: 3px;
                     cursor: pointer;
                     font-size: 14px;
                     transition: all 0.3s ease;
                 }}
                 
                 .time-range-btn:hover {{
-                    background-color: #d5dbdb;
+                    background-color: var(--statistics-accent);
                 }}
                 
                 .time-range-btn.active {{
-                    background-color: #3498db;
-                    color: white;
-                    border-color: #2980b9;
+                    background-color: var(--statistics-primary);
+                    color: var(--statistics-primary-foreground);
+                    border-color: var(--statistics-ring);
                 }}
             </style>
             
@@ -2027,7 +2486,7 @@ class StatisticOutputTask(AsyncTask):
                 
                 function createChart(chartType, data, timeRange) {{
                     const config = chartConfigs[chartType];
-                    const colors = ['#8b5cf6', '#9f8efb', '#b5a6ff', '#c7bbff', '#d9ceff', '#a78bfa', '#9073d8', '#bfaefc', '#cabdfd', '#e6e0ff'];
+                    const colors = ['#b35b34', '#0d4b50', '#cfa54b', '#6f665b', '#dfc79a', '#8f4b38', '#74825a', '#854f46', '#2f5f62', '#b98556'];
                     
                     let datasets = [];
                     
@@ -2036,7 +2495,7 @@ class StatisticOutputTask(AsyncTask):
                             label: config.title,
                             data: data[config.dataKey],
                             borderColor: colors[0],
-                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            backgroundColor: 'rgba(179, 91, 52, 0.12)',
                             tension: 0.4,
                             fill: config.fill
                         }}];
@@ -2236,10 +2695,10 @@ class StatisticOutputTask(AsyncTask):
     def _generate_metrics_tab(self, metrics_data: dict[str, object]) -> str:
         """生成指标趋势图表选项卡HTML内容"""
         colors = {
-            "cost_per_100_messages": "#8b5cf6",
-            "cost_per_hour": "#9f8efb",
-            "tokens_per_hour": "#c7bbff",
-            "cost_per_100_replies": "#d9ceff",
+            "cost_per_100_messages": "#b35b34",
+            "cost_per_hour": "#0d4b50",
+            "tokens_per_hour": "#cfa54b",
+            "cost_per_100_replies": "#74825a",
         }
 
         return f"""
@@ -2271,25 +2730,25 @@ class StatisticOutputTask(AsyncTask):
             
             <style>
                 .time-scale-btn {{
-                    background-color: #ecf0f1;
-                    border: 1px solid #bdc3c7;
-                    color: #2c3e50;
+                    background-color: var(--statistics-card);
+                    border: 1px solid var(--statistics-border);
+                    color: var(--statistics-foreground);
                     padding: 8px 16px;
                     margin: 0 5px;
-                    border-radius: 4px;
+                    border-radius: 3px;
                     cursor: pointer;
                     font-size: 14px;
                     transition: all 0.3s ease;
                 }}
                 
                 .time-scale-btn:hover {{
-                    background-color: #d5dbdb;
+                    background-color: var(--statistics-accent);
                 }}
                 
                 .time-scale-btn.active {{
-                    background-color: #8b5cf6;
-                    color: white;
-                    border-color: #7c6bcf;
+                    background-color: var(--statistics-primary);
+                    color: var(--statistics-primary-foreground);
+                    border-color: var(--statistics-ring);
                 }}
             </style>
             
@@ -2422,8 +2881,12 @@ class AsyncStatisticOutputTask(AsyncTask):
     """完全异步的统计输出任务 - 更高性能版本"""
 
     def __init__(self, record_file_path: str | None = None):
-        # 延迟0秒启动，运行间隔300秒
-        super().__init__(task_name="Async Statistics Data Output Task", wait_before_start=0, run_interval=300)
+        # 启动后立即运行，之后每15分钟输出一次统计数据
+        super().__init__(
+            task_name="Async Statistics Data Output Task",
+            wait_before_start=0,
+            run_interval=StatisticOutputTask.RUN_INTERVAL_SECONDS,
+        )
 
         # 直接复用 StatisticOutputTask 的初始化逻辑
         temp_stat_task = StatisticOutputTask(record_file_path)

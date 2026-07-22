@@ -3,7 +3,14 @@ import type { ThemeTokens, UserThemeConfig } from './tokens'
 import { generatePalette, getReadableForeground, isDefaultAccentColor } from './palette'
 import { getPresetById } from './presets'
 import { sanitizeCSS } from './sanitizer'
-import { defaultDarkTokens, defaultLightTokens, tokenToCSSVarName } from './tokens'
+import {
+  DEFAULT_DASHBOARD_STYLE,
+  defaultDarkTokens,
+  defaultLightTokens,
+  futureRetroDarkTokens,
+  futureRetroLightTokens,
+  tokenToCSSVarName,
+} from './tokens'
 
 const CUSTOM_CSS_ID = 'maibot-custom-css'
 const COMPONENT_CSS_ID_PREFIX = 'maibot-bg-css-'
@@ -57,15 +64,29 @@ const buildTokens = (config: UserThemeConfig, isDark: boolean): ThemeTokens => {
     }
   }
 
-  if (config.selectedPreset && config.selectedPreset !== 'light' && config.selectedPreset !== 'dark') {
+  if (
+    config.selectedPreset &&
+    config.selectedPreset !== 'light' &&
+    config.selectedPreset !== 'dark'
+  ) {
     const preset = getPresetById(config.selectedPreset)
     if (preset?.tokens) {
       mergedTokens = mergeTokens(mergedTokens, preset.tokens)
     }
   }
 
-  if (config.tokenOverrides) {
-    mergedTokens = mergeTokens(mergedTokens, config.tokenOverrides)
+  if ((config.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE) === 'future-retro') {
+    mergedTokens = mergeTokens(
+      mergedTokens,
+      isDark ? futureRetroDarkTokens : futureRetroLightTokens
+    )
+  }
+
+  const dashboardStyle = config.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE
+  const styleTokenOverrides = config.styleTokenOverrides?.[dashboardStyle]
+
+  if (styleTokenOverrides) {
+    mergedTokens = mergeTokens(mergedTokens, styleTokenOverrides)
   }
 
   return mergedTokens
@@ -174,9 +195,13 @@ export function removeAllComponentCSS(): void {
 export function applyThemePipeline(config: UserThemeConfig, isDark: boolean): void {
   const root = document.documentElement
   const tokens = buildTokens(config, isDark)
+  const dashboardStyle = config.dashboardStyle ?? DEFAULT_DASHBOARD_STYLE
+  const customCSS = dashboardStyle === 'future-retro' ? undefined : config.styleCustomCSS?.[dashboardStyle]
+  const backgroundConfig = config.styleBackgroundConfig?.[dashboardStyle]
+
   injectTokensAsCSS(tokens, root)
-  if (config.customCSS) {
-    const sanitized = sanitizeCSS(config.customCSS)
+  if (customCSS) {
+    const sanitized = sanitizeCSS(customCSS)
     if (sanitized.css.trim().length > 0) {
       injectCustomCSS(sanitized.css)
     } else {
@@ -187,8 +212,8 @@ export function applyThemePipeline(config: UserThemeConfig, isDark: boolean): vo
   }
 
   // 应用组件级 CSS(注入顺序在全局 CSS 之后)
-  if (config.backgroundConfig) {
-    const { page, sidebar, header, card, dialog } = config.backgroundConfig
+  if (backgroundConfig) {
+    const { page, sidebar, header, card, dialog } = backgroundConfig
     ;[
       ['page', page],
       ['sidebar', sidebar],

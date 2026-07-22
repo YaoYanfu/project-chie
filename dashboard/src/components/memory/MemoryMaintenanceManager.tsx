@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ThinkingIllustration } from '@/components/ui/thinking-illustration'
 import { useToast } from '@/hooks/use-toast'
 import {
   freezeMemory,
@@ -93,7 +94,11 @@ function getActionLabel(action: MaintenanceAction): string {
   }
 }
 
-export function MemoryMaintenanceManager() {
+export interface MemoryMaintenanceManagerProps {
+  initialTarget?: string
+}
+
+export function MemoryMaintenanceManager({ initialTarget = '' }: MemoryMaintenanceManagerProps) {
   const { toast } = useToast()
   const [target, setTarget] = useState('')
   const [action, setAction] = useState<MaintenanceAction>('reinforce')
@@ -104,6 +109,7 @@ export function MemoryMaintenanceManager() {
   const [actionLoading, setActionLoading] = useState(false)
   const [itemSearch, setItemSearch] = useState('')
   const initialLoadedRef = useRef(false)
+  const initialTargetAppliedRef = useRef('')
 
   const filteredItems = useMemo(() => {
     const keyword = itemSearch.trim().toLowerCase()
@@ -145,6 +151,16 @@ export function MemoryMaintenanceManager() {
     initialLoadedRef.current = true
     void loadRecycleBin()
   }, [loadRecycleBin])
+
+  useEffect(() => {
+    const cleanTarget = initialTarget.trim()
+    if (!cleanTarget || cleanTarget === initialTargetAppliedRef.current) {
+      return
+    }
+    initialTargetAppliedRef.current = cleanTarget
+    setTarget(cleanTarget)
+    setItemSearch(cleanTarget)
+  }, [initialTarget])
 
   const runAction = useCallback(async (nextAction: MaintenanceAction, nextTarget: string) => {
     const cleanTarget = nextTarget.trim()
@@ -276,7 +292,7 @@ export function MemoryMaintenanceManager() {
             <Badge variant="outline">已加载 {items.length} 条</Badge>
             <Badge variant="secondary">当前命中 {filteredItems.length} 条</Badge>
           </div>
-          <ScrollArea className="h-[520px] rounded-lg border">
+          <ScrollArea className="h-[520px]">
             <Table>
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
@@ -311,7 +327,7 @@ export function MemoryMaintenanceManager() {
                 }) : (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      {loading ? 'Thinking...' : '回收站没有可展示的关系'}
+                      {loading ? <ThinkingIllustration size="sm" className="mx-auto" /> : '回收站没有可展示的关系'}
                     </TableCell>
                   </TableRow>
                 )}

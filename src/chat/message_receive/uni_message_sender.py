@@ -1,9 +1,9 @@
 from typing import Any, Optional, Tuple
 
-from rich.traceback import install
-
 import asyncio
 import traceback
+
+from rich.traceback import install
 
 from src.chat.message_receive.message import SessionMessage
 from src.chat.utils.utils import calculate_typing_time, truncate_message
@@ -12,6 +12,7 @@ from src.common.database.database import get_db_session
 from src.common.logger import get_logger
 from src.common.message_server.api import get_global_api
 from src.common.utils.utils_tts import convert_text_message_to_voice
+from src.common.utils.utils_message import MessageUtils
 from src.webui.routers.chat.serializers import serialize_message_sequence
 
 install(extra_lines=3)
@@ -358,6 +359,7 @@ class UniversalMessageSender:
 
             if storage_message:
                 with get_db_session() as db_session:
+                    MessageUtils.fill_reply_frequency_if_available(message)
                     db_session.add(message.to_db_instance())
 
             try:

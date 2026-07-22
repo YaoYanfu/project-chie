@@ -2,8 +2,13 @@
  * 模型列表 - 移动端卡片视图
  */
 import React from 'react'
+import { AlertCircle, CheckCircle2, Loader2, Pencil, Trash2, Zap } from 'lucide-react'
+
+import type { ModelTestResult } from '@/lib/config-api'
 import { Button } from '@/components/ui/button'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { StreamlineIcon } from '@/components/ui/streamline-icon'
+
 import type { ModelInfo } from '../types'
 
 interface ModelCardListProps {
@@ -15,10 +20,57 @@ interface ModelCardListProps {
   onEdit: (model: ModelInfo, index: number) => void
   /** 删除模型回调 */
   onDelete: (index: number) => void
+  /** 测试模型回调 */
+  onTest: (modelName: string) => void
   /** 检查模型是否被使用 */
   isModelUsed: (modelName: string) => boolean
+  /** 正在测试的模型名称集合 */
+  testingModels: Set<string>
+  /** 模型测试结果 */
+  modelTestResults: Map<string, ModelTestResult>
   /** 搜索关键词 */
   searchQuery: string
+}
+
+function renderModelTestStatus(result: ModelTestResult | undefined, isTesting: boolean) {
+  if (isTesting) {
+    const description = '正在测试模型能力'
+    return (
+      <Badge variant="secondary" className="h-6 w-6 justify-center p-0" title={description} aria-label={description}>
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      </Badge>
+    )
+  }
+
+  if (!result) {
+    const description = '未测试：尚未执行模型能力测试'
+    return (
+      <Badge
+        variant="outline"
+        className="border-muted-foreground/40 h-6 w-6 justify-center bg-transparent p-0"
+        title={description}
+        aria-label={description}
+      />
+    )
+  }
+
+  if (result.success) {
+    const description = `测试通过：文本${result.visual_tested ? '、视觉' : ''}与工具调用正常${
+      result.latency_ms != null ? `，耗时 ${(result.latency_ms / 1000).toFixed(2)}s` : ''
+    }`
+    return (
+      <Badge className="h-6 w-6 justify-center bg-green-600 p-0 hover:bg-green-700" title={description} aria-label={description}>
+        <CheckCircle2 className="h-3.5 w-3.5" />
+      </Badge>
+    )
+  }
+
+  const description = result.error || '模型能力测试未通过'
+  return (
+    <Badge variant="destructive" className="h-6 w-6 justify-center p-0" title={description} aria-label={description}>
+      <AlertCircle className="h-3.5 w-3.5" />
+    </Badge>
+  )
 }
 
 export const ModelCardList = React.memo(function ModelCardList({
@@ -26,28 +78,33 @@ export const ModelCardList = React.memo(function ModelCardList({
   allModels,
   onEdit,
   onDelete,
+  onTest,
   isModelUsed,
+  testingModels,
+  modelTestResults,
   searchQuery,
 }: ModelCardListProps) {
   if (paginatedModels.length === 0) {
     return (
-      <div className="md:hidden text-center text-muted-foreground py-8 rounded-lg border bg-card">
+      <div className="text-muted-foreground bg-card rounded-lg border py-8 text-center md:hidden">
         {searchQuery ? '未找到匹配的模型' : '暂无模型配置'}
       </div>
     )
   }
 
   return (
-    <div className="md:hidden space-y-3">
+    <div className="space-y-2.5 md:hidden">
       {paginatedModels.map((model, displayIndex) => {
-        const actualIndex = allModels.findIndex(m => m === model)
+        const actualIndex = allModels.findIndex((m) => m === model)
         const used = isModelUsed(model.name)
+        const isTesting = testingModels.has(model.name)
+        const testResult = modelTestResults.get(model.name)
         return (
-          <div key={displayIndex} className="rounded-lg border bg-card p-4 space-y-3">
+          <div key={displayIndex} className="bg-card space-y-2 rounded-lg border p-3">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-base">{model.name}</h3>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="truncate text-sm font-semibold">{model.name}</h3>
                   <span
                     className={`block h-3 w-3 shrink-0 rounded-full border ${
                       used
@@ -57,34 +114,56 @@ export const ModelCardList = React.memo(function ModelCardList({
                     title={used ? '已使用' : '未使用'}
                     aria-label={used ? '已使用' : '未使用'}
                   />
+                  {renderModelTestStatus(testResult, isTesting)}
                 </div>
-                <p className="text-xs text-muted-foreground break-all" title={model.model_identifier}>
+                <p
+                  className="text-muted-foreground text-[11px] leading-snug break-all"
+                  title={model.model_identifier}
+                >
                   {model.model_identifier}
                 </p>
               </div>
-              <div className="flex gap-1 flex-shrink-0">
+              <div className="flex shrink-0 gap-1">
                 <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => onEdit(model, actualIndex)}
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onTest(model.name)}
+                  disabled={isTesting}
+                  title="测试模型"
+                  aria-label={`测试模型 ${model.name}`}
                 >
-                  <Pencil className="h-4 w-4 mr-1" strokeWidth={2} fill="none" />
-                  编辑
+                  {isTesting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="h-3.5 w-3.5" />
+                  )}
                 </Button>
                 <Button
-                  size="sm"
-                  onClick={() => onDelete(actualIndex)}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  variant="default"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onEdit(model, actualIndex)}
+                  title="编辑"
+                  aria-label={`编辑模型 ${model.name}`}
                 >
-                  <Trash2 className="h-4 w-4 mr-1" strokeWidth={2} fill="none" />
-                  删除
+                  <StreamlineIcon name="edit-pdf-solid" fallback={Pencil} className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  onClick={() => onDelete(actualIndex)}
+                  className="h-8 w-8 bg-red-600 text-white hover:bg-red-700"
+                  title="删除"
+                  aria-label={`删除模型 ${model.name}`}
+                >
+                  <StreamlineIcon name="delete-2-solid" fallback={Trash2} className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs">
               <div>
                 <span className="text-muted-foreground text-xs">提供商</span>
-                <p className="font-medium">{model.api_provider}</p>
+                <p className="truncate font-medium">{model.api_provider}</p>
               </div>
               <div>
                 <span className="text-muted-foreground text-xs">视觉</span>

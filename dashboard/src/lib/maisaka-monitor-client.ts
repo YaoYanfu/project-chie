@@ -21,6 +21,8 @@ export interface MaisakaToolCall {
   name: string
   arguments?: Record<string, unknown>
   arguments_raw?: string
+  source?: 'reasoning' | 'response' | string
+  source_label?: string
 }
 
 export interface SessionStartEvent {
@@ -36,6 +38,9 @@ export interface SessionStartEvent {
 export interface StageStatusEvent {
   session_id: string
   session_name?: string
+  platform?: string
+  user_id?: string | null
+  group_id?: string | null
   stage: string
   detail: string
   round_text: string
@@ -48,6 +53,9 @@ export interface StageStatusEvent {
 export interface StageRemovedEvent {
   session_id: string
   session_name?: string
+  platform?: string
+  user_id?: string | null
+  group_id?: string | null
   timestamp: number
 }
 
@@ -56,11 +64,43 @@ export interface StageSnapshotEvent {
   timestamp: number
 }
 
+export interface LlmRetryEvent {
+  session_id: string
+  platform?: string
+  user_id?: string | null
+  group_id?: string | null
+  task_name: string
+  request_type: string
+  model_name: string
+  attempt: number
+  max_attempts: number
+  reason: string
+  retry_interval: number
+  timestamp: number
+}
+
+export interface LlmErrorEvent {
+  session_id: string
+  platform?: string
+  user_id?: string | null
+  group_id?: string | null
+  task_name: string
+  request_type: string
+  model_name: string
+  message: string
+  timestamp: number
+}
+
 export interface MessageIngestedEvent {
   session_id: string
   speaker_name: string
   content: string
   message_id: string
+  reply_to?: MaisakaReplyPreview | null
+  media?: MaisakaMessageMedia[]
+  platform?: string
+  user_id?: string
+  group_id?: string
   timestamp: number
 }
 
@@ -69,17 +109,43 @@ export interface MessageSentEvent {
   speaker_name: string
   content: string
   message_id: string
+  reply_to?: MaisakaReplyPreview | null
+  media?: MaisakaMessageMedia[]
   source_kind?: string
+  platform?: string
+  user_id?: string
+  group_id?: string
   timestamp: number
 }
 
-export interface CycleStartEvent {
+export interface MessageUpdatedEvent {
   session_id: string
-  cycle_id: number
-  round_index: number
-  max_rounds: number
-  history_count: number
+  speaker_name: string
+  content: string
+  message_id: string
+  reply_to?: MaisakaReplyPreview | null
+  media?: MaisakaMessageMedia[]
+  source_kind?: string
+  platform?: string
+  user_id?: string
+  group_id?: string
   timestamp: number
+}
+
+export interface MaisakaReplyPreview {
+  message_id: string
+  sender_name: string
+  content: string
+}
+
+export interface MaisakaMessageMedia {
+  kind: 'image' | 'emoji'
+  hash: string
+  text: string
+  url: string
+  data_url?: string
+  default_original?: boolean
+  index?: number
 }
 
 export interface TimingGateResultEvent {
@@ -161,9 +227,12 @@ export interface MaisakaFinalizedToolResult {
   tool_call_id: string
   tool_name: string
   tool_args: Record<string, unknown>
+  tool_call_source?: string
+  tool_call_source_label?: string
   success: boolean
   duration_ms: number
   summary: string
+  prompt_html_uri?: string
   detail?: unknown
 }
 
@@ -182,16 +251,6 @@ export interface PlannerFinalizedEvent {
     end_reason?: string
     end_detail?: string
   }
-}
-
-export interface CycleEndEvent {
-  session_id: string
-  cycle_id: number
-  time_records: Record<string, number>
-  agent_state: string
-  end_reason?: string
-  end_detail?: string
-  timestamp: number
 }
 
 export interface ReplierRequestEvent {
@@ -221,15 +280,16 @@ export type MaisakaMonitorEvent =
   | { type: 'stage.status'; data: StageStatusEvent }
   | { type: 'stage.removed'; data: StageRemovedEvent }
   | { type: 'stage.snapshot'; data: StageSnapshotEvent }
+  | { type: 'llm.retry'; data: LlmRetryEvent }
+  | { type: 'llm.error'; data: LlmErrorEvent }
   | { type: 'message.ingested'; data: MessageIngestedEvent }
   | { type: 'message.sent'; data: MessageSentEvent }
-  | { type: 'cycle.start'; data: CycleStartEvent }
+  | { type: 'message.updated'; data: MessageUpdatedEvent }
   | { type: 'timing_gate.result'; data: TimingGateResultEvent }
   | { type: 'planner.request'; data: PlannerRequestEvent }
   | { type: 'planner.response'; data: PlannerResponseEvent }
   | { type: 'planner.finalized'; data: PlannerFinalizedEvent }
   | { type: 'tool.execution'; data: ToolExecutionEvent }
-  | { type: 'cycle.end'; data: CycleEndEvent }
   | { type: 'replier.request'; data: ReplierRequestEvent }
   | { type: 'replier.response'; data: ReplierResponseEvent }
 
@@ -239,8 +299,11 @@ export type MaisakaEventListener = (event: MaisakaMonitorEvent) => void
 
 class MaisakaMonitorClient {
   private initialized = false
+  private readonly initialReplayLimit = 1000
   private listenerIdCounter = 0
   private listeners: Map<number, MaisakaEventListener> = new Map()
+  private replayCursor = 0
+  private readonly replayLimit = 10000
   private subscriptionActive = false
   private subscriptionPromise: Promise<void> | null = null
   private deferredUnsubTimer: ReturnType<typeof setTimeout> | null = null
@@ -272,14 +335,21 @@ class MaisakaMonitorClient {
     this.initialized = true
   }
 
-  private async ensureSubscribed(): Promise<void> {
+  private getReplaySubscribeData(): Record<string, unknown> {
+    return {
+      since_event_id: this.replayCursor,
+      replay_limit: this.replayCursor > 0 ? this.replayLimit : this.initialReplayLimit,
+    }
+  }
+
+  private async ensureSubscribed(): Promise<boolean> {
     if (this.subscriptionActive) {
-      return
+      return false
     }
 
     if (this.subscriptionPromise === null) {
       this.subscriptionPromise = unifiedWsClient
-        .subscribe('maisaka_monitor', 'main')
+        .subscribe('maisaka_monitor', 'main', this.getReplaySubscribeData())
         .then(() => {
           this.subscriptionActive = true
         })
@@ -289,6 +359,26 @@ class MaisakaMonitorClient {
     }
 
     await this.subscriptionPromise
+    return true
+  }
+
+  private async replayFromCursor(): Promise<void> {
+    await unifiedWsClient.subscribe('maisaka_monitor', 'main', this.getReplaySubscribeData())
+  }
+
+  updateReplayCursor(eventId: number): void {
+    if (!Number.isFinite(eventId) || eventId <= this.replayCursor) {
+      return
+    }
+    this.replayCursor = Math.floor(eventId)
+    unifiedWsClient.updateSubscriptionData('maisaka_monitor', 'main', this.getReplaySubscribeData())
+  }
+
+  setInitialReplayCursor(eventId: number): void {
+    if (!Number.isFinite(eventId) || eventId < 0) {
+      return
+    }
+    this.replayCursor = Math.max(this.replayCursor, Math.floor(eventId))
   }
 
   async subscribe(listener: MaisakaEventListener): Promise<() => Promise<void>> {
@@ -302,7 +392,10 @@ class MaisakaMonitorClient {
       this.deferredUnsubTimer = null
     }
 
-    await this.ensureSubscribed()
+    const createdSubscription = await this.ensureSubscribed()
+    if (!createdSubscription) {
+      await this.replayFromCursor()
+    }
 
     return async () => {
       this.listeners.delete(listenerId)
