@@ -42,11 +42,11 @@ def extract_pinned_min_version(requirement: Requirement) -> Version:
     return matched_versions[0]
 
 
-def get_latest_dev_version() -> Version:
+def get_latest_stable_version() -> Version:
     with urlopen(PYPI_JSON_URL, timeout=30) as response:
         pypi_data = json.load(response)
 
-    dev_versions: list[Version] = []
+    stable_versions: list[Version] = []
     for release_version, release_files in pypi_data["releases"].items():
         if not release_files or all(release_file.get("yanked", False) for release_file in release_files):
             continue
@@ -56,13 +56,13 @@ def get_latest_dev_version() -> Version:
         except InvalidVersion:
             continue
 
-        if parsed_version.is_devrelease:
-            dev_versions.append(parsed_version)
+        if not parsed_version.is_prerelease:
+            stable_versions.append(parsed_version)
 
-    if not dev_versions:
-        raise RuntimeError(f"PyPI 上没有找到 {PACKAGE_NAME} 的 dev 版本")
+    if not stable_versions:
+        raise RuntimeError(f"PyPI 上没有找到 {PACKAGE_NAME} 的稳定版本")
 
-    return max(dev_versions)
+    return max(stable_versions)
 
 
 def update_pyproject(latest_version: Version) -> bool:
@@ -72,7 +72,7 @@ def update_pyproject(latest_version: Version) -> bool:
     current_version = extract_pinned_min_version(current_requirement)
 
     if latest_version <= current_version:
-        print(f"pyproject.toml 已是最新 dev 版本: {current_version}")
+        print(f"pyproject.toml 已是最新稳定版本: {current_version}")
         return False
 
     normalized_package_name = canonicalize_name(PACKAGE_NAME)
@@ -97,7 +97,7 @@ def update_requirements(latest_version: Version) -> bool:
     current_version = extract_pinned_min_version(current_requirement)
 
     if latest_version <= current_version:
-        print(f"requirements.txt 已是最新 dev 版本: {current_version}")
+        print(f"requirements.txt 已是最新稳定版本: {current_version}")
         return False
 
     normalized_package_name = canonicalize_name(PACKAGE_NAME)
@@ -125,8 +125,8 @@ def update_requirements(latest_version: Version) -> bool:
 
 
 def main() -> None:
-    latest_version = get_latest_dev_version()
-    print(f"PyPI 最新 dashboard dev 版本: {latest_version}")
+    latest_version = get_latest_stable_version()
+    print(f"PyPI 最新 dashboard 稳定版本: {latest_version}")
 
     pyproject_updated = update_pyproject(latest_version)
     requirements_updated = update_requirements(latest_version)
