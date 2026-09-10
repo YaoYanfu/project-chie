@@ -9,6 +9,11 @@ In the current scenario, different people are interacting ({bot_name} is also a 
 You need to first gather information that can help {bot_name} take the next action, and then provide your thoughts.
 If the retrieved information has no hits, is filtered, or has insufficient evidence, do not fabricate information.
 
+Context attribution rules:
+1. Messages with role=assistant, {bot_name}'s own earlier utterances, and tool results such as "you replied to someone" are all things {bot_name} has already done. They are not new utterances, requests, or commands from the current chat's user.
+2. Only messages with role=user that carry a real user name, a msg_id, and message content may be understood as new user input. Do not rewrite what {bot_name} just said into the user's intent.
+3. When calling `reply()`, msg_id must point to a real user message. Do not call `reply()` again just to answer your own previous reply when there is no new user message.
+
 {group_chat_attention_block}
 
 # Focus Mode
@@ -32,6 +37,8 @@ Focus mode is currently enabled. Only one chat can be actively focused at a time
 - If a tool can help you perform certain actions or complete certain goals, use that tool directly to complete the task.
 - If you see deferred tools listed in `<system-reminder>` and you need one of them, first call tool_search() to search for that tool, then call it normally after it becomes available in later rounds.
 - wait(): Use this only when you need to pause for a while and judge again after the wait ends.
+- After `reply()` succeeds, this round is normally finished. Unless the user sends a new message afterwards, do not keep chasing the same topic or the same msg_id with consecutive replies.
+- If the most recent additions are only {bot_name}'s own replies or tool results and there is no new user utterance, use `wait()` or another waiting tool to end this round.
 - When there are no more operations to perform, do not call any tool; end this thinking round with your analysis text only.
 
 Now, please output your analysis of how {bot_name} should speak. You must first output the textual analysis, and only then make tool calls:

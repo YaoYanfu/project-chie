@@ -5,6 +5,17 @@ import path from 'path'
 
 import { dashboardVersionDefine } from './app-version'
 
+// 云端千惠 WebUI 地址（dev 代理目标）。
+// 不要在仓库里写死真实服务器地址：本地建 dashboard/.env.local 并设置
+// MAIBOT_CLOUD_WEBUI_URL=http://<云端主机>:8001 即可，未设置时回退到本机 8001。
+const cloudWebuiUrl = (process.env.MAIBOT_CLOUD_WEBUI_URL || 'http://127.0.0.1:8001').replace(/\/$/, '')
+
+// 允许访问 dev server 的额外主机名（如 Tailscale/内网域名），逗号分隔。
+const extraAllowedHosts = (process.env.MAIBOT_DASHBOARD_ALLOWED_HOSTS || '')
+  .split(',')
+  .map((host) => host.trim())
+  .filter(Boolean)
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [tailwindcss(), react()],
@@ -12,10 +23,10 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 7999,
-    allowedHosts: ['sengokucolad.tail1e46b9.ts.net'],
+    allowedHosts: extraAllowedHosts,
     proxy: {
       '/api': {
-        target: 'http://82.156.88.63:8001',  // 云端千惠 WebUI
+        target: cloudWebuiUrl,  // 云端千惠 WebUI
         changeOrigin: true,
         ws: true,
         // 确保 Cookie 正确转发

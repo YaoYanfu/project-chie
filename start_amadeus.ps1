@@ -1,14 +1,25 @@
 # Amadeus 一键启动脚本
 #
+# 用法：
+#   .\start_amadeus.ps1                 # 云端主机取 $env:AMADEUS_CLOUD_HOST，未设置则交互询问
+#   .\start_amadeus.ps1 -CloudHost user@host
+#
 # 这个脚本按以下顺序完成整个启动流程：
 # 1. 检查本机配置和必要命令。
-# 2. 建立 SSH 隧道，把本机 18001 端口安全转发到云端 Project Chie 的 8001 端口。
+# 2. 建立 SSH 隧道，把本机 18001 端口安全转发到云端 Project Chie 的 WebUI 端口。
 # 3. 启动本机 Amadeus 后端，并等待 127.0.0.1:8765 可以访问。
 # 4. 通过 Amadeus 后端确认云端千惠在线、人物身份映射正常。
 # 5. 启动 Electron 前端。
 #
 # 关闭 Electron 或按 Ctrl+C 后，脚本只会结束“本次由它启动”的后台进程；
 # 启动脚本之前就已运行的 SSH 隧道或 Amadeus 后端不会被误关。
+
+param(
+    # 云端 SSH 目标，形如 user@host。不传时读取 AMADEUS_CLOUD_HOST，仍无则交互询问。
+    [string]$CloudHost = $env:AMADEUS_CLOUD_HOST,
+    # 云端 WebUI 端口，隧道将其映射到本机 $TunnelPort。
+    [int]$TunnelTargetPort = 8001
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -18,7 +29,6 @@ $DashboardRoot = Join-Path $ProjectRoot 'dashboard'
 $ConfigPath = Join-Path $ProjectRoot 'data\amadeus\config.json'
 $LogDirectory = Join-Path $ProjectRoot 'data\amadeus\logs'
 
-$CloudHost = 'ubuntu@82.156.88.63'
 $TunnelPort = 18001
 $AmadeusPort = 8765
 
@@ -113,6 +123,14 @@ try {
         throw "前端依赖尚未安装。请先进入 $DashboardRoot 执行 npm install。"
     }
 
+    # 云端主机不再写死在仓库里：优先 -CloudHost 参数，其次 $env:AMADEUS_CLOUD_HOST，最后交互询问。
+    if ([string]::IsNullOrWhiteSpace($CloudHost)) {
+        $CloudHost = (Read-Host '请输入云端 SSH 目标（形如 user@host）').Trim()
+    }
+    if ([string]::IsNullOrWhiteSpace($CloudHost) -or $CloudHost -notmatch '^[^@\s]+@[^@\s]+$') {
+        throw '云端 SSH 目标无效：请使用 user@host 形式，或设置环境变量 AMADEUS_CLOUD_HOST。'
+    }
+
     Write-Host '环境检查完成。' -ForegroundColor Green
 
     Write-Step '建立本机到云端 Project Chie 的 SSH 安全隧道'
@@ -123,14 +141,14 @@ try {
     }
     else {
         # -N 表示只做端口转发，不在服务器执行远程命令。
-        # -L 把本机 18001 映射到云端机器自身的 8001，云端端口无需暴露给公网。
+        # -L 把本机 $TunnelPort 映射到云端机器自身的 $TunnelTargetPort，云端端口无需暴露给公网。
         # ServerAlive 选项用于及时发现断线，避免留下看似存在、实际失效的隧道。
         $SshArguments = @(
             '-N',
             '-o', 'ExitOnForwardFailure=yes',
             '-o', 'ServerAliveInterval=30',
             '-o', 'ServerAliveCountMax=3',
-            '-L', "127.0.0.1:${TunnelPort}:127.0.0.1:8001",
+            '-L', "127.0.0.1:${TunnelPort}:127.0.0.1:${TunnelTargetPort}",
             $CloudHost
         )
         $TunnelProcess = Start-Process `
@@ -140,7 +158,7 @@ try {
             -PassThru
 
         if (-not (Wait-TcpPort -HostName '127.0.0.1' -Port $TunnelPort -TimeoutSeconds 10)) {
-            throw 'SSH 隧道启动失败。请先在终端手动执行一次 ssh ubuntu@82.156.88.63，确认密钥和主机指纹可用。'
+            throw "SSH 隧道启动失败。请先在终端手动执行一次 ssh $CloudHost，确认密钥和主机指纹可用。"
         }
         Write-Host "SSH 隧道已建立（PID $($TunnelProcess.Id)）。" -ForegroundColor Green
     }

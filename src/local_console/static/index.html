@@ -779,6 +779,8 @@
     const scrollToBottomBtn = document.querySelector("#scrollToBottomBtn");
     const selectedMessageIds = new Set();
     let activeVoiceEl = null;
+    // 与后端 tts_timeout 对齐的语音等待预算，/api/status 会覆盖它。
+    let voiceSynthesisTimeoutMs = 120000;
 
     const savedToken = localStorage.getItem("maibot_local_console_token");
     const savedSession = localStorage.getItem("maibot_local_console_session");
@@ -922,8 +924,17 @@
       });
     }
 
-    function waitForAssistantVoice(sessionId, assistantMessage, attempt = 0) {
-      if (!assistantMessage || assistantMessage.voice_url || attempt >= 20) {
+    // 单条语音最多连续容忍的请求失败次数。失败的轮询不计入 attempt 预算，
+    // 否则一次网络抖动就会提前放弃等待，而合成可能还要几十秒才完成。
+    const VOICE_POLL_MAX_CONSECUTIVE_ERRORS = 5;
+
+    function waitForAssistantVoice(sessionId, assistantMessage, attempt = 0, errorCount = 0) {
+      // 每 3 秒轮询一次；次数上限由后端 tts_timeout 推导，留一倍余量覆盖排队与写盘。
+      const maxAttempts = Math.max(20, Math.ceil(voiceSynthesisTimeoutMs / 3000) * 2);
+      if (!assistantMessage || assistantMessage.voice_url || attempt >= maxAttempts) {
+        if (assistantMessage && !assistantMessage.voice_url && attempt >= maxAttempts) {
+          setStatus("台词语音合成超时，文字回复已保留");
+        }
         return;
       }
       window.setTimeout(async () => {
@@ -939,11 +950,14 @@
             playAssistantVoice(updatedMessage);
             return;
           }
-          waitForAssistantVoice(sessionId, assistantMessage, attempt + 1);
+          waitForAssistantVoice(sessionId, assistantMessage, attempt + 1, 0);
         } catch (error) {
-          if (attempt < 3) {
-            waitForAssistantVoice(sessionId, assistantMessage, attempt + 1);
+          // 连续失败达到上限才真正放弃，并明确告知用户；否则继续按原预算重试。
+          if (errorCount + 1 >= VOICE_POLL_MAX_CONSECUTIVE_ERRORS) {
+            setStatus("语音状态查询连续失败，文字回复已保留");
+            return;
           }
+          waitForAssistantVoice(sessionId, assistantMessage, attempt + 1, errorCount + 1);
         }
       }, 3000);
     }
@@ -1043,6 +1057,9 @@
 
     async function loadStatus() {
       const payload = await api("/api/status");
+      if (typeof payload.voice_timeout === "number" && payload.voice_timeout > 0) {
+        voiceSynthesisTimeoutMs = payload.voice_timeout * 1000;
+      }
       const mode = payload.model_enabled ? "本地模型接口已启用" : "本地占位模式";
       const thinkMode = payload.disable_thinking ? "no_think" : "thinking";
       setStatus(`${mode} / ${payload.model_name} / num_ctx=${payload.context_window} / ${thinkMode}`);

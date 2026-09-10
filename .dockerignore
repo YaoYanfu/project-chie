@@ -23,3 +23,13 @@ mai_knowledge/
 depends-data/
 !depends-data/
 !depends-data/char_frequency.json
+
+# 本机云端部署工作区：含云端配置、数据库副本与私密控制台会话，不进镜像上下文
+deploy/
+# 根目录一次性发布包（体积可达上百 MB）
+*.tar.gz
+# 单元测试与个人维护笔记
+pytests/
+memory/
+# Amadeus 本机侧数据（含云端 token 与聊天记录）
+data/amadeus/

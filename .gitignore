@@ -75,6 +75,22 @@ dist-ssr/
 # Custom Project Chie config for Docker deployments
 docker-config/
 
+# 根目录一次性发布包（内容已在 src/ 与 deploy/ 中，不需要版本控制）
+/*.tar.gz
+
+# 根目录无引用的图标（实际使用 src/local_console/static/chie-private.ico）
+/*.ico
+
+# 私密控制台未被引用的静态资源
+/src/local_console/static/chihui-private.jpg
+/src/local_console/static/chihui-private-bg.png
+
+# dashboard dev server 环境变量模板（真实值写在 .env.local，仍被 *.local 忽略）
+!dashboard/.env.example
+
+# pytest cacheprovider 在仓库根留下的随机命名临时目录
+/pytest-cache-files-*/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

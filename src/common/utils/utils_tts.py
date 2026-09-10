@@ -23,6 +23,14 @@ if TYPE_CHECKING:
     from src.chat.message_receive.message import SessionMessage
 
 
+class TtsConfigurationError(Exception):
+    """语音合成配置本身不可用。
+
+    这类失败（provider 不认识、参考音频未配置）属于配置问题而非合成故障，
+    调用方应降级为文本发送，而不是把它当成一次合成失败处理。
+    """
+
+
 VOICE_REQUEST_KEYWORDS = (
     "发语音",
     "发个语音",
@@ -225,18 +233,23 @@ def extract_private_dialogue_tts_text(reply_text: str) -> str:
 
 
 async def synthesize_voice(text: str) -> Optional[bytes]:
-    """将文本合成为语音字节；失败时返回 ``None``。"""
+    """将文本合成为语音字节。
+
+    返回 ``None`` 表示本次合成未产出结果；
+    配置本身不可用时抛出 :class:`TtsConfigurationError`，由调用方决定如何降级。
+    """
     from src.config.config import global_config
 
     voice_config = global_config.voice
     if not voice_config.enable_tts:
         return None
-    if voice_config.tts_provider.strip().lower() != "gpt_sovits":
-        logger.warning(f"暂不支持的语音合成服务: {voice_config.tts_provider}")
-        return None
+    provider = voice_config.tts_provider.strip().lower()
+    if provider != "gpt_sovits":
+        logger.error(f"暂不支持的语音合成服务: {voice_config.tts_provider}，本次降级为文本发送")
+        raise TtsConfigurationError(f"不支持的语音合成服务: {voice_config.tts_provider}")
     if not voice_config.tts_ref_audio_path.strip():
-        logger.warning("GPT-SoVITS 参考音频路径为空，无法合成语音")
-        return None
+        logger.error("GPT-SoVITS 参考音频路径为空，无法合成语音，本次降级为文本发送")
+        raise TtsConfigurationError("GPT-SoVITS 参考音频路径为空")
 
     tts_text = prepare_tts_text(text)
     if not tts_text:
@@ -369,7 +382,12 @@ def _message_can_be_converted_to_voice(message: "SessionMessage") -> bool:
 
 
 async def convert_text_message_to_voice(message: "SessionMessage") -> bool:
-    """将文本出站消息转换为语音组件。"""
+    """将文本出站消息转换为语音组件。
+
+    返回值语义是“是否继续发送本条消息”，而不是“是否转换成功”：
+    配置级不可用（provider 不认识、参考音频未配置）会直接降级为文本发送，
+    只有真正的合成故障才受 ``tts_fallback_to_text`` 控制。
+    """
     from src.config.config import global_config
 
     if not _message_can_be_converted_to_voice(message):
@@ -388,7 +406,12 @@ async def convert_text_message_to_voice(message: "SessionMessage") -> bool:
     if random.random() > global_config.voice.tts_send_probability:
         return True
 
-    voice_bytes = await synthesize_voice(text)
+    try:
+        voice_bytes = await synthesize_voice(text)
+    except TtsConfigurationError as exc:
+        # 配置问题不应该把用户的回复整条丢掉：降级为文本，并把原因完整暴露在日志里。
+        logger.error(f"语音合成配置不可用，本次以文本发送: {exc}")
+        return True
     if not voice_bytes:
         return global_config.voice.tts_fallback_to_text
 

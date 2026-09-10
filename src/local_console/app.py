@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src.common.logger import get_logger
-from src.common.utils.utils_tts import extract_private_dialogue_tts_text, synthesize_voice
+from src.common.utils.utils_tts import TtsConfigurationError, extract_private_dialogue_tts_text, synthesize_voice
 
 from .engine import LocalChatEngine, LocalModelError
 from .settings import LocalConsoleSettings
@@ -73,6 +73,7 @@ class StatusResponse(BaseModel):
     context_window: int
     disable_thinking: bool
     data_dir: str
+    voice_timeout: float
 
 
 def _message_to_payload(message: ChatMessage) -> MessagePayload:
@@ -103,7 +104,11 @@ async def _generate_private_dialogue_voice(
     if not voice_text:
         return
 
-    voice_bytes = await synthesize_voice(voice_text)
+    try:
+        voice_bytes = await synthesize_voice(voice_text)
+    except TtsConfigurationError as exc:
+        logger.warning(f"私密模式台词语音配置不可用，仅显示文字回复: {exc}")
+        return
     if not voice_bytes:
         logger.info("私密模式台词语音合成未生成，保留完整文字回复")
         return
@@ -166,6 +171,8 @@ def create_app(settings: Optional[LocalConsoleSettings] = None) -> FastAPI:
 
     @app.get("/api/status", response_model=StatusResponse, dependencies=[Depends(require_auth)])
     async def get_status() -> StatusResponse:
+        from src.config.config import global_config
+
         return StatusResponse(
             host=effective_settings.host,
             port=effective_settings.port,
@@ -175,6 +182,8 @@ def create_app(settings: Optional[LocalConsoleSettings] = None) -> FastAPI:
             context_window=effective_settings.context_window,
             disable_thinking=effective_settings.disable_thinking,
             data_dir=str(effective_settings.data_dir),
+            # 前端据此决定为等待台词语音轮询多久，避免合成还没结束就放弃等待。
+            voice_timeout=global_config.voice.tts_timeout,
         )
 
     @app.get("/api/sessions", response_model=SessionsResponse, dependencies=[Depends(require_auth)])
